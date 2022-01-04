@@ -19,9 +19,11 @@ class NetworkMangerOpenVPNCertificate(AbstractVPNConnection):
         filepath = vpnconfig.get_vpn_config_filepath()
         cert = vpnconfig.get_certificate()
         # attempt to connect
+        print("Connecting")
+        print("\n\nConnected")
 
     def down(self):
-        pass
+        print("disconnecting")
 
 
 class NetworkMangerOpenVPNUserPass(AbstractVPNConnection):
@@ -30,39 +32,60 @@ class NetworkMangerOpenVPNUserPass(AbstractVPNConnection):
         filepath = vpnconfig.get_vpn_config_filepath()
         cert = vpnconfig.get_user_pass()
         # attempt to connect
+        print("Connecting")
+        print("\n\nConnected")
 
     def down(self):
-        pass
+        print("disconnecting")
 
 
-class OpenVPNCertificate(AbstractVPNConnection):
+class NetworkManagerWireguard(AbstractVPNConnection):
 
     def up(self, vpnconfig: AbstractVPNConfiguration):
         filepath = vpnconfig.get_vpn_config_filepath()
         cert = vpnconfig.get_certificate()
         # attempt to connect
+        print("Connecting")
+        print("\n\nConnected")
 
     def down(self):
-        pass
+        print("disconnecting")
 
 
-class OpenVPNUserPass(AbstractVPNConnection):
+class NativeOpenVPNCertificate(AbstractVPNConnection):
+
+    def up(self, vpnconfig: AbstractVPNConfiguration):
+        filepath = vpnconfig.get_vpn_config_filepath()
+        cert = vpnconfig.get_certificate()
+        # attempt to connect
+        print("Connecting")
+        print("\n\nConnected")
+
+    def down(self):
+        print("disconnecting")
+
+
+class NativeOpenVPNUserPass(AbstractVPNConnection):
 
     def up(self, vpnconfig: AbstractVPNConfiguration):
         filepath = vpnconfig.get_vpn_config_filepath()
         cert = vpnconfig.get_user_pass()
         # attempt to connect
+        print("Connecting")
+        print("\n\nConnected")
 
     def down(self):
-        pass
+        print("disconnecting")
 
 
-class Wireguard(AbstractVPNConnection):
+class NativeWireguard(AbstractVPNConnection):
 
     def up(self, vpnconfig: AbstractVPNConfiguration):
         filepath = vpnconfig.get_vpn_config_filepath()
         cert = vpnconfig.get_certificate()
         # attempt to connect
+        print("Connecting")
+        print("\n\nConnected")
 
     def down(self):
-        pass
+        print("disconnecting")

@@ -2,7 +2,7 @@ from abc import ABC
 
 class AbstractVPNConfiguration(ABC):
 
-    def get_vpn_config_filepath(self) -> str:
+    def get_vpn_config_filepath(self, is_certificate: bool) -> str:
         """Get filepath to where the config was created."""
         pass
 

@@ -4,20 +4,37 @@ from abc import ABC, abstractmethod
 class AbstractVPNConfiguration(ABC):
 
     @property
+    @abstractmethod
+    def servername(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def vpn_credentials(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
     def protocol(self) -> str:
         pass
 
     @abstractmethod
-    def get_vpn_config_filepath(self, is_certificate: bool) -> str:
-        """Get filepath to where the config was created."""
+    def __enter__(self) -> str:
+        pass
+
+    @abstractmethod
+    def __exit__(self):
+        pass
+
+
+class AbstractVPNCredentials(ABC):
+
+    @abstractmethod
+    def get_certificate(self) -> str:
+        """Get certificate for certificate based authentication"""
         pass
 
     @abstractmethod
     def get_user_pass(self) -> tuple(str):
         """Get OpenVPN username and password for authentication"""
-        pass
-
-    @abstractmethod
-    def get_certificate(self) -> str:
-        """Get certificate for certificate based authentication"""
         pass

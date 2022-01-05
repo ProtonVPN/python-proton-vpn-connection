@@ -1,5 +1,36 @@
 from ..vpnconnection.abstract_connection_factory import AbstractConnectionFactory
-from ..vpnconnection.abstract_vpnconnection import AbstractVPNConnection, ProtocolEnum
+from ..vpnconnection.abstract_vpnconnection import AbstractVPNConnection
+from ..vpnconfig import AbstractVPNConfiguration
+
+
+class NetworkMangerOpenVPNCertificate(AbstractVPNConnection):
+
+    def up(self, vpnconfig: AbstractVPNConfiguration):
+        print("Connecting")
+        print("\n\nConnected")
+
+    def down(self):
+        print("disconnecting")
+
+
+class NetworkMangerOpenVPNUserPass(AbstractVPNConnection):
+
+    def up(self, vpnconfig: AbstractVPNConfiguration):
+        print("Connecting")
+        print("\n\nConnected")
+
+    def down(self):
+        print("disconnecting")
+
+
+class NetworkManagerWireguard(AbstractVPNConnection):
+
+    def up(self, vpnconfig: AbstractVPNConfiguration):
+        print("Connecting")
+        print("\n\nConnected")
+
+    def down(self):
+        print("disconnecting")
 
 
 class NetworkManagerConnectionFactory(AbstractConnectionFactory):
@@ -15,42 +46,3 @@ class NetworkManagerConnectionFactory(AbstractConnectionFactory):
     @classmethod
     def wireguard_certificate_based(self) -> NetworkManagerWireguard:
         return NetworkManagerWireguard
-
-
-class NetworkMangerOpenVPNCertificate(AbstractVPNConnection):
-
-    def up(self, vpnconfig: AbstractVPNConfiguration):
-        filepath = vpnconfig.get_vpn_config_filepath()
-        cert = vpnconfig.get_certificate()
-        # attempt to connect
-        print("Connecting")
-        print("\n\nConnected")
-
-    def down(self):
-        print("disconnecting")
-
-
-class NetworkMangerOpenVPNUserPass(AbstractVPNConnection):
-
-    def up(self, vpnconfig: AbstractVPNConfiguration):
-        filepath = vpnconfig.get_vpn_config_filepath()
-        cert = vpnconfig.get_user_pass()
-        # attempt to connect
-        print("Connecting")
-        print("\n\nConnected")
-
-    def down(self):
-        print("disconnecting")
-
-
-class NetworkManagerWireguard(AbstractVPNConnection):
-
-    def up(self, vpnconfig: AbstractVPNConfiguration):
-        filepath = vpnconfig.get_vpn_config_filepath()
-        cert = vpnconfig.get_certificate()
-        # attempt to connect
-        print("Connecting")
-        print("\n\nConnected")
-
-    def down(self):
-        print("disconnecting")

@@ -19,7 +19,8 @@ class VPNConnection(AbstractVPNConnection):
 
         connection.up(vpnconfig)
 
-    def down(self):
+    def down(self, device_name):
         # find connection with specific virtual device type
-        # turn off connection
-        print("Connection down")
+        # figure out which protocol is used
+        # figure out which implementation is being used
+        print("\nDisconnected from", device_name)

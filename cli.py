@@ -138,7 +138,24 @@ class CLI:
         vpnconnection.up(vpnconfig)
 
     def disconnect(self):
-        pass
+        parser = argparse.ArgumentParser(
+            description="Disconnect from ProtonVPN", prog="protonvpn-cli d",
+            add_help=False
+        )
+        parser.add_argument(
+            "device_name",
+            nargs="?",
+            help="Virtual device name",
+            default="proton0",
+            metavar=""
+        )
+        args = parser.parse_args(sys.argv[2:])
+        if not args.device_name:
+            print("\nPlease provide a virtual device name to disconnect from.")
+            sys.exit(1)
+
+        vpnconnection = VPNConnection()
+        vpnconnection.down(args.device_name)
 
 
 CLI()

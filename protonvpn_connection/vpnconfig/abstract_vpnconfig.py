@@ -1,40 +1,48 @@
-from abc import ABC, abstractmethod
-
+from abc import ABC, abstractmethod, ABCMeta
+from typing import Tuple
 
 class AbstractVPNCredentials(ABC):
 
     @abstractmethod
     def get_certificate(self) -> str:
         """Get certificate for certificate based authentication"""
-        pass
+        raise NotImplementedError
 
     @abstractmethod
-    def get_user_pass(self) -> tuple(str):
+    def get_user_pass(self) -> Tuple[str, ...]:
         """Get OpenVPN username and password for authentication"""
-        pass
+        raise NotImplementedError
 
 
 class AbstractVPNConfiguration(ABC):
 
     @property
+    def default_device_name(self) -> str:
+        return "proton0"
+
+    @property
+    def device_name(self) -> str:
+        raise NotImplementedError
+
+    @property
     @abstractmethod
     def servername(self) -> str:
-        pass
+        raise NotImplementedError
 
     @property
     @abstractmethod
     def vpn_credentials(self) -> AbstractVPNCredentials:
-        pass
+        raise NotImplementedError
 
     @property
     @abstractmethod
     def protocol(self) -> str:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def __enter__(self) -> str:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def __exit__(self):
-        pass
+        raise NotImplementedError

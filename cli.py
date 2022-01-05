@@ -42,7 +42,7 @@ class VPNConfiguration(AbstractVPNConfiguration):
         return self._servername
 
     @property
-    def split_tunneling(self) -> List[str, ...]:
+    def split_tunneling(self) -> List[str]:
         return self._split_tunneling
 
     @property

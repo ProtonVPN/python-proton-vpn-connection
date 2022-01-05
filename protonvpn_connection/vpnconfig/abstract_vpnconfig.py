@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod, ABCMeta
+from abc import ABC, abstractmethod
 from typing import Tuple, List
 
 
@@ -28,7 +28,7 @@ class AbstractVPNConfiguration(ABC):
 
     @property
     @abstractmethod
-    def split_tunneling(self) -> List[str, ...]:
+    def split_tunneling(self) -> List[str]:
         raise NotImplementedError
 
     @property

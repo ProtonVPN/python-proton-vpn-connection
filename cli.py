@@ -20,9 +20,9 @@ class Credentials(AbstractVPNCredentials):
 class VPNConfiguration(AbstractVPNConfiguration):
 
     def __init__(
-        self, server_entry_ip, ports,
-        virtual_device_type, custom_dns_list, domain, servername,
-        vpnconnection_credentials):
+        self, server_entry_ip, ports, vpnconnection_credentials,
+        servername=None, domain=None, virtual_device_type=None, custom_dns_list=None,
+        ):
         self._configfile = None
         self._server_entry_ip = server_entry_ip
         self._ports = ports
@@ -31,6 +31,10 @@ class VPNConfiguration(AbstractVPNConfiguration):
         self._domain = domain
         self._servername = servername
         self._vpnconnection_credentials = vpnconnection_credentials
+
+    @property
+    def device_name(self) -> str:
+        return self.default_device_name if self._virtual_device_type is None else self._virtual_device_type
 
     @property
     def servername(self) -> str:
@@ -53,8 +57,8 @@ class VPNConfiguration(AbstractVPNConfiguration):
 
 class OpenVPNUDPConfig(VPNConfiguration):
 
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     @property
     def protocol(self):
@@ -63,8 +67,8 @@ class OpenVPNUDPConfig(VPNConfiguration):
 
 class OpenVPNTCPConfig(VPNConfiguration):
 
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     @property
     def protocol(self):
@@ -73,8 +77,8 @@ class OpenVPNTCPConfig(VPNConfiguration):
 
 class OpenVPNWGConfig(VPNConfiguration):
 
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     @property
     def protocol(self):
@@ -128,15 +132,7 @@ class CLI:
 
         credentials = Credentials()
 
-        vpnconfig = protocols[args.protocol](
-            "192.168.0.1",
-            [80, 88, 1143],
-            "proton0",
-            [],
-            "my.custom-domain.com",
-            args.servername,
-            credentials
-        )
+        vpnconfig = protocols[args.protocol]("192.168.0.1", [80, 88, 1143], credentials, args.servername)
         vpnconnection = VPNConnection()
 
         vpnconnection.up(vpnconfig)

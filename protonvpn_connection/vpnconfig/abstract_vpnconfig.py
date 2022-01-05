@@ -21,6 +21,7 @@ class AbstractVPNConfiguration(ABC):
         return "proton0"
 
     @property
+    @abstractmethod
     def device_name(self) -> str:
         raise NotImplementedError
 

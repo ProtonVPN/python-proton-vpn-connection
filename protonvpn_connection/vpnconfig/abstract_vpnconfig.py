@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod, ABCMeta
-from typing import Tuple
+from typing import Tuple, List
+
 
 class AbstractVPNCredentials(ABC):
 
@@ -23,6 +24,11 @@ class AbstractVPNConfiguration(ABC):
     @property
     @abstractmethod
     def device_name(self) -> str:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def split_tunneling(self) -> List[str, ...]:
         raise NotImplementedError
 
     @property

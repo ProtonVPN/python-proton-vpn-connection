@@ -1,6 +1,6 @@
 import argparse
 import sys
-from typing import Tuple
+from typing import Tuple, List
 
 from protonvpn_connection.vpnconfig import (AbstractVPNConfiguration,
                                             AbstractVPNCredentials)
@@ -21,16 +21,17 @@ class VPNConfiguration(AbstractVPNConfiguration):
 
     def __init__(
         self, server_entry_ip, ports, vpnconnection_credentials,
-        servername=None, domain=None, virtual_device_type=None, custom_dns_list=None,
+        servername=None, domain=None, virtual_device_type=None, custom_dns_list=None, split_tunneling=None,
         ):
         self._configfile = None
         self._server_entry_ip = server_entry_ip
         self._ports = ports
-        self._virtual_device_type = virtual_device_type
-        self._custom_dns_list = custom_dns_list
+        self._vpnconnection_credentials = vpnconnection_credentials
         self._domain = domain
         self._servername = servername
-        self._vpnconnection_credentials = vpnconnection_credentials
+        self._virtual_device_type = virtual_device_type
+        self._custom_dns_list = custom_dns_list
+        self._split_tunneling = split_tunneling
 
     @property
     def device_name(self) -> str:
@@ -39,6 +40,10 @@ class VPNConfiguration(AbstractVPNConfiguration):
     @property
     def servername(self) -> str:
         return self._servername
+
+    @property
+    def split_tunneling(self) -> List[str, ...]:
+        return self._split_tunneling
 
     @property
     def vpn_credentials(self) -> AbstractVPNCredentials:

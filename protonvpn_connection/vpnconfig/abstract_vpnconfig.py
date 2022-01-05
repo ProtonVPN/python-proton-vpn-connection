@@ -1,6 +1,19 @@
 from abc import ABC, abstractmethod
 
 
+class AbstractVPNCredentials(ABC):
+
+    @abstractmethod
+    def get_certificate(self) -> str:
+        """Get certificate for certificate based authentication"""
+        pass
+
+    @abstractmethod
+    def get_user_pass(self) -> tuple(str):
+        """Get OpenVPN username and password for authentication"""
+        pass
+
+
 class AbstractVPNConfiguration(ABC):
 
     @property
@@ -10,7 +23,7 @@ class AbstractVPNConfiguration(ABC):
 
     @property
     @abstractmethod
-    def vpn_credentials(self) -> str:
+    def vpn_credentials(self) -> AbstractVPNCredentials:
         pass
 
     @property
@@ -24,17 +37,4 @@ class AbstractVPNConfiguration(ABC):
 
     @abstractmethod
     def __exit__(self):
-        pass
-
-
-class AbstractVPNCredentials(ABC):
-
-    @abstractmethod
-    def get_certificate(self) -> str:
-        """Get certificate for certificate based authentication"""
-        pass
-
-    @abstractmethod
-    def get_user_pass(self) -> tuple(str):
-        """Get OpenVPN username and password for authentication"""
         pass

@@ -3,7 +3,7 @@ from ..vpnconnection.abstract_vpnconnection import AbstractVPNConnection
 from ..vpnconfig import AbstractVPNConfiguration
 
 
-class NetworkMangerOpenVPNCertificate(AbstractVPNConnection):
+class NMOpenVPNCertificateConnection(AbstractVPNConnection):
 
     def up(self, vpnconfig: AbstractVPNConfiguration):
         print("Connecting")
@@ -13,7 +13,7 @@ class NetworkMangerOpenVPNCertificate(AbstractVPNConnection):
         print("disconnecting")
 
 
-class NetworkMangerOpenVPNUserPass(AbstractVPNConnection):
+class NMOpenVPNUserPassConnection(AbstractVPNConnection):
 
     def up(self, vpnconfig: AbstractVPNConfiguration):
         print("Connecting")
@@ -23,7 +23,7 @@ class NetworkMangerOpenVPNUserPass(AbstractVPNConnection):
         print("disconnecting")
 
 
-class NetworkManagerWireguard(AbstractVPNConnection):
+class NMWireguardConnection(AbstractVPNConnection):
 
     def up(self, vpnconfig: AbstractVPNConfiguration):
         print("Connecting")
@@ -36,13 +36,13 @@ class NetworkManagerWireguard(AbstractVPNConnection):
 class NetworkManagerConnectionFactory(AbstractConnectionFactory):
 
     @classmethod
-    def openvpn_certificate_based(self) -> NetworkMangerOpenVPNCertificate:
-        return NetworkMangerOpenVPNCertificate
+    def openvpn_certificate_based(self) -> NMOpenVPNCertificateConnection:
+        return NMOpenVPNCertificateConnection
 
     @classmethod
-    def openvpn_user_pass_based(self) -> NetworkMangerOpenVPNUserPass:
-        return NetworkMangerOpenVPNUserPass
+    def openvpn_user_pass_based(self) -> NMOpenVPNUserPassConnection:
+        return NMOpenVPNUserPassConnection
 
     @classmethod
-    def wireguard_certificate_based(self) -> NetworkManagerWireguard:
-        return NetworkManagerWireguard
+    def wireguard_certificate_based(self) -> NMWireguardConnection:
+        return NMWireguardConnection

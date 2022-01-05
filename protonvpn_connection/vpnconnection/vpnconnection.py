@@ -1,8 +1,8 @@
-from .abstract_vpnconnection import AbstractConnection
+from .abstract_vpnconnection import AbstractVPNConnection
 from ..vpnconfig.abstract_vpnconfig import AbstractVPNConfiguration
 
 
-class VPNConnection(AbstractConnection):
+class VPNConnection(AbstractVPNConnection):
 
     def up(self, vpnconfig: AbstractVPNConfiguration):
         if "prefferd_method_set_in_variable_set_to_native":

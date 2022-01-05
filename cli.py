@@ -4,7 +4,7 @@ from typing import Tuple
 
 from protonvpn_connection.vpnconfig import (AbstractVPNConfiguration,
                                             AbstractVPNCredentials)
-from protonvpn_connection.vpnconnection.vpnconnection import VPNConnection
+from protonvpn_connection.vpnconnection import VPNConnection
 
 
 class Credentials(AbstractVPNCredentials):

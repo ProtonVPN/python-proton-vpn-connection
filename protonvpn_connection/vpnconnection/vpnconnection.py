@@ -1,23 +1,53 @@
 from .abstract_vpnconnection import AbstractVPNConnection
-from ..vpnconfig.abstract_vpnconfig import AbstractVPNConfiguration
 
 
 class VPNConnection(AbstractVPNConnection):
+    """Allows to instantiate a VPN connection.
 
-    def up(self, vpnconfig: AbstractVPNConfiguration):
-        if "prefferd_method_set_in_variable_set_to_native":
-            from ..native import NativeConnectionFactory
-            preffered_backend = NativeConnectionFactory
-        else:
-            from ..network_manager import NetworkManagerConnectionFactory
-            preffered_backend = NetworkManagerConnectionFactory
+    The VPNConnection constructor needs to be passed four different objects
+    that provide different types of information.
 
-        if vpnconfig.protocol.lower() in ["udp", "tcp"]:
-            connection = preffered_backend.openvpn_user_pass_based()
-        elif vpnconfig.protocol.lower() in ["wireguard", "wg"]:
-            connection = preffered_backend.wireguard_certificate_based()
+    vpnserver:
+        vpnserver at the least provide a server_ip and domain properties.
+        Servername is optional is not entirely necessary to provide, unless
+        you would like to have a custom name for the connection.
 
-        connection.up(vpnconfig)
+        Properties:
+            server_ip -> str
+            domain -> str
+            servername -> str | None [Optional]
+
+    ports:
+        ports should always provide two properties, tcp and udp. Both of
+        these properties should return a list of strings, or empty if there are no
+        ports.
+
+        Properties:
+            tcp -> [int]
+            udp -> [int]
+
+    vpncredentials:
+        vpncredentials should provide a namedtuple with username and password
+        as its properties.
+
+        Properties:
+            get_username_password() -> namedtuple(str)
+
+    usersettings:
+
+        usersettings should provide two different properties, one to get protocol and another one to get
+        a list of custom DNS IPs. For protocol only the following values are accepted: [udp | tcp]
+
+        Properties:
+            protocol -> str
+            custom_dns_list -> [str]
+
+    """
+    def __init__(self, vpnserver: object, ports: object, vpncredentials: object, usersettings: object):
+        pass
+
+    def up(self):
+        pass
 
     def down(self, device_name):
         # find connection with specific virtual device type

@@ -8,42 +8,34 @@ class VPNConnection(AbstractVPNConnection):
     that provide different types of information.
 
     vpnserver:
-        vpnserver at the least provide a server_ip and domain properties.
+        vpnserver should always provide a server_ip, domain, tcp_ports
+        and udp_ports properties.
         Servername is optional is not entirely necessary to provide, unless
         you would like to have a custom name for the connection.
 
         Properties:
             server_ip -> str
             domain -> str
-            servername -> str | None [Optional]
-
-    ports:
-        ports should always provide two properties, tcp and udp. Both of
-        these properties should return a list of strings, or empty if there are no
-        ports.
-
-        Properties:
-            tcp -> [int]
-            udp -> [int]
+            servername -> str | None
+            tcp_ports -> [int]
+            udp_ports -> [int]
 
     vpncredentials:
         vpncredentials should provide a namedtuple with username and password
         as its properties.
 
-        Properties:
+        Methods:
             get_username_password() -> namedtuple(str)
 
-    usersettings:
+    Usage:
+    .. code-block::
+        vpnconnection = VPNConnection(vpnserver, vpncredentials)
+        vpnconnection.up()
 
-        usersettings should provide two different properties, one to get protocol and another one to get
-        a list of custom DNS IPs. For protocol only the following values are accepted: [udp | tcp]
-
-        Properties:
-            protocol -> str
-            custom_dns_list -> [str]
-
+        # to shutdown vpn connection
+        vpnconnection.down()
     """
-    def __init__(self, vpnserver: object, ports: object, vpncredentials: object, usersettings: object):
+    def __init__(self, vpnserver: object, vpncredentials: object):
         pass
 
     def up(self):

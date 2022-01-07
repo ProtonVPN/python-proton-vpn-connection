@@ -34,19 +34,16 @@ class AbstractVPNAccount(ABC):
     """Abstract vpn credentials.
 
     For credentials to be corrected fetched, the object being passed
-    should have a method get_username_password() that return a named
+    should have a method get_username_and_password() that return a named
     tuple. Usage example:
-    .. code-block::
+    .. ::
 
-        user_pass_tuple = vpncredentials.get_username_password()
+        user_pass_tuple = vpnaccount.get_username_and_password()
         username = user_pass_tuple.username
-        password = user_pass_tuple.password
+        username = user_pass_tuple.paswword
+
+    A named tuple VPNUserPass is received with properties username and password.
     """
 
-    @property
-    def vpn_username(self):
-        raise NotImplementedError
-
-    @property
-    def vpn_password(self):
+    def get_username_and_password(self):
         raise NotImplementedError

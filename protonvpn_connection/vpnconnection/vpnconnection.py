@@ -6,7 +6,7 @@ class classproperty(property):
         return classmethod(self.fget).__get__(None, owner)()
 
 
-class VPNConnectionFactory:
+class VPNConnection:
     """VPN connection factory.
 
     Allows to instantiate a VPN connection.
@@ -29,16 +29,16 @@ class VPNConnectionFactory:
     vpnaccount:
         - vpnaccount should provide the following properties:
         - Methods:
-            - vpn_username -> str
-            - vpn_password -> str
+            get_username_and_password -> namedtuple(username, password)
 
     Basic Usage:
     ::
-    vpnconnection = VPNConnectionFactory(vpnserver, vpnaccount)
-    vpnconnection.up()
+        vpnconnection = VPNConnection.factory()
+        vpnconnection(vpnserver, vpnaccount)
+        vpnconnection.up()
 
-    # to shutdown vpn connection
-    vpnconnection.down()
+        # to shutdown vpn connection
+        vpnconnection.down()
 
     """
     def __init__(self, vpnserver: object, vpnaccount: object):
@@ -46,7 +46,7 @@ class VPNConnectionFactory:
         self.vpnaccount = vpnaccount
 
     @classmethod
-    def get_vpnconnection(
+    def factory(
         cls,
         protocol: str = None,
         usersettings: object = None,
@@ -70,7 +70,7 @@ class VPNConnectionFactory:
                 - If the priority value of another implementation is lower then the priority value of
                   NM implementation, then former will be returned instead of the latter.
                 - If connection_implementation is set to a matching property of an implementation of
-                  VPNConnectionFactory, then that implementation is to be returned instead.
+                  VPNConnection, then that implementation is to be returned instead.
             :type connection_implementation: str
         """
         pass
@@ -110,17 +110,17 @@ class VPNConnectionFactory:
         pass
 
 
-class NMVPNConnection(VPNConnectionFactory):
+class NMVPNConnection(VPNConnection):
     """Returns VPN connections based on Network Manager implementation.
 
     This is the default backend that will be returned. See docstring for
-    VPNConnectionFactory.get_vpnconnection() for further explanation on how priorities work.
+    VPNConnection.get_vpnconnection() for further explanation on how priorities work.
 
-    A NMVPNConnection can consist of various implementations, such as OpenVPN, IKEv2 or Wireguard.
+    A NMVPNConnection can return a VPNConnection based on protocols such as OpenVPN, IKEv2 or Wireguard.
     """
 
     @classmethod
-    def get_vpnconnection(cls, protocol: str = None, usersettings: object = None):
+    def get_connection(cls, protocol: str = None, usersettings: object = None):
         """Get VPN connection.
 
         The type of procotol returned here is based on some conditions, and these conditions are:

@@ -1,7 +1,7 @@
 VPNConnection
 =====
 
-.. autoclass:: protonvpn_connection.vpnconnection.VPNConnectionFactory
+.. autoclass:: protonvpn_connection.vpnconnection.VPNConnection
     :members:
     :private-members:
 

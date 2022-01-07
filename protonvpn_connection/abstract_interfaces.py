@@ -11,22 +11,42 @@ class AbstractVPNServer(ABC):
 
     @property
     def server_ip(self):
+        """
+        :return: server ip to connect to
+        :rtype: str
+        """
         raise NotImplementedError
 
     @property
     def domain(self):
+        """
+        :return: domain for x509 verification
+        :rtype: str
+        """
         raise NotImplementedError
 
     @property
     def tcp_ports(self):
+        """
+        :return: list with tcp ports
+        :rtype: [int]
+        """
         raise NotImplementedError
 
     @property
     def udp_ports(self):
+        """
+        :return: list with udp ports
+        :rtype: [int]
+        """
         raise NotImplementedError
 
     @property
     def servername(self):
+        """Optional
+        :return: human readeable value
+        :rtype: str
+        """
         return None
 
 
@@ -46,4 +66,8 @@ class AbstractVPNAccount(ABC):
     """
 
     def get_username_and_password(self):
+        """
+        :return: named tuple
+        :rtype: namedtuple(username, password)
+        """
         raise NotImplementedError

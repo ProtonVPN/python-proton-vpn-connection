@@ -14,37 +14,31 @@ class VPNConnectionFactory:
     that provide different types of information.
 
     vpnserver:
-        vpnserver should always provide a server_ip, domain, tcp_ports
-        and udp_ports properties.
-        Servername is optional is not entirely necessary to provide, unless
-        you would like to have a custom name for the connection.
+        - vpnserver should always provide a server_ip, domain, tcp_ports
+          and udp_ports properties.
+          Servername is optional is not entirely necessary to provide, unless
+          you would like to have a custom name for the connection.
 
-        Properties:
-            server_ip -> str
-
-            domain -> str
-
-            servername -> str | None
-
-            tcp_ports -> [int]
-
-            udp_ports -> [int]
+        - Properties:
+            - server_ip -> str
+            - domain -> str
+            - servername -> str | None
+            - tcp_ports -> [int]
+            - udp_ports -> [int]
 
     vpnaccount:
-        vpnaccount should provide the following properties:
-
-        Methods:
-            vpn_username -> str
-
-            vpn_password -> str
+        - vpnaccount should provide the following properties:
+        - Methods:
+            - vpn_username -> str
+            - vpn_password -> str
 
     Basic Usage:
-    .. ::
-        vpnconnection = VPNConnectionFactory(vpnserver, vpnaccount)
-        vpnconnection.up()
+    ::
+    vpnconnection = VPNConnectionFactory(vpnserver, vpnaccount)
+    vpnconnection.up()
 
-        # to shutdown vpn connection
-        vpnconnection.down()
+    # to shutdown vpn connection
+    vpnconnection.down()
 
     """
     def __init__(self, vpnserver: object, vpnaccount: object):
@@ -60,32 +54,23 @@ class VPNConnectionFactory:
     ):
         """Get a vpn connection from factory.
 
-            This methods can three optional arguments:
-            :param protocol: protocol to connect with, all in smallcaps.
+            :param protocol: Optional.
+                protocol to connect with, all in smallcaps
             :type protocol: str
-
             :param usersettings: Optional.
-
-            If it's passed then it should provide the following properties:
-
-            - custom_dns_list -> [str] - A list of custom IPs to use for DNS
-
-            - split_tunnleing -> [str] - A list of IPs to exclude from VPN
-
-            - smart_routing -> bool - If smart routing is to be used or not
-
+                If it's passed then it should provide the following properties:
+                - custom_dns_list -> [str] - A list of custom IPs to use for DNS
+                - split_tunnleing -> [str] - A list of IPs to exclude from VPN
+                - smart_routing -> bool - If smart routing is to be used or not
             :type usersettings: object
             :param connection_implementation: Optional.
+                By default, get_vpnconnection() will always return based on NM implementation, although
+                there are two execetpions to this, which are listed below:
 
-            By default, get_vpnconnection() will always return based on NM implementation, although
-            there are two execetpions to this, which are listed below:
-
-            - If the priority value of another implementation is lower then the priority value of
-            NM implementation, then former will be returned instead of the latter.
-
-            - If connection_implementation is set to a matching property of an implementation of
-            VPNConnectionFactory, then that implementation is to be returned instead.
-
+                - If the priority value of another implementation is lower then the priority value of
+                  NM implementation, then former will be returned instead of the latter.
+                - If connection_implementation is set to a matching property of an implementation of
+                  VPNConnectionFactory, then that implementation is to be returned instead.
             :type connection_implementation: str
         """
         pass
@@ -132,7 +117,6 @@ class NMVPNConnection(VPNConnectionFactory):
     VPNConnectionFactory.get_vpnconnection() for further explanation on how priorities work.
 
     A NMVPNConnection can consist of various implementations, such as OpenVPN, IKEv2 or Wireguard.
-
     """
 
     @classmethod
@@ -140,18 +124,13 @@ class NMVPNConnection(VPNConnectionFactory):
         """Get VPN connection.
 
         The type of procotol returned here is based on some conditions, and these conditions are:
-
-            - If only the protocol has been passed, then it should return the respective
-            connection based on the desired protocol
-
-            - If only usersettings has been passed, it has to be checked if smart_routing is enabled
-            or not. If yes the follow the logic for smart routing, if not then user protocol
-            is selected from usersettings.
-
-            - If both are passed then protocol takes always precedence.
-
-            - If none are passed, then a custom logic takes precedence [TBD].
-
+        - If only the protocol has been passed, then it should return the respective
+          connection based on the desired protocol
+        - If only usersettings has been passed, it has to be checked if smart_routing is enabled
+          or not. If yes the follow the logic for smart routing, if not then user protocol
+          is selected from usersettings.
+        - If both are passed then protocol takes always precedence.
+        - If none are passed, then a custom logic takes precedence [TBD].
         """
         pass
 

@@ -1,12 +1,5 @@
 from abc import ABC
 
-"""
-These classes can either be implemented or just used as a guide on which methods
-should be available for VPNConnection to use. Any object that is passed to VPNConnection
-should have these methods implemented, with certain exceptions which will be described in each class if
-it has any.
-"""
-
 
 class AbstractVPNServer(ABC):
     """Abstract vpn server class.

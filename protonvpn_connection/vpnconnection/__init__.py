@@ -1,3 +1,3 @@
-from .vpnconnection import VPNConnection
+from .vpnconnection import VPNConnectionFactory
 
-__all__ = ["VPNConnection"]
+__all__ = ["VPNConnectionFactory"]

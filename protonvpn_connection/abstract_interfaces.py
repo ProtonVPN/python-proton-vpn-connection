@@ -37,7 +37,7 @@ class AbstractVPNServer(ABC):
         return None
 
 
-class AbstractVPNCredentials(ABC):
+class AbstractVPNAccount(ABC):
     """Abstract vpn credentials.
 
     For credentials to be corrected fetched, the object being passed
@@ -51,5 +51,9 @@ class AbstractVPNCredentials(ABC):
     """
 
     @property
-    def get_username_password(self):
+    def vpn_username(self):
+        raise NotImplementedError
+
+    @property
+    def vpn_password(self):
         raise NotImplementedError

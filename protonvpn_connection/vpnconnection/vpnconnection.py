@@ -1,4 +1,6 @@
 from abc import abstractmethod
+from typing import Callable
+from ..abstract_interfaces import AbstractVPNServer, AbstractVPNAccount
 
 
 class classproperty(property):
@@ -33,20 +35,36 @@ class VPNConnection:
 
     Basic Usage:
     ::
-        vpnconnection = VPNConnection.factory()
+        vpnconnection = VPNConnection.get_from_factory()
         vpnconnection(vpnserver, vpnaccount)
+
+        # Before establishing you should also decide if you would like to
+        # subscribe to the connection status updates with:
+        # vpnconnection.register("killswitch")
+
         vpnconnection.up()
 
         # to shutdown vpn connection
         vpnconnection.down()
 
     """
-    def __init__(self, vpnserver: object, vpnaccount: object):
+    def __init__(self, vpnserver: AbstractVPNServer, vpnaccount: AbstractVPNAccount):
+        """Initialize a VPNConnection object.
+
+            :param vpnserver: AbstractVPNServer type or same signature as AbstractVPNServer.
+            :type vpnserver: object
+            :param vpnaccount: AbstractVPNAccount type or same signature as AbstractVPNAccount.
+            :type vpnaccount: object
+
+        This will set the interal properties which will be used by each implementation/protocol
+        to create its configuration file, so that it's ready to establish a VPN connection.
+        """
         self.vpnserver = vpnserver
         self.vpnaccount = vpnaccount
+        self._subscribers = {}
 
     @classmethod
-    def factory(
+    def get_from_factory(
         cls,
         protocol: str = None,
         usersettings: object = None,
@@ -75,7 +93,48 @@ class VPNConnection:
         """
         pass
 
-    def priority(self):
+    def register(self, who: str, callback: Callable = None):
+        """Register subscribers.
+
+            :param who: who is the subscriber, smallcaps letters
+            :type who: str
+            :param callback: Optional.
+                The optional callback method that can be passed.
+            :type callback: Callable
+
+        Ideally each subscriber should at the least expose an receive_connection_status_update() method,
+        so that it can always be called. Though not necessary, each subscriber can pass
+        a specific callback method, which the publisher does not care of the name of the method,
+        as long as it's callable and that at the least it receives one argument.
+        """
+        if not callback:
+            callback = getattr(who, "receive_connection_status_update")
+
+        self._subscribers[who] = callback
+
+    def unregister(self, who):
+        """Unrgister subscribers.
+
+            :param who: who is the subscriber, smallcaps letters
+            :type who: str
+        """
+        try:
+            del self._subscribers[who]
+        except KeyError:
+            pass
+
+    def notify_subscribers(self, connection_status, *args, **kwargs):
+        """Notify all subscribers.
+
+        This method is used once there are any status updates on the VPNConnection.
+        Any desired args and kwargs can passed although one that should always be passed is
+        connections_status.
+        """
+        for subscriber, callback in self._subscribers.items():
+            callback(connection_status, *args, **kwargs)
+
+    @classproperty
+    def _priority(self):
         """This value determines which implementation takes precedence.
 
         If no specific implementation has been defined then each connection
@@ -118,6 +177,7 @@ class NMVPNConnection(VPNConnection):
 
     A NMVPNConnection can return a VPNConnection based on protocols such as OpenVPN, IKEv2 or Wireguard.
     """
+    implementation = "networkmanager"
 
     @classmethod
     def get_connection(cls, protocol: str = None, usersettings: object = None):
@@ -134,8 +194,7 @@ class NMVPNConnection(VPNConnection):
         """
         pass
 
-    @classproperty
-    def priority(cls):
+    def _priority(cls):
         return 100
 
     def _setup(self):

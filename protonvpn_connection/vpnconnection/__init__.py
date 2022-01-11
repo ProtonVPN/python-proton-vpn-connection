@@ -1,4 +1,4 @@
 from .vpnconnection import VPNConnection
-from ..networkmanager import NMVPNConnection
+from .networkmanager import NMVPNConnection
 
 __all__ = ["VPNConnection"]

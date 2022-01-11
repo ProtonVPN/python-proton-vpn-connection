@@ -36,10 +36,3 @@ Wireguard
 .. autoclass:: protonvpn_connection.vpnconnection.networkmanager.Wireguard
    :members:
    :show-inheritance:
-
-Exceptions
-----------
-
-.. automodule:: protonvpn_connection.vpnconnection.exceptions
-   :members:
-   :inherited-members:

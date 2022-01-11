@@ -7,10 +7,11 @@ Welcome to python-protonvpn-connection's documentation!
 =======================================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
 
    vpnconnection
+   nmvpnconnection
    abstracts
 
 

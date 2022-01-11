@@ -45,6 +45,7 @@ class AbstractVPNServer(ABC):
     @property
     def servername(self):
         """Optional.
+
         :return: human readeable value
         :rtype: str
         """
@@ -57,7 +58,7 @@ class AbstractVPNAccount(ABC):
     For credentials to be corrected fetched, the object being passed
     should have a method get_username_and_password() that return a named
     tuple. Usage example:
-    .. ::
+    ::
 
         user_pass_tuple = vpnaccount.get_username_and_password()
         username = user_pass_tuple.username
@@ -85,6 +86,7 @@ class AbstractUserSettings(ABC):
     @property
     def protocol(self) -> str:
         """Optional.
+
         :return: protocol value: tcp | udp | wg
         :rtype: str
         """
@@ -93,22 +95,25 @@ class AbstractUserSettings(ABC):
     @property
     def custom_dns_list(self) -> List[str]:
         """Optional.
+
         :return: a list with alternative IPs for DNS queries
         :rtype: List[str]
         """
-        return None
+        return []
 
     @property
     def split_tunneling(self) -> List[str]:
         """Optional.
+
         :return: a list with IPs to exclude from VPN tunnel
         :rtype: List[str]
         """
-        return None
+        return []
 
     @property
     def netshield(self) -> str:
         """Optional.
+
         :return: netshield configuration value. Incorrect values are ignored by the server
         :rtype: List[str]
         """

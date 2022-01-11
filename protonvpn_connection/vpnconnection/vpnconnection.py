@@ -9,29 +9,13 @@ class classproperty(property):
 
 
 class VPNConnection:
-    """VPN connection factory.
+    """VPN connection.
 
     Allows to instantiate a VPN connection.
-    The VPNConnection constructor needs to be passed four different objects
-    that provide different types of information.
-
-    vpnserver:
-        - vpnserver should always provide a server_ip, domain, tcp_ports
-          and udp_ports properties.
-          Servername is optional is not entirely necessary to provide, unless
-          you would like to have a custom name for the connection.
-
-        - Properties:
-            - server_ip -> str
-            - domain -> str
-            - servername -> str | None
-            - tcp_ports -> [int]
-            - udp_ports -> [int]
-
-    vpnaccount:
-        - vpnaccount should provide the following properties:
-        - Methods:
-            get_username_and_password -> namedtuple(username, password)
+    The VPNConnection constructor needs to be passed two objects
+    that provide different types of information for configuration,
+    thus these objects either implement the interfaces AbstractVPNServer and 
+    AbstractVPNAccount or just implement the necessary signatures.
 
     Basic Usage:
     ::

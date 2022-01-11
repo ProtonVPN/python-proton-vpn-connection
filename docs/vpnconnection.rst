@@ -7,6 +7,7 @@ VPNConnection
 .. autoclass:: protonvpn_connection.vpnconnection.VPNConnection
    :members:
    :private-members:
+   :special-members: __init__
 
 NMVPNConnection
 -------------
@@ -14,7 +15,6 @@ NMVPNConnection
 .. autoclass:: protonvpn_connection.vpnconnection.NMVPNConnection
    :members:
    :show-inheritance:
-   :special-members: __init__
    :private-members:
 
 OpenVPN
@@ -23,7 +23,6 @@ OpenVPN
 .. autoclass:: protonvpn_connection.vpnconnection.OpenVPN
    :members:
    :show-inheritance:
-   :special-members: __init__
 
 OpenVPNTCP
 -------
@@ -31,7 +30,6 @@ OpenVPNTCP
 .. autoclass:: protonvpn_connection.vpnconnection.OpenVPNTCP
    :members:
    :show-inheritance:
-   :special-members: __init__
 
 OpenVPNUDP
 -------
@@ -39,7 +37,6 @@ OpenVPNUDP
 .. autoclass:: protonvpn_connection.vpnconnection.OpenVPNUDP
    :members:
    :show-inheritance:
-   :special-members: __init__
 
 Wireguard
 -------
@@ -47,7 +44,6 @@ Wireguard
 .. autoclass:: protonvpn_connection.vpnconnection.Wireguard
    :members:
    :show-inheritance:
-   :special-members: __init__
 
 Exceptions
 ----------

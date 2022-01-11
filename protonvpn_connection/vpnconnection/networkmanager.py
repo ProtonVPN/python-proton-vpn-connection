@@ -1,3 +1,4 @@
+from .vpnconnection import VPNConnection
 
 class NMVPNConnection(VPNConnection):
     """Returns VPN connections based on Network Manager implementation.

@@ -1,4 +1,5 @@
 from abc import ABC
+from typing import List
 
 
 class AbstractVPNServer(ABC):
@@ -43,7 +44,7 @@ class AbstractVPNServer(ABC):
 
     @property
     def servername(self):
-        """Optional
+        """Optional.
         :return: human readeable value
         :rtype: str
         """
@@ -71,3 +72,44 @@ class AbstractVPNAccount(ABC):
         :rtype: namedtuple(username, password)
         """
         raise NotImplementedError
+
+
+class AbstractUserSettings(ABC):
+    """Abstract user settings.
+
+    This is completly optional. If you would like to pass some specific configurations
+    then you should follow this signature. Either create own class that provides the
+    specified properties below or implement the abstract class directly and only
+    override the necessary methods.
+    """
+    @property
+    def protocol(self) -> str:
+        """Optional.
+        :return: protocol value: tcp | udp | wg
+        :rtype: str
+        """
+        return None
+
+    @property
+    def custom_dns_list(self) -> List[str]:
+        """Optional.
+        :return: a list with alternative IPs for DNS queries
+        :rtype: List[str]
+        """
+        return None
+
+    @property
+    def split_tunneling(self) -> List[str]:
+        """Optional.
+        :return: a list with IPs to exclude from VPN tunnel
+        :rtype: List[str]
+        """
+        return None
+
+    @property
+    def netshield(self) -> str:
+        """Optional.
+        :return: netshield configuration value. Incorrect values are ignored by the server
+        :rtype: List[str]
+        """
+        return None

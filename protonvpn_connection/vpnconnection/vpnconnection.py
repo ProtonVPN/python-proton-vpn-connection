@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from typing import Callable
-from ..abstract_interfaces import AbstractVPNServer, AbstractVPNAccount
+from ..abstract_interfaces import AbstractVPNServer, AbstractVPNAccount, AbstractUserSettings
 
 
 class classproperty(property):
@@ -67,7 +67,7 @@ class VPNConnection:
     def get_from_factory(
         cls,
         protocol: str = None,
-        usersettings: object = None,
+        usersettings: AbstractUserSettings = None,
         connection_implementation: str = None,
     ):
         """Get a vpn connection from factory.
@@ -76,10 +76,9 @@ class VPNConnection:
                 protocol to connect with, all in smallcaps
             :type protocol: str
             :param usersettings: Optional.
-                If it's passed then it should provide the following properties:
-                - custom_dns_list -> [str] - A list of custom IPs to use for DNS
-                - split_tunnleing -> [str] - A list of IPs to exclude from VPN
-                - smart_routing -> bool - If smart routing is to be used or not
+                Provide an instance that implements AbstractUserSettings or
+                provide an instance that simply exposes methods to match the
+                signature of AbstractUserSettings.
             :type usersettings: object
             :param connection_implementation: Optional.
                 By default, get_vpnconnection() will always return based on NM implementation, although

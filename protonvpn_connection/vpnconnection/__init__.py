@@ -1,3 +1,3 @@
-from .vpnconnection import VPNConnectionFactory
+from .vpnconnection import VPNConnection, NMVPNConnection, OpenVPN, OpenVPNTCP, OpenVPNUDP, Wireguard
 
-__all__ = ["VPNConnectionFactory"]
+__all__ = ["VPNConnection", "NMVPNConnection", "OpenVPN", "OpenVPNTCP", "OpenVPNUDP", "Wireguard"]

@@ -5,7 +5,8 @@ VPNConnection
 -------------
 
 .. autoclass:: protonvpn_connection.vpnconnection.VPNConnection
-    :members:
+   :members:
+   :private-members:
 
 NMVPNConnection
 -------------
@@ -14,6 +15,7 @@ NMVPNConnection
    :members:
    :show-inheritance:
    :special-members: __init__
+   :private-members:
 
 OpenVPN
 -------
@@ -22,7 +24,6 @@ OpenVPN
    :members:
    :show-inheritance:
    :special-members: __init__
-
 
 OpenVPNTCP
 -------

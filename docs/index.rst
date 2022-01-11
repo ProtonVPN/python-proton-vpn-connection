@@ -11,6 +11,7 @@ Welcome to python-protonvpn-connection's documentation!
    :caption: Contents:
 
    vpnconnection
+   abstracts
 
 
 Indices and tables

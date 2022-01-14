@@ -216,10 +216,15 @@ class OpenVPNUDP(OpenVPN):
     protocol = "udp"
 
     def _setup(self):
-        pass
+        from ..vpnconfiguration import OVPNFileConfig
+        vpnconfig = OVPNFileConfig(self._vpnserver, self._vpnaccount, self._settings)
+        vpnconfig.protocol = self.protocol
+        self._configure_connection(vpnconfig)
+        self._add_connection_async(self.connection)
 
     def up(self):
-        pass
+        self._setup()
+        self._start_connection_async(self._get_protonvpn_connection())
 
     def down(self):
         pass

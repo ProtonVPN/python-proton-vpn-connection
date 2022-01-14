@@ -75,25 +75,16 @@ class AbstractVPNAccount(ABC):
         raise NotImplementedError
 
 
-class AbstractUserSettings(ABC):
-    """Abstract user settings.
+class AbstractSettings(ABC):
+    """Abstract settings.
 
-    This is completly optional. If you would like to pass some specific configurations
-    then you should follow this signature. Either create own class that provides the
+    This is completly optional. If you would like to pass some specific settings for VPN
+    configuration then you should follow this signature. Either create own class that provides the
     specified properties below or implement the abstract class directly and only
     override the necessary methods.
     """
     @property
-    def protocol(self) -> str:
-        """Optional.
-
-        :return: protocol value: tcp | udp | wg
-        :rtype: str
-        """
-        return None
-
-    @property
-    def custom_dns_list(self) -> List[str]:
+    def dns_custom_ips(self) -> List[str]:
         """Optional.
 
         :return: a list with alternative IPs for DNS queries
@@ -102,7 +93,7 @@ class AbstractUserSettings(ABC):
         return []
 
     @property
-    def split_tunneling(self) -> List[str]:
+    def split_tunneling_ips(self) -> List[str]:
         """Optional.
 
         :return: a list with IPs to exclude from VPN tunnel

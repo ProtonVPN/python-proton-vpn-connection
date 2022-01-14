@@ -66,7 +66,7 @@ class NMConnection(VPNConnection, NMClientMixin):
 
         return connection
 
-    def _get_protonvpn_connection(self):
+    def _get_protonvpn_connection(self, from_active=False):
         """Get ProtonVPN connection.
 
         Returns:
@@ -75,8 +75,12 @@ class NMConnection(VPNConnection, NMClientMixin):
             - NetworkManagerConnectionTypeEnum.ACTIVE: NM.ActiveConnection
         """
         protonvpn_connection = False
+        if from_active:
+            conn_list = self.nm_client.get_active_connections()
+        else:
+            conn_list = self.nm_client.get_connections()
 
-        for conn in self.nm_client.get_connections():
+        for conn in conn_list:
             if conn.get_connection_type() == "vpn":
                 conn_for_vpn = conn
 
@@ -191,6 +195,9 @@ class OpenVPN(NMConnection):
             "password", user_data.password
         )
 
+    def down(self):
+        self._remove_connection_async(self._get_protonvpn_connection(True))
+
 
 class OpenVPNTCP(OpenVPN):
     """Creates a OpenVPNTCP connection."""
@@ -207,9 +214,6 @@ class OpenVPNTCP(OpenVPN):
         self._setup()
         self._start_connection_async(self._get_protonvpn_connection())
 
-    def down(self):
-        pass
-
 
 class OpenVPNUDP(OpenVPN):
     """Creates a OpenVPNUDP connection."""
@@ -225,9 +229,6 @@ class OpenVPNUDP(OpenVPN):
     def up(self):
         self._setup()
         self._start_connection_async(self._get_protonvpn_connection())
-
-    def down(self):
-        pass
 
 
 class Wireguard(NMConnection):

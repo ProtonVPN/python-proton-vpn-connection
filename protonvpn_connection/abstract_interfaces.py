@@ -72,7 +72,16 @@ class AbstractVPNAccount(ABC):
         :return: named tuple
         :rtype: namedtuple(username, password)
         """
-        raise NotImplementedError
+        return None
+
+    def get_client_private_wg_key(self):
+        return None
+
+    def get_client_private_openvpn_key(self):
+        return None
+
+    def get_client_api_pem_certificate(self):
+        return None
 
 
 class AbstractSettings(ABC):
@@ -97,7 +106,7 @@ class AbstractSettings(ABC):
         """Optional.
 
         :return: a list with IPs to exclude from VPN tunnel
-        :rtype: List[str]
+        :rtype: List[Dict]
         """
         return []
 
@@ -107,5 +116,14 @@ class AbstractSettings(ABC):
 
         :return: netshield configuration value. Incorrect values are ignored by the server
         :rtype: List[str]
+        """
+        return None
+
+    @property
+    def disable_ipv6(self) -> bool:
+        """Optional.
+
+        :return: if ipv6 should be disabled
+        :rtype: bool
         """
         return None

@@ -15,6 +15,7 @@ class DummySettings(AbstractSettings):
 
 class VPNConfiguration:
     def __init__(self, vpnserver, vpnaccount, settings=None):
+        self._configfile = None
         self._vpnserver = vpnserver
         self._vpnaccount = vpnaccount
         self.settings = settings
@@ -38,34 +39,17 @@ class VPNConfiguration:
         else:
             self._settings = new_value
 
-    @abstractmethod
-    def __enter__(self):
-        pass
-
-    @abstractmethod
-    def __exit__(self):
-        pass
-
-    @abstractmethod
-    def generate(self):
-        pass
-
-
-class OVPNFileConfig(VPNConfiguration):
-    _configfile = None
-    _protocol = None
-
     def __enter__(self):
         # We create the configuration file when we enter,
         # and delete it when we exit.
         # This is a race free way of having temporary files.
         if self._configfile is None:
-            self.__delete_existing_ovpn_configuration()
+            self.__delete_existing_configuration()
             self._configfile = tempfile.NamedTemporaryFile(
                 dir=os.getcwd(), delete=False,
-                prefix='ProtonVPN-', suffix="ovpn", mode='w'
+                prefix='ProtonVPN-', suffix=self.extension, mode='w'
             )
-            self._configfile.write("test")
+            self._configfile.write(self.generate())
             self._configfile.close()
             self._configfile_enter_level = 0
 
@@ -82,25 +66,64 @@ class OVPNFileConfig(VPNConfiguration):
             os.unlink(self._configfile.name)
             self._configfile = None
 
-    def __delete_existing_ovpn_configuration(self):
+    def __delete_existing_configuration(self):
         for file in os.getcwd():
-            if file.endswith(".ovpn"):
+            if file.endswith(".{}".format(self.extension)):
                 os.remove(
                     os.path.join(os.getcwd(), file)
                 )
 
+    @abstractmethod
     def generate(self):
-        """Method that generates a vpn certificate.
+        pass
+
+
+class OVPNFileConfig(VPNConfiguration):
+    extension = ".ovpn"
+    _protocol = None
+    _is_certificate = False
+
+    @property
+    def is_certificate(self):
+        return self._is_certificate
+
+    @is_certificate.setter
+    def is_certificate(self, new_value):
+        self._is_certificate = new_value
+
+    def generate(self):
+        """Method that generates a vpn config file.
 
         Returns:
             string: configuration file
         """
 
+        ports = self._vpnserver.tcp_ports if "tcp" == self.protocol else self._vpnserver.udp_ports
+
         j2_values = {
             "openvpn_protocol": self._protocol,
-            "serverlist": [self._physical_server.entry_ip],
-            "openvpn_ports": self.ports,
+            "serverlist": [self._vpnserver.server_ip],
+            "openvpn_ports": ports,
+            "ipv6_disabled": self._settings.disable_ipv6,
+            "certificate_based": self._is_certificate,
+            "split": True if len(self._settings.split_tunneling_ips) > 0 else False,
         }
+        if self._is_certificate:
+            j2_values["cert"] = self._vpnaccount.get_client_api_pem_certificate()
+            j2_values["priv_key"] = self._vpnaccount.get_client_private_openvpn_key()
+
+        if len(self._settings.split_tunneling_ips) > 0:
+            ip_nm_pairs = []
+            for ip in self._settings.split_tunneling_ips:
+                if "/" in ip:
+                    ip, cidr = ip.split("/")
+                    netmask = self._cidr_to_netmask(int(cidr))
+                else:
+                    ip = ip
+
+                ip_nm_pairs.append({"ip": ip, "nm": netmask})
+
+            j2_values["ip_nm_pair"] = ip_nm_pairs
 
         j2 = Environment(loader=FileSystemLoader(TEMPLATE_FOLDER))
 
@@ -110,6 +133,11 @@ class OVPNFileConfig(VPNConfiguration):
             return template.render(j2_values)
         except jinja2.exceptions.TemplateNotFound as e:
             raise jinja2.exceptions.TemplateNotFound(e)
+
+    def _cidr_to_netmask(self, cidr):
+        import ipaddress
+        subnet = ipaddress.IPv4Network("0.0.0.0/{0}".format(cidr))
+        return str(subnet.netmask)
 
 
 class WireguardFileConfig(VPNConfiguration):

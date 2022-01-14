@@ -50,7 +50,7 @@ persist-tun
 reneg-sec 0
 
 remote-cert-tls server
-{%- if !certificate_based %}
+{%- if not certificate_based %}
 auth-user-pass
 {%- endif %}
 pull

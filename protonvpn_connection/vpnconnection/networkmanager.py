@@ -54,6 +54,7 @@ class OpenVPNTCP(OpenVPN):
     def _setup(self):
         from ..vpnconfiguration import OVPNFileConfig
         vpnconfig = OVPNFileConfig(self._vpnserver, self._vpnaccount, self._settings)
+        vpnconfig.protocol = self.protocol
         with vpnconfig as f:
             print(f)
             # import with pluging tool

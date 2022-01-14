@@ -1,15 +1,9 @@
 from .vpnconnection import VPNConnection
 
 
-class NMConnection(VPNConnection):
-    """Returns VPN connections based on Network Manager implementation.
-
-    This is the default backend that will be returned. See docstring for
-    VPNConnection.get_vpnconnection() for further explanation on how priorities work.
-
-    A NMConnection can return a VPNConnection based on protocols such as OpenVPN, IKEv2 or Wireguard.
-    """
-    implementation = "networkmanager"
+class NativeConnection(VPNConnection):
+    """Dummy class to emulate native implementation"""
+    implementation = "native"
 
     @classmethod
     def factory(cls, protocol: str = None):
@@ -24,7 +18,7 @@ class NMConnection(VPNConnection):
 
     @staticmethod
     def _priority():
-        return 100
+        return 101
 
     def _setup(self):
         raise NotImplementedError
@@ -36,7 +30,7 @@ class NMConnection(VPNConnection):
         raise NotImplementedError
 
 
-class OpenVPN(NMConnection):
+class OpenVPN(NativeConnection):
 
     @staticmethod
     def get_by_protocol(protocol: str):
@@ -52,16 +46,10 @@ class OpenVPNTCP(OpenVPN):
     protocol = "tcp"
 
     def _setup(self):
-        from ..vpnconfiguration import OVPNFileConfig
-        vpnconfig = OVPNFileConfig(self._vpnserver, self._vpnaccount, self._settings)
-        with vpnconfig as f:
-            print(f)
-            # import with pluging tool
-            # add connection to NM
+        pass
 
     def up(self):
-        self._setup()
-        # start connection
+        pass
 
     def down(self):
         pass
@@ -81,7 +69,7 @@ class OpenVPNUDP(OpenVPN):
         pass
 
 
-class Wireguard(NMConnection):
+class Wireguard(NativeConnection):
     """Creates a Wireguard connection."""
     protocol = "wg"
 

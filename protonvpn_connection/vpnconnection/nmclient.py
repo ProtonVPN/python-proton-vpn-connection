@@ -7,6 +7,14 @@ class NMClient:
     nm_client = NM.Client.new(None)
     main_loop = GLib.MainLoop()
 
+    def _commit_changes_async(self, new_connection):
+        new_connection.commit_changes_async(True,None,self.__dynamic_callback,
+                                        dict(
+                                        callback_type="commit",
+                                        conn_name=new_connection.get_id(),
+                                        ))
+        self.main_loop.run()
+
     def _add_connection_async(self, connection):
         self.nm_client.add_connection_async(
             connection,
@@ -99,6 +107,10 @@ class NMClient:
                 stop=dict(
                     finish_function=NM.Client.deactivate_connection_finish,
                     msg="stopped"
+                ),
+                commit=dict(
+                    finish_function=NM.RemoteConnection.commit_changes_finish,
+                    msg="commit"
                 )
             )
 

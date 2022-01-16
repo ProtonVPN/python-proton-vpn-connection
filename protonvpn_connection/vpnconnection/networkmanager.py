@@ -321,12 +321,46 @@ class Wireguard(NMConnection):
     """Creates a Wireguard connection."""
     protocol = "wireguard"
     _persistence_prefix = "nm_openvpn_{}_".format(protocol)
+    virtual_device_name = "proton0"
+    connection = None
 
     def _setup(self):
-        pass
+        import uuid
+        import dbus
+        import socket
+
+        UID=str(uuid.uuid4())
+        s_con = dbus.Dictionary({"type": "wireguard", "uuid": UID, "id":Wireguard.virtual_device_name, "interface-name" : Wireguard.virtual_device_name})
+        con = dbus.Dictionary( {"connection": s_con} )
+        bus = dbus.SystemBus()
+        proxy = bus.get_object("org.freedesktop.NetworkManager", "/org/freedesktop/NetworkManager/Settings")
+        settings = dbus.Interface(proxy, "org.freedesktop.NetworkManager.Settings")
+        settings.AddConnection(con)
+        nm_client = NM.Client.new(None)
+        new_con = nm_client.get_connection_by_uuid(UID)
+        s_wg = new_con.get_setting(NM.SettingWireGuard)
+        #https://lazka.github.io/pgi-docs/NM-1.0/classes/Connection.html#NM.Connection.get_setting
+        ip4 = new_con.get_setting_ip4_config()
+        ip4.set_property('method','manual')
+        s_wg.set_property(NM.SETTING_WIREGUARD_PRIVATE_KEY,self._vpnaccount.get_client_private_wg_key())
+        ip4.add_address(NM.IPAddress(socket.AF_INET,'10.2.0.2',32))
+        ip4.add_dns('10.2.0.1')
+        ip4.add_dns_search('~')
+        ipv6_config = new_con.get_setting_ip6_config()
+        ipv6_config.props.dns_priority = -1500
+        ip4.props.dns_priority = -1500
+        peer = NM.WireGuardPeer()
+        peer.set_public_key(self._vpnserver.x25519pk, True)
+        peer.set_endpoint(f'{self._vpnserver.server_ip}:{self._vpnserver.udp_ports[0]}', True)
+        peer.append_allowed_ip('0.0.0.0/0', False)
+        s_wg.append_peer(peer)
+        new_con.commit_changes(True, None)
+        self._commit_changes_async(new_con)
+        Wireguard.connection=new_con
 
     def up(self):
-        pass
+        self._setup()
+        self._start_connection_async(Wireguard.connection)
 
     def down(self):
         pass

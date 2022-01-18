@@ -53,6 +53,12 @@ class NativeConnection(VPNConnection):
 
     @classmethod
     def _get_connection(cls):
+        classes = [OpenVPN]
+
+        for _class in classes:
+            vpnconnection = _class.get_current_connection()
+            if vpnconnection._get_protonvpn_connection():
+                return vpnconnection
         return None
 
     @staticmethod
@@ -312,6 +318,9 @@ class OpenVPN(NativeConnection):
         res._read_props_file()
         res._subprocess=None
         return res
+
+    def _get_protonvpn_connection(self):
+        return True
 
 
 class OpenVPNTCP(OpenVPN):

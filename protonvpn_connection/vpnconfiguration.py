@@ -47,7 +47,7 @@ class VPNConfiguration:
         if self._configfile is None:
             self.__delete_existing_configuration()
             self._configfile = tempfile.NamedTemporaryFile(
-                dir=ExecutionEnvironment.path_runtime, delete=False,
+                dir=ExecutionEnvironment().path_runtime, delete=False,
                 prefix='ProtonVPN-', suffix=self.extension, mode='w'
             )
             self._configfile.write(self.generate())

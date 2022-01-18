@@ -93,6 +93,16 @@ class VPNConnection:
 
         return implementations[0].factory(protocol)
 
+    @classmethod
+    def get_current_connection(self):
+        from .networkmanager import NMConnection
+        from .native import NativeConnection
+        implementations = [NMConnection, NativeConnection]
+        for implementation in implementations:
+            conn = implementation._get_connection()
+            if conn:
+                return conn
+
     def register(self, who: str, callback: Callable = None):
         """Register subscribers.
 
@@ -150,6 +160,10 @@ class VPNConnection:
 
         """
         raise NotImplementedError
+
+    @abstractmethod
+    def _get_connection(self):
+        pass
 
     @abstractmethod
     def up(self):

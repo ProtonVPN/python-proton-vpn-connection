@@ -16,6 +16,10 @@ class NativeConnection(VPNConnection):
         elif "wireguard" in protocol:
             return Wireguard
 
+    @classmethod
+    def _get_connection(cls):
+        return None
+
     @staticmethod
     def _priority():
         return 101

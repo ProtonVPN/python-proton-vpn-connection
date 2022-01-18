@@ -109,7 +109,8 @@ class NMClientMixin:
                 conn_name,
                 callback_type_dict[callback_type]["msg"]
             )
+            print(msg)
         except Exception as e:
-            print(msg, e)
+            print(e)
 
         self.main_loop.quit()

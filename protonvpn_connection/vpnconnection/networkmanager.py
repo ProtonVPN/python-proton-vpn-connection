@@ -27,8 +27,17 @@ class NMConnection(VPNConnection, NMClientMixin):
         elif "wireguard" in protocol:
             return Wireguard
 
-    @staticmethod
-    def _priority():
+    @classmethod
+    def _get_connection(cls):
+        classes = [OpenVPNTCP, OpenVPNUDP, Wireguard]
+
+        for _class in classes:
+            vpnconnection = _class(None, None)
+            if vpnconnection._get_protonvpn_connection():
+                return vpnconnection
+
+    @classmethod
+    def _priority(cls):
         return 100
 
     def _setup(self):
@@ -62,11 +71,11 @@ class NMConnection(VPNConnection, NMClientMixin):
 
         # https://lazka.github.io/pgi-docs/NM-1.0/classes/Connection.html#NM.Connection.normalize
         if connection.normalize():
-            print("Connection normalized")
+            pass
 
         return connection
 
-    def _get_protonvpn_connection(self, from_active=False):
+    def _get_protonvpn_connection(self):
         """Get ProtonVPN connection.
 
         Returns:
@@ -74,29 +83,39 @@ class NMConnection(VPNConnection, NMClientMixin):
             - NetworkManagerConnectionTypeEnum.ALL: NM.RemoteConnection
             - NetworkManagerConnectionTypeEnum.ACTIVE: NM.ActiveConnection
         """
-        protonvpn_connection = False
-        if from_active:
-            conn_list = self.nm_client.get_active_connections()
-        else:
-            conn_list = self.nm_client.get_connections()
 
-        for conn in conn_list:
-            if conn.get_connection_type() == "vpn":
-                conn_for_vpn = conn
+        active_conn_list = self.nm_client.get_active_connections()
+        non_active_conn_list = self.nm_client.get_connections()
 
-                try:
-                    vpn_settings = conn_for_vpn.get_setting_vpn()
-                except AttributeError:
-                    continue
+        all_conn_list = active_conn_list + non_active_conn_list
 
-                if (
-                    vpn_settings.get_data_item("dev")
-                    == self.virtual_device_name
-                ):
-                    protonvpn_connection = conn
-                    break
+        self._ensure_unique_id_is_set()
+        if not self.unique_id:
+            return None
 
-        return protonvpn_connection
+        for conn in all_conn_list:
+            if conn.get_connection_type() != "vpn":
+                continue
+
+            if conn.get_uuid() == self.unique_id:
+                return conn
+
+        return None
+
+    def _ensure_unique_id_is_set(self):
+        from ..persistence import ConnectionPeristence
+        persistence = ConnectionPeristence()
+
+        try:
+            if not self.unique_id:
+                self.unique_id = persistence.get_persisted(self._persistence_prefix)
+        except AttributeError:
+            self.unique_id = persistence.get_persisted(self._persistence_prefix)
+
+        if not self.unique_id:
+            return
+
+        self.unique_id = self.unique_id.replace(self._persistence_prefix, "")
 
 
 class OpenVPN(NMConnection):
@@ -116,12 +135,13 @@ class OpenVPN(NMConnection):
 
         self.vpn_settings = self.connection.get_setting_vpn()
         self.connection_settings = self.connection.get_setting_connection()
+        self.unique_id = self.connection_settings.get_uuid()
 
         self.make_vpn_user_owned()
         self.add_server_certificate_check()
         self.dns_configurator()
         self.set_custom_connection_id()
-        self.apply_virtual_device_type()
+        self.persist_connection()
 
         if not cert_based:
             self.add_vpn_credentials()
@@ -171,12 +191,6 @@ class OpenVPN(NMConnection):
         except AttributeError:
             self.connection_settings.props.id = "ProtonVPN Connection"
 
-    def apply_virtual_device_type(self):
-        """Apply virtual device type and name."""
-        # Changes virtual tunnel name
-        self.vpn_settings.add_data_item("dev", self.virtual_device_name)
-        self.vpn_settings.add_data_item("dev-type", "tun")
-
     def add_vpn_credentials(self):
         """Add OpenVPN credentials to ProtonVPN connection.
 
@@ -195,13 +209,26 @@ class OpenVPN(NMConnection):
             "password", user_data.password
         )
 
+    def persist_connection(self):
+        from ..persistence import ConnectionPeristence
+        persistence = ConnectionPeristence()
+        conn_id = self._persistence_prefix + self.unique_id
+        persistence.persist(conn_id)
+
     def down(self):
-        self._remove_connection_async(self._get_protonvpn_connection(True))
+        self._remove_connection_async(self._get_protonvpn_connection())
+
+    def _remove_connection_persistence(self):
+        from ..persistence import ConnectionPeristence
+        persistence = ConnectionPeristence()
+        conn_id = self._persistence_prefix + self.unique_id
+        persistence.remove_persist(conn_id)
 
 
 class OpenVPNTCP(OpenVPN):
     """Creates a OpenVPNTCP connection."""
     protocol = "tcp"
+    _persistence_prefix = "nm_openvpn_tcp_"
 
     def _setup(self):
         from ..vpnconfiguration import OVPNFileConfig
@@ -218,6 +245,7 @@ class OpenVPNTCP(OpenVPN):
 class OpenVPNUDP(OpenVPN):
     """Creates a OpenVPNUDP connection."""
     protocol = "udp"
+    _persistence_prefix = "nm_openvpn_udp_"
 
     def _setup(self):
         from ..vpnconfiguration import OVPNFileConfig
@@ -233,7 +261,8 @@ class OpenVPNUDP(OpenVPN):
 
 class Wireguard(NMConnection):
     """Creates a Wireguard connection."""
-    protocol = "wg"
+    protocol = "wireguard"
+    _persistence_prefix = "nm_openvpn_wireguard_"
 
     def _setup(self):
         pass

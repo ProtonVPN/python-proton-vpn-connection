@@ -3,10 +3,10 @@ from .vpnconnection import VPNConnection
 import gi
 gi.require_version("NM", "1.0")
 from gi.repository import NM
-from .nmclient import NMClientMixin
+from .nmclient import NMClient
 
 
-class NMConnection(VPNConnection, NMClientMixin):
+class NMConnection(VPNConnection, NMClient):
     """Returns VPN connections based on Network Manager implementation.
 
     This is the default backend that will be returned. See docstring for
@@ -89,7 +89,7 @@ class NMConnection(VPNConnection, NMClientMixin):
 
         all_conn_list = active_conn_list + non_active_conn_list
 
-        self._ensure_unique_id_is_set()
+        self.__ensure_unique_id_is_set()
         if not self.unique_id:
             return None
 
@@ -107,7 +107,24 @@ class NMConnection(VPNConnection, NMClientMixin):
 
         return None
 
-    def _ensure_unique_id_is_set(self):
+    def __ensure_unique_id_is_set(self):
+        """Ensure that the unique id is set
+
+        It is crucial that unique_id is always set and current. The only times
+        where it can be empty is when there is no VPN connection.
+
+        Suppose the following:
+        ::
+            vpnconnection = VPNConnection.get_current_connection()
+            if not vpnconnection:
+                print("There is no connection")
+
+        The way to determine if there is connection is through persistence, where
+        the filename is composed of various elemets, where the unique id plays a key
+        part in it (see persist_connection()).
+
+        The unique ID is also used to find connections in NetworkManager.
+        """
         from ..persistence import ConnectionPeristence
         persistence = ConnectionPeristence()
 
@@ -122,6 +139,39 @@ class NMConnection(VPNConnection, NMClientMixin):
 
         self.unique_id = self.unique_id.replace(self._persistence_prefix, "")
 
+    def _persist_connection(self):
+        """Persist a connection.
+
+        If for some reason component crashes, we need to know which connection we
+        should be handling. Thus the connection unique ID is prefixed with the protocol
+        and implementation and stored to a file. Ie:
+            - A connection unique ID is 132123-123sdf-12312-fsd
+            - A file is created
+            - The filename and content is: <IMPLEMENTATION>_<PROTOCOl>_132123-123sdf-12312-fsd
+              - where IMPLEMENTATION can be networkmanager or native
+              - where PROTOCOl can be openvpn_tcp, openvpn_udp or wireguard
+
+        Following the previous example, our file will end up being called nm_wireguard_132123-123sdf-12312-fsd,
+        which tells us that we used NetworkManager as an implementation and we've used the Wireguard protocol.
+        Knowing this, we can correctly instatiate for later use.
+        """
+        from ..persistence import ConnectionPeristence
+        persistence = ConnectionPeristence()
+        conn_id = self._persistence_prefix + self.unique_id
+        persistence.persist(conn_id)
+
+    def _remove_connection_persistence(self):
+        """Remove connection persistence.
+
+        Works in the opposite way of _persist_connection. As it removes the peristence
+        file. This is used in conjunction with down, since if the connection is turned down,
+        we don't want to keep any persistence files.
+        """
+        from ..persistence import ConnectionPeristence
+        persistence = ConnectionPeristence()
+        conn_id = self._persistence_prefix + self.unique_id
+        persistence.remove_persist(conn_id)
+
 
 class OpenVPN(NMConnection):
     virtual_device_name = "proton0"
@@ -135,40 +185,56 @@ class OpenVPN(NMConnection):
         else:
             return OpenVPNUDP
 
-    def _configure_connection(self, vpnconfig, cert_based=False):
+    def down(self):
+        self._remove_connection_async(self._get_protonvpn_connection())
+        self._remove_connection_persistence()
+
+    def _configure_connection(self, vpnconfig):
+        """Configure imported vpn connection.
+
+            :param vpnconfig: vpn configuration object.
+            :type vpnconfig: VPNConfiguration
+
+        It also uses vpnserver, vpnaccount and settings for the following reasons:
+            - vpnserver is used to fetch domain, servername (optioanl)
+            - vpnaccount is used to fetch username/password for non-certificate based connections
+            - settings is used to fetch dns settings
+
+        """
         self.connection = self._import_vpn_config(vpnconfig)
 
-        self.vpn_settings = self.connection.get_setting_vpn()
-        self.connection_settings = self.connection.get_setting_connection()
-        self.unique_id = self.connection_settings.get_uuid()
+        self.__vpn_settings = self.connection.get_setting_vpn()
+        self.__connection_settings = self.connection.get_setting_connection()
 
-        self.make_vpn_user_owned()
-        self.add_server_certificate_check()
-        self.dns_configurator()
-        self.set_custom_connection_id()
-        self.persist_connection()
+        self.unique_id = self.__connection_settings.get_uuid()
 
-        if not cert_based:
-            self.add_vpn_credentials()
+        self.__make_vpn_user_owned()
+        self.__add_server_certificate_check()
+        self.__configure_dns()
+        self.__set_custom_connection_id()
+        self._persist_connection()
 
-    def make_vpn_user_owned(self):
+        if not vpnconfig.is_certificate:
+            self.__add_vpn_credentials()
+
+    def __make_vpn_user_owned(self):
         # returns NM.SettingConnection
         # https://lazka.github.io/pgi-docs/NM-1.0/classes/SettingConnection.html#NM.SettingConnection
         from getpass import getuser
 
-        self.connection_settings.add_permission(
+        self.__connection_settings.add_permission(
             "user",
             getuser(),
             None
         )
 
-    def add_server_certificate_check(self):
+    def __add_server_certificate_check(self):
         appened_domain = "name:" + self._vpnserver.domain
-        self.vpn_settings.add_data_item(
+        self.__vpn_settings.add_data_item(
             "verify-x509-name", appened_domain
         )
 
-    def dns_configurator(self):
+    def __configure_dns(self):
         """Apply dns configurations to ProtonVPN connection."""
 
         ipv4_config = self.connection.get_setting_ip4_config()
@@ -189,14 +255,14 @@ class OpenVPN(NMConnection):
 
         ipv4_config.props.dns = custom_dns
 
-    def set_custom_connection_id(self):
+    def __set_custom_connection_id(self):
         try:
-            self.connection_settings.props.id = "ProtonVPN {}".foramt(
+            self.__connection_settings.props.id = "ProtonVPN {}".format(
                 self._vpnserver.servername if self._vpnserver.servername else "Connection")
         except AttributeError:
-            self.connection_settings.props.id = "ProtonVPN Connection"
+            self.__connection_settings.props.id = "ProtonVPN Connection"
 
-    def add_vpn_credentials(self):
+    def __add_vpn_credentials(self):
         """Add OpenVPN credentials to ProtonVPN connection.
 
         Args:
@@ -207,33 +273,18 @@ class OpenVPN(NMConnection):
         # https://lazka.github.io/pgi-docs/NM-1.0/classes/SettingVpn.html
         user_data = self._vpnaccount.get_username_and_password()
 
-        self.vpn_settings.add_data_item(
+        self.__vpn_settings.add_data_item(
             "username", user_data.username
         )
-        self.vpn_settings.add_secret(
+        self.__vpn_settings.add_secret(
             "password", user_data.password
         )
-
-    def persist_connection(self):
-        from ..persistence import ConnectionPeristence
-        persistence = ConnectionPeristence()
-        conn_id = self._persistence_prefix + self.unique_id
-        persistence.persist(conn_id)
-
-    def down(self):
-        self._remove_connection_async(self._get_protonvpn_connection())
-
-    def _remove_connection_persistence(self):
-        from ..persistence import ConnectionPeristence
-        persistence = ConnectionPeristence()
-        conn_id = self._persistence_prefix + self.unique_id
-        persistence.remove_persist(conn_id)
 
 
 class OpenVPNTCP(OpenVPN):
     """Creates a OpenVPNTCP connection."""
     protocol = "tcp"
-    _persistence_prefix = "nm_openvpn_tcp_"
+    _persistence_prefix = "nm_openvpn_{}_".format(protocol)
 
     def _setup(self):
         from ..vpnconfiguration import OVPNFileConfig
@@ -250,7 +301,7 @@ class OpenVPNTCP(OpenVPN):
 class OpenVPNUDP(OpenVPN):
     """Creates a OpenVPNUDP connection."""
     protocol = "udp"
-    _persistence_prefix = "nm_openvpn_udp_"
+    _persistence_prefix = "nm_openvpn_{}_".format(protocol)
 
     def _setup(self):
         from ..vpnconfiguration import OVPNFileConfig
@@ -267,7 +318,7 @@ class OpenVPNUDP(OpenVPN):
 class Wireguard(NMConnection):
     """Creates a Wireguard connection."""
     protocol = "wireguard"
-    _persistence_prefix = "nm_openvpn_wireguard_"
+    _persistence_prefix = "nm_openvpn_{}_".format(protocol)
 
     def _setup(self):
         pass

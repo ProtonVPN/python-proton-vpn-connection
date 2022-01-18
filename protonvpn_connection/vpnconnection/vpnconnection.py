@@ -44,11 +44,11 @@ class VPNConnection:
             :type vpnserver: object
             :param vpnaccount: AbstractVPNAccount type or same signature as AbstractVPNAccount.
             :type vpnaccount: object
-            :param usersettings: Optional.
+            :param settings: Optional.
                 Provide an instance that implements AbstractSettings or
                 provide an instance that simply exposes methods to match the
                 signature of AbstractSettings.
-            :type usersettings: object
+            :type settings: object
 
         This will set the interal properties which will be used by each implementation/protocol
         to create its configuration file, so that it's ready to establish a VPN connection.

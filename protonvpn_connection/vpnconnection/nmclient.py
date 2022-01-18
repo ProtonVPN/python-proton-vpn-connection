@@ -3,7 +3,7 @@ gi.require_version("NM", "1.0")
 from gi.repository import NM, GLib
 
 
-class NMClientMixin:
+class NMClient:
     nm_client = NM.Client.new(None)
     main_loop = GLib.MainLoop()
 
@@ -78,8 +78,7 @@ class NMClientMixin:
             data (dict): optional extra data
         """
         callback_type = data.get("callback_type")
-        conn_name = data.get("conn_name")
-        print(callback_type, conn_name)
+        # conn_name = data.get("conn_name")
         try:
             callback_type_dict = dict(
                 remove=dict(
@@ -105,12 +104,11 @@ class NMClientMixin:
 
         try:
             (callback_type_dict[callback_type]["finish_function"])(client, result)
-            msg = "The connection profile \"{}\" has been {}.".format(
-                conn_name,
-                callback_type_dict[callback_type]["msg"]
-            )
-            print(msg)
-        except Exception as e:
-            print(e)
+            # msg = "The connection profile \"{}\" has been {}.".format(
+            #     conn_name,
+            #     callback_type_dict[callback_type]["msg"]
+            # )
+        except Exception:
+            pass
 
         self.main_loop.quit()

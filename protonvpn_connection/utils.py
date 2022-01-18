@@ -1,4 +1,4 @@
-from .metaclasses import Singleton
+from .metaclass import Singleton
 import os
 
 

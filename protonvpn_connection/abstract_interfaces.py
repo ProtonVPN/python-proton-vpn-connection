@@ -27,6 +27,14 @@ class AbstractVPNServer(ABC):
         raise NotImplementedError
 
     @property
+    def x25519(self):
+        """
+        :return: x25519 public key
+        :rtype: str
+        """
+        raise NotImplementedError
+
+    @property
     def tcp_ports(self):
         """
         :return: list with tcp ports

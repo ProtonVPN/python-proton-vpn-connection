@@ -327,14 +327,12 @@ class OpenVPNTCP(OpenVPN):
     """Creates a OpenVPNTCP connection."""
     protocol = "tcp"
 
-    def _setup(self):
-        pass
-
     def up(self):
-        pass
+        self._setup()
+        self._create_process()
 
     def down(self):
-        pass
+        self._disconnect()
 
 
 class OpenVPNUDP(OpenVPN):
@@ -346,10 +344,6 @@ class OpenVPNUDP(OpenVPN):
         self._create_process()
 
     def down(self):
-        # FIXME : This doesn't work if the client code exited.
-        # We need something like :
-        # v=VPNConnection.get_current_connection()
-        # v.down()
         self._disconnect()
 
 class Wireguard(NativeConnection):

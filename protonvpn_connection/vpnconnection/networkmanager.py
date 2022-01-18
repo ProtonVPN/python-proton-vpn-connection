@@ -97,6 +97,11 @@ class NMConnection(VPNConnection, NMClientMixin):
             if conn.get_connection_type() != "vpn":
                 continue
 
+            try:
+                conn = conn.get_connection()
+            except AttributeError:
+                pass
+
             if conn.get_uuid() == self.unique_id:
                 return conn
 

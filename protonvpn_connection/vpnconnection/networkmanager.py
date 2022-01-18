@@ -94,7 +94,7 @@ class NMConnection(VPNConnection, NMClient):
             return None
 
         for conn in all_conn_list:
-            if conn.get_connection_type() != "vpn":
+            if conn.get_connection_type() != "vpn" and conn.get_connection_type()!="wireguard":
                 continue
 
             try:
@@ -320,7 +320,7 @@ class OpenVPNUDP(OpenVPN):
 class Wireguard(NMConnection):
     """Creates a Wireguard connection."""
     protocol = "wireguard"
-    _persistence_prefix = "nm_openvpn_{}_".format(protocol)
+    _persistence_prefix = "nm_wg_{}_".format(protocol)
     virtual_device_name = "proton0"
     connection = None
 
@@ -357,10 +357,15 @@ class Wireguard(NMConnection):
         new_con.commit_changes(True, None)
         self._commit_changes_async(new_con)
         Wireguard.connection=new_con
+        self.unique_id = UID
+        self._persist_connection()
 
     def up(self):
         self._setup()
         self._start_connection_async(Wireguard.connection)
 
+
     def down(self):
+        self._remove_connection_async(self._get_protonvpn_connection())
+        self._remove_connection_persistence()
         pass

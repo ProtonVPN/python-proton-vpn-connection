@@ -43,10 +43,11 @@ class VPNConfiguration:
         # We create the configuration file when we enter,
         # and delete it when we exit.
         # This is a race free way of having temporary files.
+        from .utils import ExecutionEnvironment
         if self._configfile is None:
             self.__delete_existing_configuration()
             self._configfile = tempfile.NamedTemporaryFile(
-                dir=os.getcwd(), delete=False,
+                dir=ExecutionEnvironment.path_runtime, delete=False,
                 prefix='ProtonVPN-', suffix=self.extension, mode='w'
             )
             self._configfile.write(self.generate())

@@ -1,3 +1,4 @@
+openvpn_v2_template = """
 # ==============================================================================
 # Copyright (c) 2016-2020 Proton Technologies AG (Switzerland)
 # Email: contact@protonvpn.com
@@ -138,3 +139,4 @@ aeb893d9a96d1f15519bb3c4dcb40ee3
 {{priv_key}}
 </key>
 {%- endif %}
+"""

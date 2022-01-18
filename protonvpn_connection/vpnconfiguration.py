@@ -3,7 +3,7 @@ import tempfile
 import os
 from .abstract_interfaces import AbstractSettings
 import jinja2
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, BaseLoader
 
 
 TEMPLATE_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "template")
@@ -68,10 +68,11 @@ class VPNConfiguration:
             self._configfile = None
 
     def __delete_existing_configuration(self):
-        for file in os.getcwd():
+        from .utils import ExecutionEnvironment
+        for file in ExecutionEnvironment().path_runtime:
             if file.endswith(".{}".format(self.extension)):
                 os.remove(
-                    os.path.join(os.getcwd(), file)
+                    os.path.join(ExecutionEnvironment().path_runtime, file)
                 )
 
     @abstractmethod
@@ -126,9 +127,8 @@ class OVPNFileConfig(VPNConfiguration):
 
             j2_values["ip_nm_pair"] = ip_nm_pairs
 
-        j2 = Environment(loader=FileSystemLoader(TEMPLATE_FOLDER))
-
-        template = j2.get_template("openvpn_v2_template.j2")
+        from .constants import openvpn_v2_template
+        template = Environment(loader=BaseLoader).from_string(openvpn_v2_template)
 
         try:
             return template.render(j2_values)

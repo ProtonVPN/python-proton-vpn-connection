@@ -96,7 +96,7 @@ class NMConnection(VPNConnection, NMClient):
             return None
 
         for conn in all_conn_list:
-            if conn.get_connection_type() != "vpn" and conn.get_connection_type()!="wireguard":
+            if conn.get_connection_type() != "vpn" and conn.get_connection_type() != "wireguard":
                 continue
 
             try:
@@ -413,8 +413,8 @@ class Wireguard(NMConnection):
 
 
 class StrongswanProperties:
-    #FIXME : Plugin seems to handle private key from a file, not really safe ?
-    #FIXME : see if the plugin can accept anything else than files.
+    # FIXME : Plugin seems to handle private key from a file, not really safe ?
+    # FIXME : see if the plugin can accept anything else than files.
     CA_FILENAME = "protonvpnca.pem"
     PRIVATE_KEY_FILENAME = "key.pem"
     CERT_FILENAME = "cert.pem"
@@ -427,19 +427,17 @@ class Strongswan(NMConnection):
     protocol = "ikev2"
     _persistence_prefix = "nm_{}_".format(protocol)
     virtual_device_name = "proton0"
+
     PEM_CA_FILEPATH = os.path.join(ExecutionEnvironment().path_runtime,StrongswanProperties.CA_FILENAME)
     PRIVKEY_FILEPATH = os.path.join(ExecutionEnvironment().path_runtime,StrongswanProperties.PRIVATE_KEY_FILENAME)
     CERT_FILEPATH = os.path.join(ExecutionEnvironment().path_runtime,StrongswanProperties.CERT_FILENAME)
-
 
     def __generate_unique_id(self):
         import uuid
         self.unique_id = str(uuid.uuid4())
 
     def _setup(self):
-        import uuid
         from ..constants import ca_cert
-
         new_connection = NM.SimpleConnection.new()
 
         s_con = NM.SettingConnection.new()
@@ -449,29 +447,29 @@ class Strongswan(NMConnection):
 
 
         s_vpn = NM.SettingVpn.new()
-        s_vpn.set_property(NM.SETTING_VPN_SERVICE_TYPE,"org.freedesktop.NetworkManager.strongswan")
-        s_vpn.add_data_item("address",self._vpnserver.domain)
-        s_vpn.add_data_item("encap","no")
-        s_vpn.add_data_item("ike","aes256gcm16-ecp384")
-        s_vpn.add_data_item("ipcomp","no")
+        s_vpn.set_property(NM.SETTING_VPN_SERVICE_TYPE, "org.freedesktop.NetworkManager.strongswan")
+        s_vpn.add_data_item("address", self._vpnserver.domain)
+        s_vpn.add_data_item("encap", "no")
+        s_vpn.add_data_item("ike", "aes256gcm16-ecp384")
+        s_vpn.add_data_item("ipcomp", "no")
         s_vpn.add_data_item("password-flags", "1")
         s_vpn.add_data_item("proposal", "no")
-        s_vpn.add_data_item("virtual","yes")
+        s_vpn.add_data_item("virtual", "yes")
 
-        with open(Strongswan.PEM_CA_FILEPATH,'w') as f:
+        with open(Strongswan.PEM_CA_FILEPATH, "w") as f:
             f.write(ca_cert)
-        s_vpn.add_data_item("certificate",Strongswan.PEM_CA_FILEPATH)
+        s_vpn.add_data_item("certificate", Strongswan.PEM_CA_FILEPATH)
 
-        if  self._use_certificate:
-            s_vpn.add_data_item("method","key")
+        if self._use_certificate:
+            s_vpn.add_data_item("method", "key")
             api_cert = self._vpnaccount.get_client_api_pem_certificate()
-            with open(Strongswan.CERT_FILEPATH,'w') as f:
+            with open(Strongswan.CERT_FILEPATH, "w") as f:
                 f.write(api_cert)
             # openvpn key should work.
             priv_key = self._vpnaccount.get_client_private_openvpn_key()
-            with open(Strongswan.PRIVKEY_FILEPATH,'w') as f:
+            with open(Strongswan.PRIVKEY_FILEPATH, "w") as f:
                 f.write(priv_key)
-            s_vpn.add_data_item("usercert",Strongswan.CERT_FILEPATH)
+            s_vpn.add_data_item("usercert", Strongswan.CERT_FILEPATH)
             s_vpn.add_data_item("userkey", Strongswan.PRIVKEY_FILEPATH)
         else:
             pass_creds = self._vpnaccount.get_username_and_password()
@@ -482,14 +480,15 @@ class Strongswan(NMConnection):
         new_connection.add_setting(s_con)
         new_connection.add_setting(s_vpn)
 
-        return new_connection
+        self.connection = new_connection
 
     def up(self):
         self.__generate_unique_id()
-        self.connection=self._setup()
-        self._add_connection_async(self.connection)
-        self._start_connection_async(self._get_protonvpn_connection())
+        self._setup()
         self._persist_connection()
+        self._add_connection_async(self.connection)
+
+        self._start_connection_async(self._get_protonvpn_connection())
 
     def down(self):
         self._remove_connection_async(self._get_protonvpn_connection())

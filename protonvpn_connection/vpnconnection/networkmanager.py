@@ -214,7 +214,7 @@ class OpenVPN(NMConnection):
         self.__set_custom_connection_id()
         self._persist_connection()
 
-        if not vpnconfig.is_certificate:
+        if not vpnconfig.use_certificate:
             self.__add_vpn_credentials()
 
     def __make_vpn_user_owned(self):

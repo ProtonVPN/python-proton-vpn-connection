@@ -21,6 +21,16 @@ class VPNConfiguration:
         self._vpnaccount = vpnaccount
         self.settings = settings
 
+    @property
+    def use_certificate(self):
+        use_certificate = False
+        env_var = os.environ.get("PROTONVPN_USE_CERTIFICATE", False)
+        if isinstance(env_var, str):
+            if env_var.lower() == "true":
+                use_certificate = True
+
+        return use_certificate
+
     @classmethod
     def from_factory(cls, protocol):
         protocols = {
@@ -85,16 +95,6 @@ class VPNConfiguration:
 
 class OVPNConfig(VPNConfiguration):
     extension = ".ovpn"
-    _protocol = None
-    _is_certificate = False
-
-    @property
-    def is_certificate(self):
-        return self._is_certificate
-
-    @is_certificate.setter
-    def is_certificate(self, new_value):
-        self._is_certificate = new_value
 
     def generate(self):
         """Method that generates a vpn config file.
@@ -113,10 +113,10 @@ class OVPNConfig(VPNConfiguration):
             "openvpn_ports": ports,
             "ipv6_disabled": self._settings.disable_ipv6,
             "ca_certificate": ca_cert,
-            "certificate_based": self._is_certificate,
+            "certificate_based": self.use_certificate,
             "split": True if len(self._settings.split_tunneling_ips) > 0 else False,
         }
-        if self._is_certificate:
+        if self.use_certificate:
             j2_values["cert"] = self._vpnaccount.get_client_api_pem_certificate()
             j2_values["priv_key"] = self._vpnaccount.get_client_private_openvpn_key()
 

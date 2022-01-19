@@ -187,6 +187,10 @@ class OpenVPN(NMConnection):
         else:
             return OpenVPNUDP
 
+    def up(self):
+        self._setup()
+        self._start_connection_async(self._get_protonvpn_connection())
+
     def down(self):
         self._remove_connection_async(self._get_protonvpn_connection())
         self._remove_connection_persistence()
@@ -297,10 +301,6 @@ class OpenVPNTCP(OpenVPN):
         self._configure_connection(vpnconfig)
         self._add_connection_async(self.connection)
 
-    def up(self):
-        self._setup()
-        self._start_connection_async(self._get_protonvpn_connection())
-
 
 class OpenVPNUDP(OpenVPN):
     """Creates a OpenVPNUDP connection."""
@@ -315,10 +315,6 @@ class OpenVPNUDP(OpenVPN):
 
         self._configure_connection(vpnconfig)
         self._add_connection_async(self.connection)
-
-    def up(self):
-        self._setup()
-        self._start_connection_async(self._get_protonvpn_connection())
 
 
 class Wireguard(NMConnection):

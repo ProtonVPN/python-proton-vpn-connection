@@ -30,8 +30,8 @@ class VPNConnection:
         vpnconnection.up()
 
     If a specific implementation supports it, a VPNConnection object is persistent
-    accross client-code exit. For instance, if you started a VPNConnection with
-    :meth:`up`, you can get it back like this :
+    accross client-code exits. For instance, if you started a VPNConnection with
+    :meth:`up`, you can get it back like this in another instance of your client code :
     ::
         vpnconnection = VPNConnection.get_current_connection()
         vpnconnection.down()

@@ -36,3 +36,10 @@ Wireguard
 .. autoclass:: protonvpn_connection.vpnconnection.networkmanager.Wireguard
    :members:
    :show-inheritance:
+
+IKEv2
+---------
+
+.. autoclass:: protonvpn_connection.vpnconnection.networkmanager.Strongswan
+   :members:
+   :show-inheritance:

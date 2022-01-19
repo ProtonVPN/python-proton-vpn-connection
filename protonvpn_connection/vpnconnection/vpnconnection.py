@@ -85,11 +85,16 @@ class VPNConnection:
         """
         from .networkmanager import NMConnection
         from .native import NativeConnection
-        implementations = [NMConnection, NativeConnection]
-        implementations.sort(key=lambda x: x._priority())
-
         if not protocol:
             protocol = "openvpn_udp"
+
+        if connection_implementation == "networkmanager":
+            return NMConnection.factory(protocol)
+        elif connection_implementation == "native":
+            return NativeConnection.factory(protocol)
+
+        implementations = [NMConnection, NativeConnection]
+        implementations.sort(key=lambda x: x._priority())
 
         return implementations[0].factory(protocol)
 

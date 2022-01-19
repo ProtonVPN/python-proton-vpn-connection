@@ -329,11 +329,17 @@ class Wireguard(NMConnection):
 
     def __add_connection_to_nm(self):
         import dbus
+
+        try:
+            servername = "ProtonVPN {}".format(
+                self._vpnserver.servername if self._vpnserver.servername else "Connection")
+        except AttributeError:
+            servername = "ProtonVPN Connection"
+
         s_con = dbus.Dictionary({
             "type": "wireguard",
             "uuid": self.unique_id,
-            "id": Wireguard.virtual_device_name,
-            "interface-name": Wireguard.virtual_device_name
+            "id": servername,
         })
         con = dbus.Dictionary({"connection": s_con})
         bus = dbus.SystemBus()

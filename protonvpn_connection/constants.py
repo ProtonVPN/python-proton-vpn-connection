@@ -1,5 +1,4 @@
 ca_cert = """
-<ca>
 -----BEGIN CERTIFICATE-----
 MIIFozCCA4ugAwIBAgIBATANBgkqhkiG9w0BAQ0FADBAMQswCQYDVQQGEwJDSDEV
 MBMGA1UEChMMUHJvdG9uVlBOIEFHMRowGAYDVQQDExFQcm90b25WUE4gUm9vdCBD
@@ -33,7 +32,6 @@ N8BOyb94yhQ7KO4F3IcLT/y/dsWitY0ZH4lCnAVV/v2YjWAWS3OWyC8BFx/Jmc3W
 DK/yPwECUcPgHIeXiRjHnJt0Zcm23O2Q3RphpU+1SO3XixsXpOVOYP6rJIXW9bMZ
 A1gTTlpi7A==
 -----END CERTIFICATE-----
-</ca>
 """
 
 openvpn_v2_template = """
@@ -110,7 +108,9 @@ route {{ ip_nm_pair.ip }} {{ ip_nm_pair.nm }} net_gateway
 {%- endfor %}
 {%- endif %}
 
+<ca>
 {{ca_certificate}}
+</ca>
 
 key-direction 1
 <tls-auth>

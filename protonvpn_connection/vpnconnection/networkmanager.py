@@ -1,30 +1,42 @@
 from .vpnconnection import VPNConnection
 
-class NMVPNConnection(VPNConnection):
+import gi
+gi.require_version("NM", "1.0")
+from gi.repository import NM
+from .nmclient import NMClient
+
+
+class NMConnection(VPNConnection, NMClient):
     """Returns VPN connections based on Network Manager implementation.
 
     This is the default backend that will be returned. See docstring for
     VPNConnection.get_vpnconnection() for further explanation on how priorities work.
 
-    A NMVPNConnection can return a VPNConnection based on protocols such as OpenVPN, IKEv2 or Wireguard.
+    A NMConnection can return a VPNConnection based on protocols such as OpenVPN, IKEv2 or Wireguard.
     """
     implementation = "networkmanager"
 
     @classmethod
-    def get_connection(cls, protocol: str = None, usersettings: object = None):
+    def factory(cls, protocol: str = None):
         """Get VPN connection.
 
-        The type of procotol returned here is based on some conditions, and these conditions are:
-        - If only the protocol has been passed, then it should return the respective
-          connection based on the desired protocol
-        - If only usersettings has been passed, it has to be checked if smart_routing is enabled
-          or not. If yes the follow the logic for smart routing, if not then user protocol
-          is selected from usersettings.
-        - If both are passed then protocol takes always precedence.
-        - If none are passed, then a custom logic takes precedence [TBD].
+        Returns vpn connection based on specified procotol from factory.
         """
-        pass
+        if "openvpn" in protocol.lower():
+            return OpenVPN.get_by_protocol(protocol)
+        elif "wireguard" in protocol.lower():
+            return Wireguard
 
+    @classmethod
+    def _get_connection(cls):
+        classes = [OpenVPNTCP, OpenVPNUDP, Wireguard]
+
+        for _class in classes:
+            vpnconnection = _class(None, None)
+            if vpnconnection._get_protonvpn_connection():
+                return vpnconnection
+
+    @classmethod
     def _priority(cls):
         return 100
 
@@ -37,44 +49,278 @@ class NMVPNConnection(VPNConnection):
     def down(self):
         raise NotImplementedError
 
+    def _import_vpn_config(self, vpnconfig):
+        plugin_info = NM.VpnPluginInfo
+        vpn_plugin_list = plugin_info.list_load()
 
-class OpenVPN(NMVPNConnection):
-    def get_openvpnconnection(self, protocol: str):
+        with vpnconfig as filename:
+            for plugin in vpn_plugin_list:
+                plugin_editor = plugin.load_editor_plugin()
+                # return a NM.SimpleConnection (NM.Connection)
+                # https://lazka.github.io/pgi-docs/NM-1.0/classes/SimpleConnection.html
+                try:
+                    connection = plugin_editor.import_(filename)
+                    # plugin_name = plugin.props.name
+                except gi.repository.GLib.Error:
+                    pass
+
+        if connection is None:
+            raise NotImplementedError(
+                "Support for given configuration is not implemented"
+            )
+
+        # https://lazka.github.io/pgi-docs/NM-1.0/classes/Connection.html#NM.Connection.normalize
+        if connection.normalize():
+            pass
+
+        return connection
+
+    def _get_protonvpn_connection(self):
+        """Get ProtonVPN connection.
+
+        Returns:
+            if:
+            - NetworkManagerConnectionTypeEnum.ALL: NM.RemoteConnection
+            - NetworkManagerConnectionTypeEnum.ACTIVE: NM.ActiveConnection
+        """
+
+        active_conn_list = self.nm_client.get_active_connections()
+        non_active_conn_list = self.nm_client.get_connections()
+
+        all_conn_list = active_conn_list + non_active_conn_list
+
+        self.__ensure_unique_id_is_set()
+        if not self.unique_id:
+            return None
+
+        for conn in all_conn_list:
+            if conn.get_connection_type() != "vpn":
+                continue
+
+            try:
+                conn = conn.get_connection()
+            except AttributeError:
+                pass
+
+            if conn.get_uuid() == self.unique_id:
+                return conn
+
+        return None
+
+    def __ensure_unique_id_is_set(self):
+        """Ensure that the unique id is set
+
+        It is crucial that unique_id is always set and current. The only times
+        where it can be empty is when there is no VPN connection.
+
+        Suppose the following:
+        ::
+            vpnconnection = VPNConnection.get_current_connection()
+            if not vpnconnection:
+                print("There is no connection")
+
+        The way to determine if there is connection is through persistence, where
+        the filename is composed of various elemets, where the unique id plays a key
+        part in it (see persist_connection()).
+
+        The unique ID is also used to find connections in NetworkManager.
+        """
+        from ..persistence import ConnectionPeristence
+        persistence = ConnectionPeristence()
+
+        try:
+            if not self.unique_id:
+                self.unique_id = persistence.get_persisted(self._persistence_prefix)
+        except AttributeError:
+            self.unique_id = persistence.get_persisted(self._persistence_prefix)
+
+        if not self.unique_id:
+            return
+
+        self.unique_id = self.unique_id.replace(self._persistence_prefix, "")
+
+    def _persist_connection(self):
+        """Persist a connection.
+
+        If for some reason component crashes, we need to know which connection we
+        should be handling. Thus the connection unique ID is prefixed with the protocol
+        and implementation and stored to a file. Ie:
+            - A connection unique ID is 132123-123sdf-12312-fsd
+            - A file is created
+            - The filename and content is: <IMPLEMENTATION>_<PROTOCOl>_132123-123sdf-12312-fsd
+              - where IMPLEMENTATION can be networkmanager or native
+              - where PROTOCOl can be openvpn_tcp, openvpn_udp or wireguard
+
+        Following the previous example, our file will end up being called nm_wireguard_132123-123sdf-12312-fsd,
+        which tells us that we used NetworkManager as an implementation and we've used the Wireguard protocol.
+        Knowing this, we can correctly instatiate for later use.
+        """
+        from ..persistence import ConnectionPeristence
+        persistence = ConnectionPeristence()
+        conn_id = self._persistence_prefix + self.unique_id
+        persistence.persist(conn_id)
+
+    def _remove_connection_persistence(self):
+        """Remove connection persistence.
+
+        Works in the opposite way of _persist_connection. As it removes the peristence
+        file. This is used in conjunction with down, since if the connection is turned down,
+        we don't want to keep any persistence files.
+        """
+        from ..persistence import ConnectionPeristence
+        persistence = ConnectionPeristence()
+        conn_id = self._persistence_prefix + self.unique_id
+        persistence.remove_persist(conn_id)
+
+
+class OpenVPN(NMConnection):
+    virtual_device_name = "proton0"
+    connection = None
+
+    @staticmethod
+    def get_by_protocol(protocol: str):
         """Get VPN connection based on protocol."""
-        pass
+        if "tcp" in protocol.lower():
+            return OpenVPNTCP
+        else:
+            return OpenVPNUDP
+
+    def down(self):
+        self._remove_connection_async(self._get_protonvpn_connection())
+        self._remove_connection_persistence()
+
+    def _configure_connection(self, vpnconfig):
+        """Configure imported vpn connection.
+
+            :param vpnconfig: vpn configuration object.
+            :type vpnconfig: VPNConfiguration
+
+        It also uses vpnserver, vpnaccount and settings for the following reasons:
+            - vpnserver is used to fetch domain, servername (optioanl)
+            - vpnaccount is used to fetch username/password for non-certificate based connections
+            - settings is used to fetch dns settings
+
+        """
+        self.connection = self._import_vpn_config(vpnconfig)
+
+        self.__vpn_settings = self.connection.get_setting_vpn()
+        self.__connection_settings = self.connection.get_setting_connection()
+
+        self.unique_id = self.__connection_settings.get_uuid()
+
+        self.__make_vpn_user_owned()
+        self.__add_server_certificate_check()
+        self.__configure_dns()
+        self.__set_custom_connection_id()
+        self._persist_connection()
+
+        if not vpnconfig.is_certificate:
+            self.__add_vpn_credentials()
+
+    def __make_vpn_user_owned(self):
+        # returns NM.SettingConnection
+        # https://lazka.github.io/pgi-docs/NM-1.0/classes/SettingConnection.html#NM.SettingConnection
+        from getpass import getuser
+
+        self.__connection_settings.add_permission(
+            "user",
+            getuser(),
+            None
+        )
+
+    def __add_server_certificate_check(self):
+        appened_domain = "name:" + self._vpnserver.domain
+        self.__vpn_settings.add_data_item(
+            "verify-x509-name", appened_domain
+        )
+
+    def __configure_dns(self):
+        """Apply dns configurations to ProtonVPN connection."""
+
+        ipv4_config = self.connection.get_setting_ip4_config()
+        ipv6_config = self.connection.get_setting_ip6_config()
+
+        ipv4_config.props.dns_priority = -1500
+        ipv6_config.props.dns_priority = -1500
+
+        try:
+            if len(self._settings.dns_custom_ips) == 0:
+                return
+        except AttributeError:
+            return
+
+        custom_dns = self.settings.dns_custom_ips
+        ipv4_config.props.ignore_auto_dns = True
+        ipv6_config.props.ignore_auto_dns = True
+
+        ipv4_config.props.dns = custom_dns
+
+    def __set_custom_connection_id(self):
+        try:
+            self.__connection_settings.props.id = "ProtonVPN {}".format(
+                self._vpnserver.servername if self._vpnserver.servername else "Connection")
+        except AttributeError:
+            self.__connection_settings.props.id = "ProtonVPN Connection"
+
+    def __add_vpn_credentials(self):
+        """Add OpenVPN credentials to ProtonVPN connection.
+
+        Args:
+            openvpn_username (string): openvpn/ikev2 username
+            openvpn_password (string): openvpn/ikev2 password
+        """
+        # returns NM.SettingVpn if the connection contains one, otherwise None
+        # https://lazka.github.io/pgi-docs/NM-1.0/classes/SettingVpn.html
+        user_data = self._vpnaccount.get_username_and_password()
+
+        self.__vpn_settings.add_data_item(
+            "username", user_data.username
+        )
+        self.__vpn_settings.add_secret(
+            "password", user_data.password
+        )
 
 
 class OpenVPNTCP(OpenVPN):
     """Creates a OpenVPNTCP connection."""
-    protocol = "tcp"
+    protocol = "openvpn_tcp"
+    _persistence_prefix = "nm_{}_".format(protocol)
 
     def _setup(self):
-        pass
+        from ..vpnconfiguration import VPNConfiguration
+        vpnconfig = VPNConfiguration.from_factory(self.protocol)
+        vpnconfig = vpnconfig(self._vpnserver, self._vpnaccount, self._settings)
+
+        self._configure_connection(vpnconfig)
+        self._add_connection_async(self.connection)
 
     def up(self):
-        pass
-
-    def down(self):
-        pass
+        self._setup()
+        self._start_connection_async(self._get_protonvpn_connection())
 
 
 class OpenVPNUDP(OpenVPN):
     """Creates a OpenVPNUDP connection."""
-    protocol = "udp"
+    protocol = "openvpn_udp"
+    _persistence_prefix = "nm_{}_".format(protocol)
 
     def _setup(self):
-        pass
+        from ..vpnconfiguration import VPNConfiguration
+        vpnconfig = VPNConfiguration.from_factory(self.protocol)
+        vpnconfig = vpnconfig(self._vpnserver, self._vpnaccount, self._settings)
+
+        self._configure_connection(vpnconfig)
+        self._add_connection_async(self.connection)
 
     def up(self):
-        pass
-
-    def down(self):
-        pass
+        self._setup()
+        self._start_connection_async(self._get_protonvpn_connection())
 
 
-class Wireguard(NMVPNConnection):
+class Wireguard(NMConnection):
     """Creates a Wireguard connection."""
-    protocol = "wg"
+    protocol = "wireguard"
+    _persistence_prefix = "nm_openvpn_{}_".format(protocol)
 
     def _setup(self):
         pass

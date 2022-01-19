@@ -1,4 +1,4 @@
-from .abstract_interfaces import (AbstractUserSettings, AbstractVPNAccount,
+from .abstract_interfaces import (AbstractSettings, AbstractVPNAccount,
                                   AbstractVPNServer)
 
-__all__ = ["AbstractUserSettings", "AbstractVPNAccount", "AbstractVPNServer"]
+__all__ = ["AbstractSettings", "AbstractVPNAccount", "AbstractVPNServer"]

@@ -1,11 +1,6 @@
 from abc import abstractmethod
 from typing import Callable
-from ..abstract_interfaces import AbstractVPNServer, AbstractVPNAccount, AbstractUserSettings
-
-
-class classproperty(property):
-    def __get__(self, cls, owner):
-        return classmethod(self.fget).__get__(None, owner)()
+from ..abstract_interfaces import AbstractVPNServer, AbstractVPNAccount, AbstractSettings
 
 
 class VPNConnection:
@@ -38,38 +33,46 @@ class VPNConnection:
         vpnconnection.up()
 
     """
-    def __init__(self, vpnserver: AbstractVPNServer, vpnaccount: AbstractVPNAccount):
+    def __init__(
+        self, vpnserver: AbstractVPNServer,
+        vpnaccount: AbstractVPNAccount,
+        settings: AbstractSettings = None
+    ):
         """Initialize a VPNConnection object.
 
             :param vpnserver: AbstractVPNServer type or same signature as AbstractVPNServer.
             :type vpnserver: object
             :param vpnaccount: AbstractVPNAccount type or same signature as AbstractVPNAccount.
             :type vpnaccount: object
+            :param settings: Optional.
+                Provide an instance that implements AbstractSettings or
+                provide an instance that simply exposes methods to match the
+                signature of AbstractSettings.
+            :type settings: object
 
         This will set the interal properties which will be used by each implementation/protocol
         to create its configuration file, so that it's ready to establish a VPN connection.
         """
-        self.vpnserver = vpnserver
-        self.vpnaccount = vpnaccount
+        self._vpnserver = vpnserver
+        self._vpnaccount = vpnaccount
+        self._settings = settings
         self._subscribers = {}
 
+    @property
+    def settings(self):
+        return self._settings
+
+    @settings.setter
+    def settings(self, new_value: AbstractSettings):
+        self._settings = new_value
+
     @classmethod
-    def get_from_factory(
-        cls,
-        protocol: str = None,
-        usersettings: AbstractUserSettings = None,
-        connection_implementation: str = None,
-    ):
+    def get_from_factory(cls, protocol: str = None, connection_implementation: str = None):
         """Get a vpn connection from factory.
 
             :param protocol: Optional.
                 protocol to connect with, all in smallcaps
             :type protocol: str
-            :param usersettings: Optional.
-                Provide an instance that implements AbstractUserSettings or
-                provide an instance that simply exposes methods to match the
-                signature of AbstractUserSettings.
-            :type usersettings: object
             :param connection_implementation: Optional.
                 By default, get_vpnconnection() will always return based on NM implementation, although
                 there are two execetpions to this, which are listed below:
@@ -80,7 +83,25 @@ class VPNConnection:
                   VPNConnection, then that implementation is to be returned instead.
             :type connection_implementation: str
         """
-        pass
+        from .networkmanager import NMConnection
+        from .native import NativeConnection
+        implementations = [NMConnection, NativeConnection]
+        implementations.sort(key=lambda x: x._priority())
+
+        if not protocol:
+            protocol = "openvpn_udp"
+
+        return implementations[0].factory(protocol)
+
+    @classmethod
+    def get_current_connection(self):
+        from .networkmanager import NMConnection
+        from .native import NativeConnection
+        implementations = [NMConnection, NativeConnection]
+        for implementation in implementations:
+            conn = implementation._get_connection()
+            if conn:
+                return conn
 
     def register(self, who: str, callback: Callable = None):
         """Register subscribers.
@@ -122,8 +143,8 @@ class VPNConnection:
         for subscriber, callback in self._subscribers.items():
             callback(connection_status, *args, **kwargs)
 
-    @classproperty
-    def _priority(self):
+    @staticmethod
+    def _priority():
         """This value determines which implementation takes precedence.
 
         If no specific implementation has been defined then each connection
@@ -139,6 +160,10 @@ class VPNConnection:
 
         """
         raise NotImplementedError
+
+    @abstractmethod
+    def _get_connection(self):
+        pass
 
     @abstractmethod
     def up(self):

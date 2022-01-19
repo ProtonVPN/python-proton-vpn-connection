@@ -19,10 +19,10 @@ AbstractVPNAccount
    :private-members:
    :show-inheritance:
 
-AbstractUserSettings
+AbstractSettings
 --------------------
 
-.. autoclass:: protonvpn_connection.abstract_interfaces.AbstractUserSettings
+.. autoclass:: protonvpn_connection.abstract_interfaces.AbstractSettings
    :members:
    :undoc-members:
    :private-members:

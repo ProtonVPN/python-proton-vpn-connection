@@ -330,11 +330,13 @@ class Wireguard(NMConnection):
     def __add_connection_to_nm(self):
         import dbus
 
+        servername = "ProtonVPN Connection"
+
         try:
             servername = "ProtonVPN {}".format(
                 self._vpnserver.servername if self._vpnserver.servername else "Connection")
         except AttributeError:
-            servername = "ProtonVPN Connection"
+            pass
 
         s_con = dbus.Dictionary({
             "type": "wireguard",

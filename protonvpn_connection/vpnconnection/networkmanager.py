@@ -322,6 +322,7 @@ class Wireguard(NMConnection):
     protocol = "wireguard"
     _persistence_prefix = "nm_{}_".format(protocol)
     connection = None
+    virtual_device_name = "proton0"
 
     def __generate_unique_id(self):
         import uuid
@@ -342,6 +343,7 @@ class Wireguard(NMConnection):
             "type": "wireguard",
             "uuid": self.unique_id,
             "id": servername,
+            "interface-name" : Wireguard.virtual_device_name
         })
         con = dbus.Dictionary({"connection": s_con})
         bus = dbus.SystemBus()
@@ -357,7 +359,9 @@ class Wireguard(NMConnection):
 
     def __configure_connection(self):
         import socket
-        self.connection = self.nm_client.get_connection_by_uuid(self.unique_id)
+        # FIXME : Update connections cache, NMclient is a mess
+        nm_client = NM.Client.new(None)
+        self.connection = nm_client.get_connection_by_uuid(self.unique_id)
         s_wg = self.connection.get_setting(NM.SettingWireGuard)
 
         # https://lazka.github.io/pgi-docs/NM-1.0/classes/Connection.html#NM.Connection.get_setting
@@ -378,11 +382,16 @@ class Wireguard(NMConnection):
         peer.set_endpoint(f'{self._vpnserver.server_ip}:{self._vpnserver.udp_ports[0]}', True)
         peer.append_allowed_ip('0.0.0.0/0', False)
         s_wg.append_peer(peer)
+        self.connection.commit_changes(True, None)
 
     def __setup_wg_connection(self):
         self.__generate_unique_id()
         self.__add_connection_to_nm()
         self.__configure_connection()
+        # FIXME : Update connections cache, NMclient is a mess
+        nm_client = NM.Client.new(None)
+        self.connection = nm_client.get_connection_by_uuid(self.unique_id)
+
         self.connection.commit_changes(True, None)
         self._commit_changes_async(self.connection)
 

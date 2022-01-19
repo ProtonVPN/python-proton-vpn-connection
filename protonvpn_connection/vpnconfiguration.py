@@ -6,7 +6,8 @@ import jinja2
 from jinja2 import Environment, BaseLoader
 
 
-TEMPLATE_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "template")
+TEMPLATE_FOLDER = '/tmp'
+#os.path.join(os.path.dirname(os.path.abspath(__file__)), "template")
 
 
 class DummySettings(AbstractSettings):

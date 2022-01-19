@@ -59,6 +59,14 @@ class AbstractVPNServer(ABC):
         """
         return None
 
+    @property
+    def x25519pk(self):
+        """
+        :return: x25519 public key for wg peer verification
+        :rtype: str
+        """
+        return None
+
 
 class AbstractVPNAccount(ABC):
     """Abstract vpn credentials.

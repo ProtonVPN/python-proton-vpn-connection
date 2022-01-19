@@ -4,6 +4,8 @@ import gi
 gi.require_version("NM", "1.0")
 from gi.repository import NM
 from .nmclient import NMClient
+import os
+from proton.utils import ExecutionEnvironment
 
 
 class NMConnection(VPNConnection, NMClient):
@@ -417,8 +419,6 @@ class StrongswanProperties:
 
 
 class Strongswan(NMConnection):
-    import os
-    from proton.utils import ExecutionEnvironment
     """Creates a Strongswan/IKEv2 connection."""
     protocol = "ikev2"
     _persistence_prefix = "nm_{}_".format(protocol)

@@ -20,11 +20,11 @@ class NMConnection(VPNConnection, NMClient):
     def factory(cls, protocol: str = None):
         """Get VPN connection.
 
-        The type of procotol returned.
+        Returns vpn connection based on specified procotol from factory.
         """
-        if "openvpn" in protocol:
+        if "openvpn" in protocol.lower():
             return OpenVPN.get_by_protocol(protocol)
-        elif "wireguard" in protocol:
+        elif "wireguard" in protocol.lower():
             return Wireguard
 
     @classmethod
@@ -180,7 +180,7 @@ class OpenVPN(NMConnection):
     @staticmethod
     def get_by_protocol(protocol: str):
         """Get VPN connection based on protocol."""
-        if "tcp" in protocol:
+        if "tcp" in protocol.lower():
             return OpenVPNTCP
         else:
             return OpenVPNUDP
@@ -283,13 +283,14 @@ class OpenVPN(NMConnection):
 
 class OpenVPNTCP(OpenVPN):
     """Creates a OpenVPNTCP connection."""
-    protocol = "tcp"
-    _persistence_prefix = "nm_openvpn_{}_".format(protocol)
+    protocol = "openvpn_tcp"
+    _persistence_prefix = "nm_{}_".format(protocol)
 
     def _setup(self):
-        from ..vpnconfiguration import OVPNFileConfig
-        vpnconfig = OVPNFileConfig(self._vpnserver, self._vpnaccount, self._settings)
-        vpnconfig.protocol = self.protocol
+        from ..vpnconfiguration import VPNConfiguration
+        vpnconfig = VPNConfiguration.from_factory(self.protocol)
+        vpnconfig = vpnconfig(self._vpnserver, self._vpnaccount, self._settings)
+
         self._configure_connection(vpnconfig)
         self._add_connection_async(self.connection)
 
@@ -300,13 +301,14 @@ class OpenVPNTCP(OpenVPN):
 
 class OpenVPNUDP(OpenVPN):
     """Creates a OpenVPNUDP connection."""
-    protocol = "udp"
-    _persistence_prefix = "nm_openvpn_{}_".format(protocol)
+    protocol = "openvpn_udp"
+    _persistence_prefix = "nm_{}_".format(protocol)
 
     def _setup(self):
-        from ..vpnconfiguration import OVPNFileConfig
-        vpnconfig = OVPNFileConfig(self._vpnserver, self._vpnaccount, self._settings)
-        vpnconfig.protocol = self.protocol
+        from ..vpnconfiguration import VPNConfiguration
+        vpnconfig = VPNConfiguration.from_factory(self.protocol)
+        vpnconfig = vpnconfig(self._vpnserver, self._vpnaccount, self._settings)
+
         self._configure_connection(vpnconfig)
         self._add_connection_async(self.connection)
 

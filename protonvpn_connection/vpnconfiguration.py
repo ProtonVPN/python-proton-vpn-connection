@@ -20,13 +20,15 @@ class VPNConfiguration:
         self._vpnaccount = vpnaccount
         self.settings = settings
 
-    @property
-    def protocol(self):
-        return self._protocol
+    @classmethod
+    def from_factory(cls, protocol):
+        protocols = {
+            "openvpn_tcp": OpenVPNTCPConfig,
+            "openvpn_udp": OpenVPNUDPConfig,
+            "wireguard": WireguardConfig,
+        }
 
-    @protocol.setter
-    def protocol(self, new_value):
-        self._protocol = new_value
+        return protocols[protocol]
 
     @property
     def settings(self):
@@ -80,7 +82,7 @@ class VPNConfiguration:
         pass
 
 
-class OVPNFileConfig(VPNConfiguration):
+class OVPNConfig(VPNConfiguration):
     extension = ".ovpn"
     _protocol = None
     _is_certificate = False
@@ -99,14 +101,17 @@ class OVPNFileConfig(VPNConfiguration):
         Returns:
             string: configuration file
         """
+        from .constants import openvpn_v2_template
+        from .constants import ca_cert
 
-        ports = self._vpnserver.tcp_ports if "tcp" == self.protocol else self._vpnserver.udp_ports
+        ports = self._vpnserver.tcp_ports if "tcp" == self._protocol else self._vpnserver.udp_ports
 
         j2_values = {
             "openvpn_protocol": self._protocol,
             "serverlist": [self._vpnserver.server_ip],
             "openvpn_ports": ports,
             "ipv6_disabled": self._settings.disable_ipv6,
+            "ca_certificate": ca_cert,
             "certificate_based": self._is_certificate,
             "split": True if len(self._settings.split_tunneling_ips) > 0 else False,
         }
@@ -127,7 +132,6 @@ class OVPNFileConfig(VPNConfiguration):
 
             j2_values["ip_nm_pair"] = ip_nm_pairs
 
-        from .constants import openvpn_v2_template
         template = Environment(loader=BaseLoader).from_string(openvpn_v2_template)
 
         try:
@@ -141,7 +145,15 @@ class OVPNFileConfig(VPNConfiguration):
         return str(subnet.netmask)
 
 
-class WireguardFileConfig(VPNConfiguration):
+class OpenVPNTCPConfig(OVPNConfig):
+    _protocol = "tcp"
+
+
+class OpenVPNUDPConfig(OVPNConfig):
+    _protocol = "udp"
+
+
+class WireguardConfig(VPNConfiguration):
     _config_file = None
 
     def __enter__(self):

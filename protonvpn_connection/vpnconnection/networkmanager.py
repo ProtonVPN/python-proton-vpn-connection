@@ -321,7 +321,6 @@ class Wireguard(NMConnection):
     """Creates a Wireguard connection."""
     protocol = "wireguard"
     _persistence_prefix = "nm_{}_".format(protocol)
-    connection = None
     virtual_device_name = "proton0"
 
     def __generate_unique_id(self):
@@ -361,11 +360,11 @@ class Wireguard(NMConnection):
         import socket
         # FIXME : Update connections cache, NMclient is a mess
         nm_client = NM.Client.new(None)
-        self.connection = nm_client.get_connection_by_uuid(self.unique_id)
-        s_wg = self.connection.get_setting(NM.SettingWireGuard)
+        connection = nm_client.get_connection_by_uuid(self.unique_id)
+        s_wg = connection.get_setting(NM.SettingWireGuard)
 
         # https://lazka.github.io/pgi-docs/NM-1.0/classes/Connection.html#NM.Connection.get_setting
-        ip4 = self.connection.get_setting_ip4_config()
+        ip4 = connection.get_setting_ip4_config()
         ip4.set_property('method', 'manual')
         s_wg.set_property(
             NM.SETTING_WIREGUARD_PRIVATE_KEY,
@@ -374,7 +373,7 @@ class Wireguard(NMConnection):
         ip4.add_address(NM.IPAddress(socket.AF_INET, '10.2.0.2', 32))
         ip4.add_dns('10.2.0.1')
         ip4.add_dns_search('~')
-        ipv6_config = self.connection.get_setting_ip6_config()
+        ipv6_config = connection.get_setting_ip6_config()
         ipv6_config.props.dns_priority = -1500
         ip4.props.dns_priority = -1500
         peer = NM.WireGuardPeer()
@@ -382,7 +381,7 @@ class Wireguard(NMConnection):
         peer.set_endpoint(f'{self._vpnserver.server_ip}:{self._vpnserver.udp_ports[0]}', True)
         peer.append_allowed_ip('0.0.0.0/0', False)
         s_wg.append_peer(peer)
-        self.connection.commit_changes(True, None)
+        connection.commit_changes(True, None)
 
     def __setup_wg_connection(self):
         self.__generate_unique_id()

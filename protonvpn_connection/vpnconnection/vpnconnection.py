@@ -103,6 +103,17 @@ class VPNConnection:
             if conn:
                 return conn
 
+    @property
+    def _use_certificate(self):
+        import os
+        use_certificate = False
+        env_var = os.environ.get("PROTONVPN_USE_CERTIFICATE", False)
+        if isinstance(env_var, str):
+            if env_var.lower() == "true":
+                use_certificate = True
+
+        return use_certificate
+
     def register(self, who: str, callback: Callable = None):
         """Register subscribers.
 

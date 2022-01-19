@@ -290,6 +290,7 @@ class OpenVPNTCP(OpenVPN):
         from ..vpnconfiguration import VPNConfiguration
         vpnconfig = VPNConfiguration.from_factory(self.protocol)
         vpnconfig = vpnconfig(self._vpnserver, self._vpnaccount, self._settings)
+        vpnconfig.use_certificate = self._use_certificate
 
         self._configure_connection(vpnconfig)
         self._add_connection_async(self.connection)
@@ -308,6 +309,7 @@ class OpenVPNUDP(OpenVPN):
         from ..vpnconfiguration import VPNConfiguration
         vpnconfig = VPNConfiguration.from_factory(self.protocol)
         vpnconfig = vpnconfig(self._vpnserver, self._vpnaccount, self._settings)
+        vpnconfig.use_certificate = self._use_certificate
 
         self._configure_connection(vpnconfig)
         self._add_connection_async(self.connection)

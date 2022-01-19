@@ -8,11 +8,15 @@ class NMClient:
     main_loop = GLib.MainLoop()
 
     def _commit_changes_async(self, new_connection):
-        new_connection.commit_changes_async(True,None,self.__dynamic_callback,
-                                        dict(
-                                        callback_type="commit",
-                                        conn_name=new_connection.get_id(),
-                                        ))
+        new_connection.commit_changes_async(
+            True,
+            None,
+            self.__dynamic_callback,
+            dict(
+                callback_type="commit",
+                conn_name=new_connection.get_id(),
+            )
+        )
         self.main_loop.run()
 
     def _add_connection_async(self, connection):

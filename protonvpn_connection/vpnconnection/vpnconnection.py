@@ -1,12 +1,10 @@
 from abc import abstractmethod
-from typing import Callable
+from typing import Callable, Optional
 from ..abstract_interfaces import AbstractVPNServer, AbstractVPNAccount, AbstractSettings
 
 
 class VPNConnection:
-    """VPN connection.
-
-    Allows to instantiate a VPN connection.
+    """Allows to instantiate a VPN connection.
     The VPNConnection constructor needs to be passed two objects
     that provide different types of information for configuration,
     thus these objects either implement the interfaces AbstractVPNServer and 
@@ -28,9 +26,17 @@ class VPNConnection:
 
     Or you could directly use a protocol from a specific implementation:
     ::
-        from protonvpn_connection.vpnconnection.networkmanager import OpenVPNTCP
-        vpnconnection = OpenVPNTCP(vpnserver, vpnaccount)
+        vpnconnection = VPNConnection.get_from_factory("wireguard")
         vpnconnection.up()
+
+    If a specific implementation supports it, a VPNConnection object is persistent
+    accross client-code exits. For instance, if you started a VPNConnection with
+    :meth:`up`, you can get it back like this in another instance of your client code :
+    ::
+        vpnconnection = VPNConnection.get_current_connection()
+        vpnconnection.down()
+
+    *Limitations* : Currently you can only handle 1 persistent connection at a time.
 
     """
     def __init__(
@@ -99,7 +105,12 @@ class VPNConnection:
         return implementations[0].factory(protocol)
 
     @classmethod
-    def get_current_connection(self):
+    def get_current_connection(self) -> Optional['VPNConnection']:
+        """ Get the current VPNConnection or None if there no current connection. current VPNConnection
+            is persistent and can be called after client code exit.
+
+            :return: :class:`VPNConnection`
+        """
         from .networkmanager import NMConnection
         from .native import NativeConnection
         implementations = [NMConnection, NativeConnection]
@@ -139,7 +150,7 @@ class VPNConnection:
         self._subscribers[who] = callback
 
     def unregister(self, who):
-        """Unrgister subscribers.
+        """Unregister subscribers.
 
             :param who: who is the subscriber, smallcaps letters
             :type who: str

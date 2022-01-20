@@ -1,10 +1,10 @@
 Network Manager VPN Connection
 ==============================
 
-NMVPNConnection
+NMConnection
 ---------------
 
-.. autoclass:: protonvpn_connection.vpnconnection.networkmanager.NMVPNConnection
+.. autoclass:: protonvpn_connection.vpnconnection.networkmanager.NMConnection
    :members:
    :show-inheritance:
    :private-members:
@@ -17,22 +17,29 @@ OpenVPN
    :show-inheritance:
 
 OpenVPNTCP
--------
+----------
 
 .. autoclass:: protonvpn_connection.vpnconnection.networkmanager.OpenVPNTCP
    :members:
    :show-inheritance:
 
 OpenVPNUDP
--------
+----------
 
 .. autoclass:: protonvpn_connection.vpnconnection.networkmanager.OpenVPNUDP
    :members:
    :show-inheritance:
 
 Wireguard
--------
+---------
 
 .. autoclass:: protonvpn_connection.vpnconnection.networkmanager.Wireguard
+   :members:
+   :show-inheritance:
+
+IKEv2
+---------
+
+.. autoclass:: protonvpn_connection.vpnconnection.networkmanager.Strongswan
    :members:
    :show-inheritance:

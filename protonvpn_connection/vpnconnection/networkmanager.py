@@ -4,6 +4,8 @@ import gi
 gi.require_version("NM", "1.0")
 from gi.repository import NM
 from .nmclient import NMClient
+import os
+from proton.utils import ExecutionEnvironment
 
 
 class NMConnection(VPNConnection, NMClient):
@@ -187,6 +189,10 @@ class OpenVPN(NMConnection):
         else:
             return OpenVPNUDP
 
+    def up(self):
+        self._setup()
+        self._start_connection_async(self._get_protonvpn_connection())
+
     def down(self):
         self._remove_connection_async(self._get_protonvpn_connection())
         self._remove_connection_persistence()
@@ -297,10 +303,6 @@ class OpenVPNTCP(OpenVPN):
         self._configure_connection(vpnconfig)
         self._add_connection_async(self.connection)
 
-    def up(self):
-        self._setup()
-        self._start_connection_async(self._get_protonvpn_connection())
-
 
 class OpenVPNUDP(OpenVPN):
     """Creates a OpenVPNUDP connection."""
@@ -315,10 +317,6 @@ class OpenVPNUDP(OpenVPN):
 
         self._configure_connection(vpnconfig)
         self._add_connection_async(self.connection)
-
-    def up(self):
-        self._setup()
-        self._start_connection_async(self._get_protonvpn_connection())
 
 
 class Wireguard(NMConnection):
@@ -421,8 +419,6 @@ class StrongswanProperties:
 
 
 class Strongswan(NMConnection):
-    import os
-    from proton.utils import ExecutionEnvironment
     """Creates a Strongswan/IKEv2 connection."""
     protocol = "ikev2"
     _persistence_prefix = "nm_{}_".format(protocol)

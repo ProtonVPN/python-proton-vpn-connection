@@ -1,7 +1,7 @@
 from abc import abstractmethod
 import tempfile
 import os
-from .abstract_interfaces import AbstractSettings
+from .interfaces import Settings
 import jinja2
 from jinja2 import Environment, BaseLoader
 
@@ -9,7 +9,7 @@ from jinja2 import Environment, BaseLoader
 TEMPLATE_FOLDER = "/tmp"
 
 
-class DummySettings(AbstractSettings):
+class DummySettings(Settings):
     pass
 
 

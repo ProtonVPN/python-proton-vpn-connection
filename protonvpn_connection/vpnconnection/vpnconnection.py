@@ -1,13 +1,13 @@
 from abc import abstractmethod
 from typing import Callable, Optional
-from ..interfaces import VPNServer, VPNCertificate, Settings
+from ..interfaces import VPNServer, VPNCertificate, Settings, VPNCredentials
 
 
 class VPNConnection:
     """Allows to instantiate a VPN connection.
     The VPNConnection constructor needs to be passed two objects
     that provide different types of information for configuration,
-    thus these objects either implement the interfaces VPNServer and 
+    thus these objects either implement the interfaces VPNServer and
     VPNCredentials or just implement the necessary signatures.
 
     Basic Usage:
@@ -63,7 +63,6 @@ class VPNConnection:
         self._vpncredentials = vpncredentials
         self._settings = settings
         self._unique_id = None
-        self._persistence_prefix = None
         self._subscribers = {}
 
     @abstractmethod
@@ -260,3 +259,15 @@ class VPNConnection:
         persistence = ConnectionPeristence()
         conn_id = self._persistence_prefix + self._unique_id
         persistence.persist(conn_id)
+
+    def _remove_connection_persistence(self):
+        """Remove connection persistence.
+
+        Works in the opposite way of _persist_connection. As it removes the peristence
+        file. This is used in conjunction with down, since if the connection is turned down,
+        we don't want to keep any persistence files.
+        """
+        from ..persistence import ConnectionPeristence
+        persistence = ConnectionPeristence()
+        conn_id = self._persistence_prefix + self._unique_id
+        persistence.remove_persist(conn_id)

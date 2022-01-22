@@ -37,11 +37,8 @@ class NMConnection(VPNConnection, NMClient):
 
     def up(self):
         self._setup()
-
-        try:
-            self._start_connection_async(self.connection)
-        except AttributeError:
-            self._start_connection_async(self._get_protonvpn_connection())
+        self._persist_connection()
+        self._start_connection_async(self._get_protonvpn_connection())
 
     def down(self):
         self._remove_connection_async(self._get_protonvpn_connection())
@@ -56,7 +53,7 @@ class NMConnection(VPNConnection, NMClient):
             if vpnconnection._get_protonvpn_connection():
                 return vpnconnection
 
-    def get_servername(self) -> str:
+    def _get_servername(self) -> str:
         servername = "ProtonVPN Connection"
         try:
             servername = "ProtonVPN {}".format(
@@ -134,18 +131,6 @@ class NMConnection(VPNConnection, NMClient):
 
         return None
 
-    def _remove_connection_persistence(self):
-        """Remove connection persistence.
-
-        Works in the opposite way of _persist_connection. As it removes the peristence
-        file. This is used in conjunction with down, since if the connection is turned down,
-        we don't want to keep any persistence files.
-        """
-        from ..persistence import ConnectionPeristence
-        persistence = ConnectionPeristence()
-        conn_id = self._persistence_prefix + self._unique_id
-        persistence.remove_persist(conn_id)
-
 
 class OpenVPN(NMConnection):
     virtual_device_name = "proton0"
@@ -182,7 +167,6 @@ class OpenVPN(NMConnection):
         self.__add_server_certificate_check()
         self.__configure_dns()
         self.__set_custom_connection_id()
-        self._persist_connection()
 
         if not vpnconfig.use_certificate:
             self.__add_vpn_credentials()
@@ -351,7 +335,6 @@ class Wireguard(NMConnection):
 
     def _setup(self):
         self.__setup_wg_connection()
-        self._persist_connection()
 
 
 class StrongswanProperties:
@@ -424,7 +407,7 @@ class Strongswan(NMConnection):
     def __add_dns(self):
         # FIXME : Update connections cache, NMclient is a mess
         nm_client = NM.Client.new(None)
-        connection = nm_client.get_connection_by_uuid(self.unique_id)
+        connection = nm_client.get_connection_by_uuid(self._unique_id)
         ip4_s = connection.get_setting_ip4_config()
         ip4_s.add_dns('10.2.0.1')
         ip4_s.add_dns_search('~.')
@@ -439,4 +422,3 @@ class Strongswan(NMConnection):
         self.__configure_connection()
         self._add_connection_async(self.connection)
         self.__add_dns()
-        self._persist_connection()

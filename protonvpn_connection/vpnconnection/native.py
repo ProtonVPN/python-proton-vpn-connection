@@ -163,9 +163,9 @@ class OpenVPN(NativeConnection):
 
     def _setup(self):
         from ..vpnconfiguration import VPNConfiguration
-        factory=VPNConfiguration(self._vpnserver , self._vpnaccount, self._settings)
-        self._vpnconfig = factory.from_factory("openvpn_udp")(self._vpnserver , self._vpnaccount)
-        self._vpnconfig.protocol = self.protocol
+        vpnconfig = VPNConfiguration.from_factory(self.protocol)
+        self._vpnconfig = vpnconfig(self._vpnserver, self._vpnaccount, self._settings)
+        self._vpnconfig.use_certificate = self._use_certificate
         self._create_cfg_file()
         self._requires_sudo = (os.getenv("VPNCONNECTIONNATIVE_SUDO_OPENVPN", "True").lower() == "true")
         ProtocolAdapter.register_log_level_trace()
@@ -328,7 +328,7 @@ class OpenVPN(NativeConnection):
 
 class OpenVPNTCP(OpenVPN):
     """Creates a OpenVPNTCP connection."""
-    protocol = "tcp"
+    protocol = "openvpn_tcp"
 
     def up(self):
         self._setup()
@@ -340,7 +340,7 @@ class OpenVPNTCP(OpenVPN):
 
 class OpenVPNUDP(OpenVPN):
     """Creates a OpenVPNUDP connection."""
-    protocol = "udp"
+    protocol = "openvpn_udp"
 
     def up(self):
         self._setup()
@@ -351,7 +351,7 @@ class OpenVPNUDP(OpenVPN):
 
 class Wireguard(NativeConnection):
     """Creates a Wireguard connection."""
-    protocol = "wg"
+    protocol = "wireguard"
 
     def _setup(self):
         pass

@@ -421,9 +421,22 @@ class Strongswan(NMConnection):
 
         self.connection = new_connection
 
+    def __add_dns(self):
+        # FIXME : Update connections cache, NMclient is a mess
+        nm_client = NM.Client.new(None)
+        connection = nm_client.get_connection_by_uuid(self.unique_id)
+        ip4_s = connection.get_setting_ip4_config()
+        ip4_s.add_dns('10.2.0.1')
+        ip4_s.add_dns_search('~.')
+        ip4_s.props.dns_priority = -1500
+        ipv6_config = connection.get_setting_ip6_config()
+        ipv6_config.add_dns_search('~.')
+        ipv6_config.props.dns_priority = -1500
+        connection.commit_changes(True, None)
+
     def _setup(self):
         self.__generate_unique_id()
         self.__configure_connection()
         self._add_connection_async(self.connection)
+        self.__add_dns()
         self._persist_connection()
-

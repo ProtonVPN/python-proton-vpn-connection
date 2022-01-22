@@ -1,4 +1,5 @@
 import os
+import os.path
 import socket
 import subprocess
 import time
@@ -63,7 +64,7 @@ class NativeConnection(VPNConnection):
 
     @staticmethod
     def _priority():
-        return 99
+        return 101
 
     def _setup(self):
         raise NotImplementedError
@@ -161,8 +162,9 @@ class OpenVPN(NativeConnection):
         return [""]
 
     def _setup(self):
-        from ..vpnconfiguration import OVPNFileConfig
-        self._vpnconfig = OVPNFileConfig(self._vpnserver, self._vpnaccount, self._settings)
+        from ..vpnconfiguration import VPNConfiguration
+        factory=VPNConfiguration(self._vpnserver , self._vpnaccount, self._settings)
+        self._vpnconfig = factory.from_factory("openvpn_udp")(self._vpnserver , self._vpnaccount)
         self._vpnconfig.protocol = self.protocol
         self._create_cfg_file()
         self._requires_sudo = (os.getenv("VPNCONNECTIONNATIVE_SUDO_OPENVPN", "True").lower() == "true")
@@ -176,12 +178,12 @@ class OpenVPN(NativeConnection):
             f.writelines([username + "\n", password + "\n"])
 
     def _get_credentials(self):
-        user_data = self._vpnaccount.get_username_and_password()
+        user_data = self._vpnaccount.vpn_get_username_and_password()
         return user_data.username, user_data.password
 
     @property
     def _auth_using_credentials(self):
-        return self._vpnconfig._is_certificate == False
+        return self._use_certificate == False
 
     def _create_cfg_file(self):
         self._tmp_cfg_file = tempfile.NamedTemporaryFile(suffix=".tmp-config.ovpn")
@@ -214,9 +216,10 @@ class OpenVPN(NativeConnection):
         commands += [self._get_openvpn_path(), "--config", self._tmp_cfg_file.name ]
         # XXX This requires the resolvconf package to be installed
         # sudo apt install revolvconf
-        commands+= ["--up", "/etc/openvpn/update-resolv-conf"]
-        commands+= ["--down", "/etc/openvpn/update-resolv-conf"]
-        commands+= ["--script-security", "2"]
+        if os.path.exists("/etc/openvpn/update-resolv-conf"):
+            commands+= ["--up", "/etc/openvpn/update-resolv-conf"]
+            commands+= ["--down", "/etc/openvpn/update-resolv-conf"]
+            commands+= ["--script-security", "2"]
 
         if self._auth_using_credentials:
             username, password = self._get_credentials()

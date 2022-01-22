@@ -1,4 +1,6 @@
-from .abstract_interfaces import (AbstractSettings, AbstractVPNAccount,
-                                  AbstractVPNServer)
+from .interfaces import Settings, VPNCertificate, VPNServer, VPNUserPass, VPNCredentials
 
-__all__ = ["AbstractSettings", "AbstractVPNAccount", "AbstractVPNServer"]
+__all__ = ["Settings", "VPNCertificate", "VPNServer", "VPNUserPass", "VPNCredentials"]
+
+## FIX ME
+# Ammend commit with changes of classnames

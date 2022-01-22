@@ -1,19 +1,19 @@
 from abc import abstractmethod
 from typing import Callable, Optional
-from ..abstract_interfaces import AbstractVPNServer, AbstractVPNAccount, AbstractSettings
+from ..interfaces import VPNServer, VPNCertificate, Settings
 
 
 class VPNConnection:
     """Allows to instantiate a VPN connection.
     The VPNConnection constructor needs to be passed two objects
     that provide different types of information for configuration,
-    thus these objects either implement the interfaces AbstractVPNServer and 
-    AbstractVPNAccount or just implement the necessary signatures.
+    thus these objects either implement the interfaces VPNServer and 
+    VPNCredentials or just implement the necessary signatures.
 
     Basic Usage:
     ::
         vpnconnection = VPNConnection.get_from_factory()
-        vpnconnection(vpnserver, vpnaccount)
+        vpnconnection(vpnserver, vpncredentials)
 
         # Before establishing you should also decide if you would like to
         # subscribe to the connection status updates with:
@@ -40,37 +40,45 @@ class VPNConnection:
 
     """
     def __init__(
-        self, vpnserver: AbstractVPNServer,
-        vpnaccount: AbstractVPNAccount,
-        settings: AbstractSettings = None
+        self, vpnserver: VPNServer,
+        vpncredentials: VPNCredentials,
+        settings: Settings = None
     ):
         """Initialize a VPNConnection object.
 
-            :param vpnserver: AbstractVPNServer type or same signature as AbstractVPNServer.
+            :param vpnserver: VPNServer type or same signature as VPNServer.
             :type vpnserver: object
-            :param vpnaccount: AbstractVPNAccount type or same signature as AbstractVPNAccount.
-            :type vpnaccount: object
+            :param vpncredentials: VPNCredentials type or same signature as VPNCredentials.
+            :type vpncredentials: object
             :param settings: Optional.
-                Provide an instance that implements AbstractSettings or
+                Provide an instance that implements Settings or
                 provide an instance that simply exposes methods to match the
-                signature of AbstractSettings.
+                signature of Settings.
             :type settings: object
 
         This will set the interal properties which will be used by each implementation/protocol
         to create its configuration file, so that it's ready to establish a VPN connection.
         """
         self._vpnserver = vpnserver
-        self._vpnaccount = vpnaccount
+        self._vpncredentials = vpncredentials
         self._settings = settings
+        self._unique_id = None
+        self._persistence_prefix = None
         self._subscribers = {}
 
-    @property
-    def settings(self):
-        return self._settings
+    @abstractmethod
+    def up(self):
+        """Up method to establish a vpn connection.
 
-    @settings.setter
-    def settings(self, new_value: AbstractSettings):
-        self._settings = new_value
+        Before start a connection it must be setup, thus it's
+        up to the one implement the class to build it.
+        """
+        pass
+
+    @abstractmethod
+    def down(self):
+        """Down method to stop a vpn connection."""
+        pass
 
     @classmethod
     def get_from_factory(cls, protocol: str = None, connection_implementation: str = None):
@@ -120,6 +128,14 @@ class VPNConnection:
                 return conn
 
     @property
+    def settings(self):
+        return self._settings
+
+    @settings.setter
+    def settings(self, new_value: Settings):
+        self._settings = new_value
+
+    @property
     def _use_certificate(self):
         import os
         use_certificate = False
@@ -160,7 +176,7 @@ class VPNConnection:
         except KeyError:
             pass
 
-    def notify_subscribers(self, connection_status, *args, **kwargs):
+    def _notify_subscribers(self, connection_status, *args, **kwargs):
         """Notify all subscribers.
 
         This method is used once there are any status updates on the VPNConnection.
@@ -169,6 +185,10 @@ class VPNConnection:
         """
         for subscriber, callback in self._subscribers.items():
             callback(connection_status, *args, **kwargs)
+
+    @abstractmethod
+    def _get_connection(self):
+        pass
 
     @staticmethod
     def _priority():
@@ -188,23 +208,55 @@ class VPNConnection:
         """
         raise NotImplementedError
 
-    @abstractmethod
-    def _get_connection(self):
-        pass
+    def _ensure_unique_id_is_set(self):
+        """Ensure that the unique id is set
 
-    @abstractmethod
-    def up(self):
-        """Up method to establish a vpn connection.
+        It is crucial that unique_id is always set and current. The only times
+        where it can be empty is when there is no VPN connection.
 
-        Before start a connection it must obviously be setup, thus it's
-        up to the one implement the class to build it.
+        Suppose the following:
+        ::
+            vpnconnection = VPNConnection.get_current_connection()
+            if not vpnconnection:
+                print("There is no connection")
 
+        The way to determine if there is connection is through persistence, where
+        the filename is composed of various elemets, where the unique id plays a key
+        part in it (see persist_connection()).
+
+        The unique ID is also used to find connections in NetworkManager.
         """
-        pass
+        from ..persistence import ConnectionPeristence
+        persistence = ConnectionPeristence()
 
-    @abstractmethod
-    def down(self):
-        """Down method to stop a vpn connection.
+        try:
+            if not self._unique_id:
+                self._unique_id = persistence.get_persisted(self._persistence_prefix)
+        except AttributeError:
+            self._unique_id = persistence.get_persisted(self._persistence_prefix)
 
+        if not self._unique_id:
+            return
+
+        self._unique_id = self._unique_id.replace(self._persistence_prefix, "")
+
+    def _persist_connection(self):
+        """Persist a connection.
+
+        If for some reason component crashes, we need to know which connection we
+        should be handling. Thus the connection unique ID is prefixed with the protocol
+        and implementation and stored to a file. Ie:
+            - A connection unique ID is 132123-123sdf-12312-fsd
+            - A file is created
+            - The filename and content is: <IMPLEMENTATION>_<PROTOCOl>_132123-123sdf-12312-fsd
+              - where IMPLEMENTATION can be networkmanager or native
+              - where PROTOCOl can be openvpn_tcp, openvpn_udp or wireguard
+
+        Following the previous example, our file will end up being called nm_wireguard_132123-123sdf-12312-fsd,
+        which tells us that we used NetworkManager as an implementation and we've used the Wireguard protocol.
+        Knowing this, we can correctly instatiate for later use.
         """
-        pass
+        from ..persistence import ConnectionPeristence
+        persistence = ConnectionPeristence()
+        conn_id = self._persistence_prefix + self._unique_id
+        persistence.persist(conn_id)

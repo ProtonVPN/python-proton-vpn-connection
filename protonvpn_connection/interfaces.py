@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, NamedTuple
 
 
 class VPNServer:
@@ -88,36 +88,113 @@ class VPNServer:
         return None
 
 
-class VPNAccount:
+class VPNCertificate:
     """
-    # TO-DO: FIX VPN ACCOUNT INTERFACE, NAME AND DOC
+    Object that gets certificates and privates keys
+    for certificate based connections.
 
-    For VPN connection to be established, credentials are 
-    Usage example:
+    An instance of this class is to be passed to VPNCredentials.
+
+    Usage:
     ::
+        from protonvpn_connection.interfaces import VPNCertificate
 
-        user_pass_tuple = vpnaccount.get_username_and_password()
-        username = user_pass_tuple.username
-        username = user_pass_tuple.paswword
+        class MyVPNCertificate(VPNCertificate):
 
-    A named tuple VPNUserPass is received with properties username and password.
+            @property
+            def vpn_client_api_pem_certificate(self):
+                return "PEM certificate in string type"
+
+            @property
+            def vpn_client_private_wg_key(self):
+                return "50A864D6C91158719A14040787F0177E968E606DB669DC37359F42E36853085C"
+
+            @property
+            def vpn_client_private_openvpn_key(self):
+                return "50A864D6C91158719A14040787F0177E968E606DB669DC37359F42E36853085C"
     """
 
-    def get_username_and_password(self):
+    @property
+    def vpn_client_api_pem_certificate(self) -> str:
         """
-        :return: named tuple
-        :rtype: namedtuple(username, password)
+        :return: X509 client certificate in PEM format
+        :rtype: str
         """
-        return None
+        raise NotImplementedError
 
-    def get_client_private_wg_key(self):
-        return None
+    @property
+    def vpn_client_private_wg_key(self) -> str:
+        """
+        :return: Wireguard private key in base64 format
+        :rtype: str
+        """
+        raise NotImplementedError
 
-    def get_client_private_openvpn_key(self):
-        return None
+    @property
+    def vpn_client_private_openvpn_key(self) -> str:
+        """
+        :return: OpenVPN private key in PEM format
+        :rtype: str
+        """
+        raise NotImplementedError
 
-    def get_client_api_pem_certificate(self):
-        return None
+
+class VPNUserPass(NamedTuple):
+    """Provides username and password for username/password VPN authentication.
+
+    Usage:
+    ::
+        from protonvpn_connection.interfaces import VPNUserPass
+
+        myuserpass = VPNUserPass(
+            username = "my-openvpn/ikev2-username",
+            password = "my-openvpn/ikev2-password"
+        )
+    """
+
+    username: str
+    password: str
+
+
+class VPNCredentials:
+    """
+    For VPN connection to be established, credentials are needed.
+    Depending of how these credentials are used, one method or the other may be
+    irrelevant.
+
+    Usage:
+    ::
+        class MyVPNCredentials(VPNCredentials):
+
+            def vpn_get_username_and_password(self):
+                # See how you can create a VPNUserPass object at `VPNUserPass`
+                return VPNUserPass
+
+            def vpn_get_certificate_holder(self):
+                # See how you can create a VPNCertificate object at `VPNCertificate`
+                return VPNCertificate
+
+    Limitation:
+    You can override only one of the methods, though at the cost that you won't be able
+    to connect to wireguard (since it's based on certificates) and/or openvpn and ikev2 based
+    with certificates. To guarantee maximum compatibility, it is recommended to pass both objects
+    for username/password and certificates.
+    """
+
+    def vpn_get_username_and_password(self) -> VPNUserPass:
+        """
+        :return: named tuple with username and password
+        :rtype: VPNUserPass
+        """
+        raise NotImplementedError
+
+    def vpn_get_certificate_holder(self) -> VPNCertificate:
+        """
+        :return: instance of VPNCertificate, which allows to make connections
+            with certificates
+        :rtype: VPNCertificate
+        """
+        raise NotImplementedError
 
 
 class Settings:
@@ -160,6 +237,7 @@ class Settings:
 
     Passing only this is perfectly fine.
     """
+
     @property
     def dns_custom_ips(self) -> List[str]:
         """Optional.

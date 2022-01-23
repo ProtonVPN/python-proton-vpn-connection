@@ -221,13 +221,14 @@ class OpenVPN(NMConnection):
         """
         # returns NM.SettingVpn if the connection contains one, otherwise None
         # https://lazka.github.io/pgi-docs/NM-1.0/classes/SettingVpn.html
-        user_data = self._vpncredentials.vpn_get_username_and_password()
+        flags = self._transform_features_to_flags()
+        username, password = self._get_credentials(flags)
 
         self.__vpn_settings.add_data_item(
-            "username", user_data.username
+            "username", username
         )
         self.__vpn_settings.add_secret(
-            "password", user_data.password
+            "password", password
         )
 
 

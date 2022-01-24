@@ -274,7 +274,7 @@ class VPNConnection:
         pass
 
     def _get_credentials(self, flags: list=None):
-        user_data = self._vpnaccount.get_username_and_password()
+        user_data = self._vpnaccount.vpn_get_username_and_password()
         username = user_data.username
         if flags is not None :
             username = "+".join([username] + flags)  # each flag must be preceded by "+"

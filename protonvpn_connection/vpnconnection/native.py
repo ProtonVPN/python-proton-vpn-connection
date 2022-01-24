@@ -177,10 +177,6 @@ class OpenVPN(NativeConnection):
         with open(self._temp_credentials_file.name, "w") as f:
             f.writelines([username + "\n", password + "\n"])
 
-    def _get_credentials(self):
-        user_data = self._vpnaccount.vpn_get_username_and_password()
-        return user_data.username, user_data.password
-
     @property
     def _auth_using_credentials(self):
         return self._use_certificate == False

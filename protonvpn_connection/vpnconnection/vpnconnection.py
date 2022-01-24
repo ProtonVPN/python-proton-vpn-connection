@@ -100,8 +100,14 @@ class VPNConnection:
                   VPNConnection, then that implementation is to be returned instead.
             :type connection_implementation: str
         """
-        from .networkmanager import NMConnection
+        implementations=[]
+        try:
+            from .networkmanager import NMConnection
+            implementations.append(NMConnection)
+        except:
+            pass
         from .native import NativeConnection
+        implementations.append(NativeConnection)
         if not protocol:
             protocol = "openvpn_udp"
 
@@ -110,7 +116,6 @@ class VPNConnection:
         elif connection_implementation == "native":
             return NativeConnection.factory(protocol)
 
-        implementations = [NMConnection, NativeConnection]
         implementations.sort(key=lambda x: x._priority())
 
         return implementations[0].factory(protocol)
@@ -122,9 +127,15 @@ class VPNConnection:
 
             :return: :class:`VPNConnection`
         """
-        from .networkmanager import NMConnection
+        implementations=[]
+        try:
+            from .networkmanager import NMConnection
+            implementations.append(NMConnection)
+        except:
+            pass
         from .native import NativeConnection
-        implementations = [NMConnection, NativeConnection]
+        implementations.append(NativeConnection)
+
         for implementation in implementations:
             conn = implementation._get_connection()
             if conn:

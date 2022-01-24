@@ -99,7 +99,7 @@ class NMConnection(VPNConnection, NMClient):
 
         return connection
 
-    def _get_protonvpn_connection(self):
+    def _get_protonvpn_connection(self, from_active=False):
         """Get ProtonVPN connection.
 
         Returns:
@@ -230,6 +230,9 @@ class OpenVPN(NMConnection):
         self.__vpn_settings.add_secret(
             "password", password
         )
+
+    def down(self):
+        self._remove_connection_async(self._get_protonvpn_connection(True))
 
 
 class OpenVPNTCP(OpenVPN):

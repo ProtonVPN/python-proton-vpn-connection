@@ -124,7 +124,7 @@ class NMClient:
             #     conn_name,
             #     callback_type_dict[callback_type]["msg"]
             # )
-        except Exception:
-            pass
+        except Exception as e:
+            print(e)
 
         self.main_loop.quit()

@@ -1,24 +1,23 @@
 from abc import abstractmethod
 import tempfile
 import os
-from .abstract_interfaces import AbstractSettings
+from .interfaces import Settings
 import jinja2
 from jinja2 import Environment, BaseLoader
 
 
-TEMPLATE_FOLDER = '/tmp'
-#os.path.join(os.path.dirname(os.path.abspath(__file__)), "template")
+TEMPLATE_FOLDER = "/tmp"
 
 
-class DummySettings(AbstractSettings):
+class DummySettings(Settings):
     pass
 
 
 class VPNConfiguration:
-    def __init__(self, vpnserver, vpnaccount, settings=None):
+    def __init__(self, vpnserver, vpncredentials, settings=None):
         self._configfile = None
         self._vpnserver = vpnserver
-        self._vpnaccount = vpnaccount
+        self._vpncredentials = vpncredentials
         self.settings = settings
         self._use_certificate = False
 
@@ -56,6 +55,7 @@ class VPNConfiguration:
         # and delete it when we exit.
         # This is a race free way of having temporary files.
         from .utils import ExecutionEnvironment
+
         if self._configfile is None:
             self.__delete_existing_configuration()
             self._configfile = tempfile.NamedTemporaryFile(
@@ -116,8 +116,8 @@ class OVPNConfig(VPNConfiguration):
             "split": True if len(self._settings.split_tunneling_ips) > 0 else False,
         }
         if self._use_certificate:
-            j2_values["cert"] = self._vpnaccount.get_client_api_pem_certificate()
-            j2_values["priv_key"] = self._vpnaccount.get_client_private_openvpn_key()
+            j2_values["cert"] = self._vpncredentials.vpn_get_certificate_holder().vpn_client_api_pem_certificate
+            j2_values["priv_key"] = self._vpncredentials.vpn_get_certificate_holder().vpn_client_private_openvpn_key
 
         if len(self._settings.split_tunneling_ips) > 0:
             ip_nm_pairs = []

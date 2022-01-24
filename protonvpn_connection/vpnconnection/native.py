@@ -9,9 +9,12 @@ import logging
 import struct
 import json
 from .vpnconnection import VPNConnection
+from .exceptions import ConnectionTimeoutError
 
-class NativeVPNConnectionFailed(Exception):
+
+class MGMTSocketNotFoundError(Exception):
     pass
+
 
 class ProtocolAdapter:
     message_header = struct.Struct('>H')
@@ -79,6 +82,7 @@ class NativeConnection(VPNConnection):
 class NativeConnectionPropertiesName:
     NATIVE_PROPS_FILENAME = "native-connection-props.json"
 
+
 class OpenVPN(NativeConnection):
     from proton.utils import ExecutionEnvironment
     NATIVE_PROPS_FILEPATH = os.path.join(ExecutionEnvironment().path_runtime,NativeConnectionPropertiesName.NATIVE_PROPS_FILENAME)
@@ -135,7 +139,7 @@ class OpenVPN(NativeConnection):
         try:
             self._mgmt_socket.connect(self._management_socket_name)
         except FileNotFoundError as e:
-            raise NativeVPNConnectionFailed("{}: {}".format(type(e).__name__, e))
+            raise MGMTSocketNotFoundError("{}: {}".format(type(e).__name__, e))
         self._buffer_mgmt_last_read = None
 
     def _close_mgmt_socket(self):
@@ -249,9 +253,9 @@ class OpenVPN(NativeConnection):
         while True:
             try:
                 self._open_mgmt_socket()
-            except (FileNotFoundError, NativeVPNConnectionFailed):
+            except (FileNotFoundError, MGMTSocketNotFoundError):
                 if time.time() - time_begin >= timeout:
-                    raise TimeoutError("Timeout opening management socket ({} secs)".format(timeout))
+                    raise ConnectionTimeoutError("Timeout opening management socket ({} secs)".format(timeout))
                 time.sleep(0.1)
                 continue
             break
@@ -261,15 +265,12 @@ class OpenVPN(NativeConnection):
             self._tmp_cfg_file.close()
         self._tmp_cfg_file = None
 
-
-
         self._debug("Gently asking OpenVPN to finish...")
+
         try:
             self._write_to_mgmt_socket(b'signal SIGTERM\r\n')
         except:
-            if ignore_failure:
-                pass
-            else:
+            if not ignore_failure:
                 raise
 
         #if no subprocess, just wait a bit

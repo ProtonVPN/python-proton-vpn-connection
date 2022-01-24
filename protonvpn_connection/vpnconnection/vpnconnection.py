@@ -271,15 +271,13 @@ class VPNConnection:
         persistence = ConnectionPeristence()
         conn_id = self._persistence_prefix + self._unique_id
         persistence.remove_persist(conn_id)
-        pass
 
-    def _get_credentials(self, flags: list=None):
-        user_data = self._vpncredentials.vpn_get_username_and_password()
+    def _get_credentials(self, flags: list = None):
+        user_data = self._vpnaccount.get_username_and_password()
         username = user_data.username
-        if flags is not None :
+        if flags is not None:
             username = "+".join([username] + flags)  # each flag must be preceded by "+"
         return username, user_data.password
-
 
     def _transform_features_to_flags(self) -> Optional[list]:
         list_flags = []
@@ -287,7 +285,7 @@ class VPNConnection:
         if features is not None:
             if not features.vpn_accelerator:
                 list_flags.append("nst")
-            v=features.netshield_level
+            v = features.netshield_level
             list_flags.append(f"f{v}")
             if features.port_forwarding:
                 list_flags.append("pmp")

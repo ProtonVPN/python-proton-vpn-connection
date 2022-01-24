@@ -7,7 +7,7 @@ import os
 
 from gi.repository import NM
 
-from ..utils import ExecutionEnvironment
+from proton.utils import ExecutionEnvironment
 from .nmclient import NMClient
 
 

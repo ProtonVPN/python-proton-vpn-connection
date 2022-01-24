@@ -66,16 +66,20 @@ class VPNConnection:
         self._subscribers = {}
 
     @abstractmethod
-    def up(self):
+    def up(self) -> None:
         """Up method to establish a vpn connection.
 
         Before start a connection it must be setup, thus it's
         up to the one implement the class to build it.
+
+        :raises AuthenticationError: The credentials used to authenticate on the VPN are not correct
+        :raises ConnectionTimeoutError: No answer from the VPN server for too long
+        :raises MissingImplementationDetails: The implementation cannot be used.
         """
         pass
 
     @abstractmethod
-    def down(self):
+    def down(self) -> None:
         """Down method to stop a vpn connection."""
         pass
 
@@ -127,11 +131,19 @@ class VPNConnection:
                 return conn
 
     @property
-    def settings(self):
+    def settings(self) -> Settings:
+        """ Current settings of the connection :
+            Some settings can be changed on the fly and are RW :
+            netshield level, kill switch enabled/disabled, split tunneling, VPN accelerator, custom DNS.
+            Other settings are RO and cannot be changed once the connection is instanciated :
+            VPN protocol.
+        """
         return self._settings
 
     @settings.setter
     def settings(self, new_value: Settings):
+        """ Change the current settings of the connection, only valid for the RW settings of the connection.
+        """
         self._settings = new_value
 
     @property
@@ -273,7 +285,7 @@ class VPNConnection:
         persistence.remove_persist(conn_id)
 
     def _get_credentials(self, flags: list = None):
-        user_data = self._vpnaccount.get_username_and_password()
+        user_data = self._vpncredentials.vpn_get_username_and_password()
         username = user_data.username
         if flags is not None:
             username = "+".join([username] + flags)  # each flag must be preceded by "+"

@@ -13,6 +13,11 @@ Welcome to python-protonvpn-connection's documentation!
    01_vpnconnection
    02_networkmanager
    03_abstracts
+   vpnconnection
+   networkmanager
+   abstracts
+   devbackend
+   devprotocol
 
 
 Indices and tables

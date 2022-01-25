@@ -316,7 +316,7 @@ class VPNConnection:
             callback(connection_status)
 
     @abstractmethod
-    def _get_connection(self) -> VPNConnection:
+    def _get_connection(self) -> 'VPNConnection':
         """*For developers*
         Each backend has to provide a classmethod of getting a connection.
 

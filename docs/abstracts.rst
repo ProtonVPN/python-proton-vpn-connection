@@ -1,28 +1,46 @@
-Abstract Interfaces
+Interfaces
 ===================
 
-AbstractVPNServer
+VPNServer
 --------------------
 
-.. autoclass:: protonvpn_connection.abstract_interfaces.AbstractVPNServer
+.. autoclass:: protonvpn_connection.interfaces.VPNServer
    :members:
    :undoc-members:
    :private-members:
    :show-inheritance:
 
-AbstractVPNAccount
+VPNCertificate
 --------------------
 
-.. autoclass:: protonvpn_connection.abstract_interfaces.AbstractVPNAccount
+.. autoclass:: protonvpn_connection.interfaces.VPNCertificate
    :members:
    :undoc-members:
    :private-members:
    :show-inheritance:
 
-AbstractSettings
+VPNUserPass
 --------------------
 
-.. autoclass:: protonvpn_connection.abstract_interfaces.AbstractSettings
+.. autoclass:: protonvpn_connection.interfaces.VPNUserPass
+   :members:
+   :undoc-members:
+   :private-members:
+   :show-inheritance:
+
+VPNCredentials
+--------------------
+
+.. autoclass:: protonvpn_connection.interfaces.VPNCredentials
+   :members:
+   :undoc-members:
+   :private-members:
+   :show-inheritance:
+
+Settings
+--------------------
+
+.. autoclass:: protonvpn_connection.interfaces.Settings
    :members:
    :undoc-members:
    :private-members:

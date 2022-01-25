@@ -154,7 +154,6 @@ class OpenVPN(NMConnection):
             - vpnserver is used to fetch domain, servername (optioanl)
             - vpncredentials is used to fetch username/password for non-certificate based connections
             - settings is used to fetch dns settings
-
         """
         self.connection = self._import_vpn_config(vpnconfig)
 
@@ -221,8 +220,7 @@ class OpenVPN(NMConnection):
         """
         # returns NM.SettingVpn if the connection contains one, otherwise None
         # https://lazka.github.io/pgi-docs/NM-1.0/classes/SettingVpn.html
-        flags = self._transform_features_to_flags()
-        username, password = self._get_credentials(flags)
+        username, password = self._get_user_pass(True)
 
         self.__vpn_settings.add_data_item(
             "username", username

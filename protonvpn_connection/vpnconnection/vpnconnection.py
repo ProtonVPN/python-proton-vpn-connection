@@ -1,22 +1,29 @@
 from abc import abstractmethod
 from typing import Callable, Optional
-from ..interfaces import VPNServer, VPNCertificate, Settings, VPNCredentials
+from ..interfaces import VPNServer, Settings, VPNCredentials
+from .enum import ConnectionStateEnum
 
 
 class VPNConnection:
-    """Allows to instantiate a VPN connection.
-    The VPNConnection constructor needs to be passed two objects
-    that provide different types of information for configuration,
-    thus these objects either implement the interfaces VPNServer and
-    VPNCredentials or just implement the necessary signatures.
+    """
 
-    Basic Usage:
+    VPNConnection is the base class for which all types of connection need to derive from.
+    It contains most of the logic that is needed for either creating a new backend
+    or protocol.
+
+    Apart from VPNConnection being a base class for vpn connections, it too provides
+    vpnconnections via its factory.
+
+    Usage:
     ::
+        from protonvpn_connection.vpnconnection import VPNConnection
+
         vpnconnection = VPNConnection.get_from_factory()
         vpnconnection(vpnserver, vpncredentials)
 
         # Before establishing you should also decide if you would like to
         # subscribe to the connection status updates with:
+        # see more inte register()
         # vpnconnection.register("killswitch")
 
         vpnconnection.up()
@@ -36,11 +43,13 @@ class VPNConnection:
         vpnconnection = VPNConnection.get_current_connection()
         vpnconnection.down()
 
-    *Limitations* : Currently you can only handle 1 persistent connection at a time.
+    *Limitations*:Currently you can only handle 1 persistent connection at a time.
 
     """
+
     def __init__(
-        self, vpnserver: VPNServer,
+        self,
+        vpnserver: VPNServer,
         vpncredentials: VPNCredentials,
         settings: Settings = None
     ):
@@ -75,12 +84,16 @@ class VPNConnection:
         :raises AuthenticationError: The credentials used to authenticate on the VPN are not correct
         :raises ConnectionTimeoutError: No answer from the VPN server for too long
         :raises MissingImplementationDetails: The implementation cannot be used.
+        :raises UnexpectedError: When an expected/unhandled error occurs.
         """
         pass
 
     @abstractmethod
     def down(self) -> None:
-        """Down method to stop a vpn connection."""
+        """Down method to stop a vpn connection.
+
+        :raises UnexpectedError: When an expected/unhandled error occurs.
+        """
         pass
 
     @classmethod
@@ -100,11 +113,11 @@ class VPNConnection:
                   VPNConnection, then that implementation is to be returned instead.
             :type connection_implementation: str
         """
-        implementations=[]
+        implementations = []
         try:
             from .networkmanager import NMConnection
             implementations.append(NMConnection)
-        except:
+        except: # noqa
             pass
         from .native import NativeConnection
         implementations.append(NativeConnection)
@@ -127,11 +140,11 @@ class VPNConnection:
 
             :return: :class:`VPNConnection`
         """
-        implementations=[]
+        implementations = []
         try:
             from .networkmanager import NMConnection
             implementations.append(NMConnection)
-        except:
+        except: # noqa
             pass
         from .native import NativeConnection
         implementations.append(NativeConnection)
@@ -168,53 +181,173 @@ class VPNConnection:
 
         return use_certificate
 
-    def register(self, who: str, callback: Callable = None):
-        """Register subscribers.
+    def register(self, who: object, callback: Callable = None) -> None:
+        """
+        Register a subscriber to receive connection status updates.
 
-            :param who: who is the subscriber, smallcaps letters
-            :type who: str
+            :param who: object/class instance that wants to receive connection status updates
+            :type who: object
             :param callback: Optional.
-                The optional callback method that can be passed.
+                Pass an alternative callback method.
             :type callback: Callable
 
-        Ideally each subscriber should at the least expose an receive_connection_status_update() method,
-        so that it can always be called. Though not necessary, each subscriber can pass
-        a specific callback method, which the publisher does not care of the name of the method,
-        as long as it's callable and that at the least it receives one argument.
+        Usage:
+        ::
+            class StatusUpdateReceiver:
+
+                def _connection_status_update(self, status):
+                    print(status)
+                    # or do something else with the received status
+
+            status_update_receives = StatusUpdateReceiver()
+
+            from protonvpn_connection.vpnconnection import VPNConnection
+
+            vpnconnection = VPNConnection.get_from_factory()
+            vpnconnection(vpnserver, vpncredentials)
+            vpnconnection.register(status_update_receives)
+
+        Each subscriber should expose `_connection_status_update()` method,
+        to guarantee that the callback is always called. If the subscriber does not provide
+        `_connection_status_update()` method, then subscribers needs toe ensure that the
+        alternative callback method is passed, ie:
+        ::
+            class StatusUpdateReceiver:
+
+                def _my_custom_method(self, status):
+                    print(status)
+                    # or do something else with the received status
+
+            status_update_receives = StatusUpdateReceiver()
+
+            from protonvpn_connection.vpnconnection import VPNConnection
+
+            vpnconnection = VPNConnection.get_from_factory()
+            vpnconnection(vpnserver, vpncredentials)
+            vpnconnection.register(
+                status_update_receives,
+                callback = status_update_receives._my_custom_method
+            )
+
         """
         if not callback:
-            callback = getattr(who, "receive_connection_status_update")
+            callback = getattr(who, "_connection_status_update")
 
         self._subscribers[who] = callback
 
-    def unregister(self, who):
-        """Unregister subscribers.
+    def unregister(self, who) -> None:
+        """
+        Unregister subscriber to stop receiving connection status updates.
 
             :param who: who is the subscriber, smallcaps letters
             :type who: str
+
+        Usage:
+        ::
+            class StatusUpdateReceiver:
+
+                def _connection_status_update(self, status):
+                    print(status)
+                    # or do something else with the received status
+
+            status_update_receives = StatusUpdateReceiver()
+
+            from protonvpn_connection.vpnconnection import VPNConnection
+
+            vpnconnection = VPNConnection.get_from_factory()
+            vpnconnection(vpnserver, vpncredentials)
+            vpnconnection.register(status_update_receives)
+
+            # lower in the code I then decide that I no longer wish to
+            # receive connection status updates, so I decide to
+            # unregister myself as a subscriber:
+            vpnconnection.unregister(status_update_receives)
+
         """
         try:
             del self._subscribers[who]
         except KeyError:
             pass
 
-    def _notify_subscribers(self, connection_status, *args, **kwargs):
-        """Notify all subscribers.
+    def _notify_subscribers(self, connection_status: ConnectionStateEnum) -> None:
+        """*For developers*
 
-        This method is used once there are any status updates on the VPNConnection.
-        Any desired args and kwargs can passed although one that should always be passed is
-        connections_status.
+        Notifies the subscribers about connection state changes.
+
+        Each backend and/or protocol have to call this method whenever the connection
+        state changes, so that each subscriber can receive states changes whenever they occur.
+
+            :param connection_status: the current status of the connection
+            :type connection_status: ConnectionStateEnum
+
+        Usage:
+        ::
+            from protonvpn_connection.vpnconnection import VPNConnection
+
+            class CustomBackend(VPNConnection):
+                implementation = "custom_backend"
+
+                ...
+
+                def up(self):
+                    self._notify_subscribers(ConnectionStateEnum.DISCONNECTED)
+                    self._setup()
+                    self._persist_connection()
+                    self._start_connection()
+                    # Connection has been established
+                    self._notify_subscribers(ConnectionStateEnum.CONNECTED)
+
+                def down(self):
+                    self._stop_connection()
+                    self._remove_connection_persistence()
+
+                def _stop_connection(self):
+                    self._notify_subscribers(ConnectionStateEnum.DISCONNECTING)
+                    # stopped connection
+                    self._notify_subscribers(ConnectionStateEnum.DISCONNECTED)
+
+                def _setup(self):
+                    # setup connection
+                    self._notify_subscribers(ConnectionStateEnum.CONNECTING)
+
+        Note: Some code has been ommitted for readability.
         """
         for subscriber, callback in self._subscribers.items():
-            callback(connection_status, *args, **kwargs)
+            callback(connection_status)
 
     @abstractmethod
-    def _get_connection(self):
+    def _get_connection(self) -> 'VPNConnection':
+        """*For developers*
+        Each backend has to provide a classmethod of getting a connection.
+
+            :return: either vpn connection if exists or none
+            :rtype: VPNConnection | None
+
+        Usage:
+        ::
+            from protonvpn_connection.vpnconnection import VPNConnection
+
+            class CustomBackend(VPNConnection):
+                implementation = "custom_backend"
+
+                @classmethod
+                def _get_connection(cls):
+                    classes = [OpenVPNTCP, OpenVPNUDP, Wireguard, Strongswan]
+
+                    for _class in classes:
+                        vpnconnection = _class(None, None)
+                        if vpnconnection._get_protonvpn_connection():
+                            return vpnconnection
+
+        Note: Some code has been ommitted for readability.
+        """
         pass
 
     @staticmethod
-    def _priority():
-        """This value determines which implementation takes precedence.
+    def _priority() -> int:
+        """*For developers*
+
+        Priority value determines which implementation takes precedence.
 
         If no specific implementation has been defined then each connection
         implementation class to calculate it's priority value. This priority value is
@@ -227,11 +360,27 @@ class VPNConnection:
         If NetworkManage packages are installed but are not running, then any other implementation
         will take precedence.
 
+        Usage:
+        ::
+            from protonvpn_connection.vpnconnection import VPNConnection
+
+            class CustomBackend(VPNConnection):
+                implementation = "custom_backend"
+
+                ...
+
+                @classmethod
+                def _priority(cls):
+                    # Either return a hard-coded value (which is discoureaged),
+                    # or calculate it based on some system settings
+                    return 150
+
+        Note: Some code has been ommitted for readability.
         """
         raise NotImplementedError
 
-    def _ensure_unique_id_is_set(self):
-        """Ensure that the unique id is set
+    def _ensure_unique_id_is_set(self) -> None:
+        """*For developers*
 
         It is crucial that unique_id is always set and current. The only times
         where it can be empty is when there is no VPN connection.
@@ -263,20 +412,51 @@ class VPNConnection:
         self._unique_id = self._unique_id.replace(self._persistence_prefix, "")
 
     def _persist_connection(self):
-        """Persist a connection.
+        """*For developers*
 
-        If for some reason component crashes, we need to know which connection we
+        If for some reason the component crashes, we need to know which connection we
         should be handling. Thus the connection unique ID is prefixed with the protocol
-        and implementation and stored to a file. Ie:
-            - A connection unique ID is 132123-123sdf-12312-fsd
-            - A file is created
-            - The filename and content is: <IMPLEMENTATION>_<PROTOCOl>_132123-123sdf-12312-fsd
-              - where IMPLEMENTATION can be networkmanager or native
-              - where PROTOCOl can be openvpn_tcp, openvpn_udp or wireguard
+        and implementation and stored to a file.
 
-        Following the previous example, our file will end up being called nm_wireguard_132123-123sdf-12312-fsd,
-        which tells us that we used NetworkManager as an implementation and we've used the Wireguard protocol.
-        Knowing this, we can correctly instatiate for later use.
+        Usage:
+        ::
+
+            from protonvpn_connection.vpnconnection import VPNConnection
+
+            class CustomBackend(VPNConnection):
+                implementation = "custom_backend"
+
+                ...
+
+                def up(self):
+                    self._setup()
+
+                    # `_persist_connection` creates a file with filename in the format of
+                    # <IMPLEMENTATION>_<PROTOCOl>_<UNIQUE_ID>
+                    # where:
+                    #   - `<IMPLEMENTATION>` is `implementation`
+                    #   - `<PROTOCOl>` is the provided protocol to factory
+                    #   - `<UNIQUE_ID>` is `self._unique_id`
+                    # so the file would look like this (given that we've selected udp as protocol):
+                    # `custom_backend_openvpn_udp_132123-123sdf-12312-fsd`
+
+                    self._persist_connection()
+
+                    self._start_connection()
+
+                def down(self):
+                    self._stop_connection()
+                    self._remove_connection_persistence()
+
+                def _stop_connection(self):
+                    # stopped connection
+
+                def _setup(self):
+                    # setup connection
+                    # after setup, the connecction uuid is 132123-123sdf-12312-fsd
+                    self._unique_id = 132123-123sdf-12312-fsd
+
+        Note: Some code has been ommitted for readability.
         """
         from ..persistence import ConnectionPeristence
         persistence = ConnectionPeristence()
@@ -284,9 +464,9 @@ class VPNConnection:
         persistence.persist(conn_id)
 
     def _remove_connection_persistence(self):
-        """Remove connection persistence.
+        """*For developers*
 
-        Works in the opposite way of _persist_connection. As it removes the peristence
+        Works in the opposite way of _persist_connection. It removes the persitence
         file. This is used in conjunction with down, since if the connection is turned down,
         we don't want to keep any persistence files.
         """
@@ -295,30 +475,74 @@ class VPNConnection:
         conn_id = self._persistence_prefix + self._unique_id
         persistence.remove_persist(conn_id)
 
-    def _get_credentials(self, flags: list = None):
+    def _get_user_pass(self, apply_feature_flags=False):
+        """*For developers*
+
+            :param apply_feature_flags: if feature flags are to be suffixed to username
+            :type apply_feature_flags: bool
+
+        In case of non-certificate based authentication, username and password need
+        to be provided for authentication. In such cases, the username can be optionally
+        suffixed with different options, of which are fetched from `self._settings`
+
+        Usage:
+        ::
+
+            from protonvpn_connection.vpnconnection import VPNConnection
+
+            class CustomBackend(VPNConnection):
+                implementation = "custom_backend"
+
+                ...
+
+                def _setup(self):
+                    if not use_ceritificate:
+                        # In this case, the username will have suffixes added given
+                        # that any of the them are set in `self._settings`
+                        user, pass = self._get_user_pass()
+
+                        # Then add the username and password to the configurations
+
+        """
         user_data = self._vpncredentials.vpn_get_username_and_password()
         username = user_data.username
-        if flags is not None:
+        if apply_feature_flags:
+            flags = self._get_feature_flags()
             username = "+".join([username] + flags)  # each flag must be preceded by "+"
+
         return username, user_data.password
 
-    def _transform_features_to_flags(self) -> Optional[list]:
+    def _get_feature_flags(self) -> Optional[list]:
+        """*For developers*
+
+        Creates a list of feature flags that are fetched from `self._settings`.
+        These feature flags are used to suffix them to a username, to trigger special
+        behaviour on server-side.
+        """
         list_flags = []
-        features = self.settings
-        if features is not None:
-            if not features.vpn_accelerator:
-                list_flags.append("nst")
-            v = features.netshield_level
-            list_flags.append(f"f{v}")
-            if features.port_forwarding:
-                list_flags.append("pmp")
-            if not features.random_nat:
-                list_flags.append("nr")
-            if features.safe_mode:
-                list_flags.append("sm")
-            else:
-                list_flags.append("nsm")
-            return list_flags
+        self._transform_features_to_flags(list_flags)
+        return list_flags
+
+    def _transform_features_to_flags(self, list_flags: Optional[list]) -> Optional[list]:
+        """*For developers*
+
+        Transform the flags into features to be suffixed to username.
+        """
+        features = self._settings
+        if features is None:
+            list_flags.append("nsm")
+            return
+
+        v = features.netshield_level
+        list_flags.append(f"f{v}")
+
+        if not features.vpn_accelerator:
+            list_flags.append("nst")
+        if features.port_forwarding:
+            list_flags.append("pmp")
+        if not features.random_nat:
+            list_flags.append("nr")
+        if features.safe_mode:
+            list_flags.append("sm")
         else:
             list_flags.append("nsm")
-        return list_flags

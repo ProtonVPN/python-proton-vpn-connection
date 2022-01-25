@@ -10,9 +10,9 @@ Welcome to python-protonvpn-connection's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   vpnconnection
-   networkmanager
-   abstracts
+   01_vpnconnection
+   02_networkmanager
+   03_abstracts
 
 
 Indices and tables

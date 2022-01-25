@@ -168,7 +168,7 @@ class OpenVPN(NativeConnection):
     def _setup(self):
         from ..vpnconfiguration import VPNConfiguration
         vpnconfig = VPNConfiguration.from_factory(self.protocol)
-        self._vpnconfig = vpnconfig(self._vpnserver, self._vpnaccount, self._settings)
+        self._vpnconfig = vpnconfig(self._vpnserver, self._vpncredentials, self._settings)
         self._vpnconfig.use_certificate = self._use_certificate
         self._create_cfg_file()
         self._requires_sudo = (os.getenv("VPNCONNECTIONNATIVE_SUDO_OPENVPN", "True").lower() == "true")
@@ -222,7 +222,7 @@ class OpenVPN(NativeConnection):
             commands+= ["--script-security", "2"]
 
         if self._auth_using_credentials:
-            username, password = self._get_credentials()
+            username, password = self._get_user_pass()
             self._create_temporary_credential_file(username, password)
             commands += ["--auth-user-pass", self._temp_credentials_file.name]
         else:

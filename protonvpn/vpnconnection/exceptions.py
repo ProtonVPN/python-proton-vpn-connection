@@ -18,13 +18,13 @@ class ConnectionTimeoutError(VPNConnectionError):
     """When a connection takes too long to connect, this exception will be thrown."""
 
 
-class MissingImplementationDetails(VPNConnectionError):
-    """When no VPN implementation is found (NetworkManager, Native, etc) then this exception is thrown.
+class MissingBackendDetails(VPNConnectionError):
+    """When no VPN backend is found (NetworkManager, Native, etc) then this exception is thrown.
 
     In rare cases where it can happen that a user has some default packages installed, where the
     services for those packages are actually not running. Ie:
-    NetworkManager is installed but not running and for some reason we can't access native implementation, thus
-    this exception is thrown as we can't do anything.
+    NetworkManager is installed but not running and for some reason we can't access native backend,
+    thus this exception is thrown as we can't do anything.
     """
 
 

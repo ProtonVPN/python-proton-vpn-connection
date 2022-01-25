@@ -31,12 +31,12 @@ class VPNConnection:
         # to shutdown vpn connection
         vpnconnection.down()
 
-    Or you could directly use a protocol from a specific implementation:
+    Or you could directly use a protocol from a specific backend:
     ::
         vpnconnection = VPNConnection.get_from_factory("wireguard")
         vpnconnection.up()
 
-    If a specific implementation supports it, a VPNConnection object is persistent
+    If a specific backend supports it, a VPNConnection object is persistent
     accross client-code exits. For instance, if you started a VPNConnection with
     :meth:`up`, you can get it back like this in another instance of your client code :
     ::
@@ -65,7 +65,7 @@ class VPNConnection:
                 signature of Settings.
             :type settings: object
 
-        This will set the interal properties which will be used by each implementation/protocol
+        This will set the interal properties which will be used by each backend/protocol
         to create its configuration file, so that it's ready to establish a VPN connection.
         """
         self._vpnserver = vpnserver
@@ -83,7 +83,7 @@ class VPNConnection:
 
         :raises AuthenticationError: The credentials used to authenticate on the VPN are not correct
         :raises ConnectionTimeoutError: No answer from the VPN server for too long
-        :raises MissingImplementationDetails: The implementation cannot be used.
+        :raises MissingBackendDetails: The backend cannot be used.
         :raises UnexpectedError: When an expected/unhandled error occurs.
         """
         pass
@@ -97,41 +97,41 @@ class VPNConnection:
         pass
 
     @classmethod
-    def get_from_factory(cls, protocol: str = None, connection_implementation: str = None):
+    def get_from_factory(cls, protocol: str = None, backend: str = None):
         """Get a vpn connection from factory.
 
             :param protocol: Optional.
                 protocol to connect with, all in smallcaps
             :type protocol: str
-            :param connection_implementation: Optional.
-                By default, get_vpnconnection() will always return based on NM implementation, although
+            :param backend: Optional.
+                By default, get_vpnconnection() will always return based on NM backend, although
                 there are two execetpions to this, which are listed below:
 
-                - If the priority value of another implementation is lower then the priority value of
-                  NM implementation, then former will be returned instead of the latter.
-                - If connection_implementation is set to a matching property of an implementation of
-                  VPNConnection, then that implementation is to be returned instead.
-            :type connection_implementation: str
+                - If the priority value of another backend is lower then the priority value of
+                  NM backend, then former will be returned instead of the latter.
+                - If backend is set to a matching property of an backend of
+                  VPNConnection, then that backend is to be returned instead.
+            :type backend: str
         """
-        implementations = []
+        backends = []
         try:
             from .networkmanager import NMConnection
-            implementations.append(NMConnection)
+            backends.append(NMConnection)
         except: # noqa
             pass
         from .native import NativeConnection
-        implementations.append(NativeConnection)
+        backends.append(NativeConnection)
         if not protocol:
             protocol = "openvpn_udp"
 
-        if connection_implementation == "networkmanager":
+        if backend == "networkmanager":
             return NMConnection.factory(protocol)
-        elif connection_implementation == "native":
+        elif backend == "native":
             return NativeConnection.factory(protocol)
 
-        implementations.sort(key=lambda x: x._priority())
+        backends.sort(key=lambda x: x._priority())
 
-        return implementations[0].factory(protocol)
+        return backends[0].factory(protocol)
 
     @classmethod
     def get_current_connection(self) -> Optional['VPNConnection']:
@@ -140,17 +140,17 @@ class VPNConnection:
 
             :return: :class:`VPNConnection`
         """
-        implementations = []
+        backends = []
         try:
             from .networkmanager import NMConnection
-            implementations.append(NMConnection)
+            backends.append(NMConnection)
         except: # noqa
             pass
         from .native import NativeConnection
-        implementations.append(NativeConnection)
+        backends.append(NativeConnection)
 
-        for implementation in implementations:
-            conn = implementation._get_connection()
+        for backend in backends:
+            conn = backend._get_connection()
             if conn:
                 return conn
 
@@ -285,7 +285,7 @@ class VPNConnection:
             from protonvpn_connection.vpnconnection import VPNConnection
 
             class CustomBackend(VPNConnection):
-                implementation = "custom_backend"
+                backend = "custom_backend"
 
                 ...
 
@@ -328,7 +328,7 @@ class VPNConnection:
             from protonvpn_connection.vpnconnection import VPNConnection
 
             class CustomBackend(VPNConnection):
-                implementation = "custom_backend"
+                backend = "custom_backend"
 
                 @classmethod
                 def _get_connection(cls):
@@ -347,17 +347,17 @@ class VPNConnection:
     def _priority() -> int:
         """*For developers*
 
-        Priority value determines which implementation takes precedence.
+        Priority value determines which backend takes precedence.
 
-        If no specific implementation has been defined then each connection
-        implementation class to calculate it's priority value. This priority value is
-        then used by the factory to select the optimal implementation for
+        If no specific backend has been defined then each connection
+        backend class to calculate it's priority value. This priority value is
+        then used by the factory to select the optimal backend for
         establishing a connection.
 
         The lower the value, the more priority it has.
 
         Network manager will always have priority, thus it will always have the value of 100.
-        If NetworkManage packages are installed but are not running, then any other implementation
+        If NetworkManage packages are installed but are not running, then any other backend
         will take precedence.
 
         Usage:
@@ -365,7 +365,7 @@ class VPNConnection:
             from protonvpn_connection.vpnconnection import VPNConnection
 
             class CustomBackend(VPNConnection):
-                implementation = "custom_backend"
+                backend = "custom_backend"
 
                 ...
 
@@ -416,7 +416,7 @@ class VPNConnection:
 
         If for some reason the component crashes, we need to know which connection we
         should be handling. Thus the connection unique ID is prefixed with the protocol
-        and implementation and stored to a file.
+        and backend and stored to a file.
 
         Usage:
         ::
@@ -424,7 +424,7 @@ class VPNConnection:
             from protonvpn_connection.vpnconnection import VPNConnection
 
             class CustomBackend(VPNConnection):
-                implementation = "custom_backend"
+                backend = "custom_backend"
 
                 ...
 
@@ -432,9 +432,9 @@ class VPNConnection:
                     self._setup()
 
                     # `_persist_connection` creates a file with filename in the format of
-                    # <IMPLEMENTATION>_<PROTOCOl>_<UNIQUE_ID>
+                    # <BACKEND>_<PROTOCOl>_<UNIQUE_ID>
                     # where:
-                    #   - `<IMPLEMENTATION>` is `implementation`
+                    #   - `<BACKEND>` is `backend`
                     #   - `<PROTOCOl>` is the provided protocol to factory
                     #   - `<UNIQUE_ID>` is `self._unique_id`
                     # so the file would look like this (given that we've selected udp as protocol):
@@ -491,7 +491,7 @@ class VPNConnection:
             from protonvpn_connection.vpnconnection import VPNConnection
 
             class CustomBackend(VPNConnection):
-                implementation = "custom_backend"
+                backend = "custom_backend"
 
                 ...
 

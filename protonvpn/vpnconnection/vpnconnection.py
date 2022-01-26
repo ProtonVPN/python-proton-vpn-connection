@@ -397,7 +397,7 @@ class VPNConnection:
 
         The unique ID is also used to find connections in NetworkManager.
         """
-        from ..persistence import ConnectionPeristence
+        from .persistence import ConnectionPeristence
         persistence = ConnectionPeristence()
 
         try:
@@ -458,7 +458,7 @@ class VPNConnection:
 
         Note: Some code has been ommitted for readability.
         """
-        from ..persistence import ConnectionPeristence
+        from .persistence import ConnectionPeristence
         persistence = ConnectionPeristence()
         conn_id = self._persistence_prefix + self._unique_id
         persistence.persist(conn_id)
@@ -470,7 +470,7 @@ class VPNConnection:
         file. This is used in conjunction with down, since if the connection is turned down,
         we don't want to keep any persistence files.
         """
-        from ..persistence import ConnectionPeristence
+        from .persistence import ConnectionPeristence
         persistence = ConnectionPeristence()
         conn_id = self._persistence_prefix + self._unique_id
         persistence.remove_persist(conn_id)

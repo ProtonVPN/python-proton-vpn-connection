@@ -1,4 +1,4 @@
-Base VPN Connection
+VPN Connection
 ===================
 
 VPNConnection

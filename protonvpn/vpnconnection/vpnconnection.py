@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from typing import Callable, Optional
-from ..interfaces import VPNServer, Settings, VPNCredentials
+from .interfaces import VPNServer, Settings, VPNCredentials
 from .enum import ConnectionStateEnum
 
 

@@ -4,7 +4,7 @@ Interfaces
 VPNServer
 --------------------
 
-.. autoclass:: protonvpn_connection.interfaces.VPNServer
+.. autoclass:: protonvpn.vpnconnection.interfaces.VPNServer
    :members:
    :undoc-members:
    :private-members:
@@ -13,7 +13,7 @@ VPNServer
 VPNCertificate
 --------------------
 
-.. autoclass:: protonvpn_connection.interfaces.VPNCertificate
+.. autoclass:: protonvpn.vpnconnection.interfaces.VPNCertificate
    :members:
    :undoc-members:
    :private-members:
@@ -22,7 +22,7 @@ VPNCertificate
 VPNUserPass
 --------------------
 
-.. autoclass:: protonvpn_connection.interfaces.VPNUserPass
+.. autoclass:: protonvpn.vpnconnection.interfaces.VPNUserPass
    :members:
    :undoc-members:
    :private-members:
@@ -31,7 +31,7 @@ VPNUserPass
 VPNCredentials
 --------------------
 
-.. autoclass:: protonvpn_connection.interfaces.VPNCredentials
+.. autoclass:: protonvpn.vpnconnection.interfaces.VPNCredentials
    :members:
    :undoc-members:
    :private-members:
@@ -40,7 +40,7 @@ VPNCredentials
 Settings
 --------------------
 
-.. autoclass:: protonvpn_connection.interfaces.Settings
+.. autoclass:: protonvpn.vpnconnection.interfaces.Settings
    :members:
    :undoc-members:
    :private-members:

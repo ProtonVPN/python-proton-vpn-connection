@@ -42,7 +42,7 @@ class ProtocolAdapter:
 
 class NativeConnection(VPNConnection):
     """Dummy class to emulate native implementation"""
-    implementation = "native"
+    backend = "native"
 
     @classmethod
     def factory(cls, protocol: str = None):

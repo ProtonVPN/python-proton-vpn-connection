@@ -12,7 +12,7 @@ from .nmclient import NMClient
 
 
 class NMConnection(VPNConnection, NMClient):
-    """Returns VPN connections based on Network Manager implementation.
+    """Returns VPN connections based on Network Manager backend.
 
     This is the default backend that will be returned. See docstring for
     VPNConnection.get_vpnconnection() for further explanation on how priorities work.
@@ -20,7 +20,7 @@ class NMConnection(VPNConnection, NMClient):
     A NMConnection can return a VPNConnection based on protocols such as OpenVPN, IKEv2 or Wireguard.
     """
 
-    implementation = "networkmanager"
+    backend = "networkmanager"
 
     @classmethod
     def factory(cls, protocol: str = None):

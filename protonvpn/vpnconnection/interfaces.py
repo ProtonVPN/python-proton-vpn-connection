@@ -8,7 +8,7 @@ class VPNServer:
 
     Usage:
     ::
-        from protonvpn_connection.interfaces import VPNServer
+        from protonvpn.vpnconnection import VPNServer
 
         class MyVPNServer(VPNServer):
 
@@ -97,7 +97,7 @@ class VPNCertificate:
 
     Usage:
     ::
-        from protonvpn_connection.interfaces import VPNCertificate
+        from protonvpn.vpnconnection import VPNCertificate
 
         class MyVPNCertificate(VPNCertificate):
 
@@ -144,7 +144,7 @@ class VPNUserPass(NamedTuple):
 
     Usage:
     ::
-        from protonvpn_connection.interfaces import VPNUserPass
+        from protonvpn.vpnconnection import VPNUserPass
 
         myuserpass = VPNUserPass(
             username = "my-openvpn/ikev2-username",
@@ -205,7 +205,7 @@ class Settings:
 
     Usage:
     ::
-        from protonvpn_connection.interfaces import Settings
+        from protonvpn.vpnconnection import Settings
 
         class VPNSettings(Settings):
 
@@ -227,7 +227,7 @@ class Settings:
 
     Note: Not all fields are mandatory to override, only those that are actually needed, ie:
     ::
-        from protonvpn_connection.interfaces import Settings
+        from protonvpn.vpnconnection import Settings
 
         class VPNSettings(Settings):
 

@@ -239,7 +239,7 @@ class OpenVPNTCP(OpenVPN):
     _persistence_prefix = "nm_{}_".format(protocol)
 
     def _setup(self):
-        from ..vpnconfiguration import VPNConfiguration
+        from .vpnconfiguration import VPNConfiguration
         vpnconfig = VPNConfiguration.from_factory(self.protocol)
         vpnconfig = vpnconfig(self._vpnserver, self._vpncredentials, self._settings)
         vpnconfig.use_certificate = self._use_certificate
@@ -254,7 +254,7 @@ class OpenVPNUDP(OpenVPN):
     _persistence_prefix = "nm_{}_".format(protocol)
 
     def _setup(self):
-        from ..vpnconfiguration import VPNConfiguration
+        from .vpnconfiguration import VPNConfiguration
         vpnconfig = VPNConfiguration.from_factory(self.protocol)
         vpnconfig = vpnconfig(self._vpnserver, self._vpncredentials, self._settings)
         vpnconfig.use_certificate = self._use_certificate
@@ -362,7 +362,7 @@ class Strongswan(NMConnection):
         self._unique_id = str(uuid.uuid4())
 
     def __configure_connection(self):
-        from ..constants import ca_cert
+        from .constants import ca_cert
         new_connection = NM.SimpleConnection.new()
 
         s_con = NM.SettingConnection.new()

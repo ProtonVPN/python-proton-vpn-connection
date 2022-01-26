@@ -4,7 +4,7 @@ Base VPN Connection
 VPNConnection
 -------------
 
-.. autoclass:: protonvpn_connection.vpnconnection.VPNConnection
+.. autoclass:: protonvpn.vpnconnection.VPNConnection
    :members:
    :private-members:
    :special-members: __init__
@@ -12,6 +12,6 @@ VPNConnection
 Exceptions
 ----------
 
-.. automodule:: protonvpn_connection.vpnconnection.exceptions
+.. automodule:: protonvpn.vpnconnection.exceptions
    :members:
    :inherited-members:

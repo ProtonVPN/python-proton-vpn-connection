@@ -20,10 +20,6 @@ The class dependency is shown below:
                                 +---+---------------+
                                     |               
                                     |               
-                                    |               
-                                    |               
-                                    |               
-                                    |               
                         +-----------v------+
                         |                  |
                         |   NMConnection   |
@@ -57,7 +53,8 @@ Protocol is needed for two cases:
 Persistence prefix is needed for persisting connections:
 
 * To identify the status of the vpn connection or
-* If you want to disconnect or recover from a crash
+* If you want to disconnect the vpn outside the execution flow of your application (see ``down()`` method)
+* If you want recover from a crash that has left stale states on the host.
 
 The prefix has to follow a specific pattern. The first part of the prefix specifies the backend, while the second part consists of the protocol which then is followed by unique id of the connection
 (which should always be generated and set in the ``_setup()`` method).
@@ -71,7 +68,8 @@ up()
 
 #. The ``up()`` method calls on ``_setup()``, which at this point all subclasses should've have overriden and implemented it's own setup method,
 #. then ``_persist_connection()``, which persists the connection to a file based on ``protocol`` and ``_persistence_prefix`` and lastly
-#. the connection is started with ``_start_connection_async``, which is inherited from ``NMClient``.
+#. the connection is started with ``_start_connection_async``, which is inherited from ``NMClient``, available in ``NMConnection`` and dedicated
+   to dbus RPC with Network Manager.
 
 .. code-block:: python
 
@@ -123,7 +121,7 @@ OpenVPN
 OpenVPNUDP
 ==========
 
-Let start by taking a closer look at ``OpenVPNUDP`` as it actually extends from ``OpenVPN`` (which in itself extends from ``VPNConnection``):
+Let start by taking a closer look at ``OpenVPNUDP`` as it actually extends from ``OpenVPN`` (which in itself extends from ``VPNConnection`` + ``NMClient``):
 
 .. code-block:: python
 

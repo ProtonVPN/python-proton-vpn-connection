@@ -1,5 +1,5 @@
-Adding  a new protocol
-=======================
+Adding a protocol to a backend
+===============================
 
 Overview
 ---------------
@@ -151,7 +151,7 @@ Since most of the logic resides in ``OpenVPN``, the classes that extend from it 
     thus you might have to manually build a connection with ``dbus-python`` and add ``NM``.
 
 
-Add new protocol
+Wireguard
 ----------------
 
 Now we'll try to add the wireguard protocol to ``NMConnection``, based on previous explanation.

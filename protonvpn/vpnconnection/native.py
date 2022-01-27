@@ -358,3 +358,16 @@ class Wireguard(NativeConnection):
 
     def down(self):
         pass
+
+class Strongswan(NativeConnection):
+    """Creates a Strongswan/IKEv2 connection."""
+    protocol = "ikev2"
+
+    def _setup(self):
+        pass
+
+    def up(self):
+        pass
+
+    def down(self):
+        pass

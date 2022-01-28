@@ -110,7 +110,7 @@ class OVPNConfig(VPNConfiguration):
             "openvpn_protocol": self._protocol,
             "serverlist": [self._vpnserver.server_ip],
             "openvpn_ports": ports,
-            "ipv6_disabled": self._settings.disable_ipv6,
+            "ipv6_disabled": self._settings.ipv6,
             "ca_certificate": ca_cert,
             "certificate_based": self._use_certificate,
             "split": True if len(self._settings.split_tunneling_ips) > 0 else False,

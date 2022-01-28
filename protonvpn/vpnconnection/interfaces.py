@@ -266,7 +266,7 @@ class Settings:
         return ""
 
     @property
-    def disable_ipv6(self) -> bool:
+    def ipv6(self) -> bool:
         """Optional.
 
         :return: if ipv6 should be disabled

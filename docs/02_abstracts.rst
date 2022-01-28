@@ -10,8 +10,18 @@ VPNServer
    :private-members:
    :show-inheritance:
 
-VPNCertificate
+VPNCredentials
 --------------------
+
+.. autoclass:: protonvpn.vpnconnection.interfaces.VPNCredentials
+   :members:
+   :undoc-members:
+   :private-members:
+   :show-inheritance:
+
+
+VPNCertificate
+###############
 
 .. autoclass:: protonvpn.vpnconnection.interfaces.VPNCertificate
    :members:
@@ -20,18 +30,9 @@ VPNCertificate
    :show-inheritance:
 
 VPNUserPass
---------------------
+############
 
 .. autoclass:: protonvpn.vpnconnection.interfaces.VPNUserPass
-   :members:
-   :undoc-members:
-   :private-members:
-   :show-inheritance:
-
-VPNCredentials
---------------------
-
-.. autoclass:: protonvpn.vpnconnection.interfaces.VPNCredentials
    :members:
    :undoc-members:
    :private-members:

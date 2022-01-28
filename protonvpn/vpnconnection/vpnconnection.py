@@ -533,7 +533,7 @@ class VPNConnection:
             list_flags.append("nsm")
             return
 
-        v = features.netshield_level
+        v = features.netshield
         list_flags.append(f"f{v}")
 
         if not features.vpn_accelerator:

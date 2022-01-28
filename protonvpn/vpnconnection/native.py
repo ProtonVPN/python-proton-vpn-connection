@@ -57,7 +57,7 @@ class NativeConnection(VPNConnection):
 
     @classmethod
     def _get_connection(cls):
-        classes = [OpenVPN]
+        classes = [OpenVPN,Wireguard]
 
         for _class in classes:
             vpnconnection = _class.get_current_connection()
@@ -166,7 +166,7 @@ class OpenVPN(NativeConnection):
         return [""]
 
     def _setup(self):
-        from ..vpnconfiguration import VPNConfiguration
+        from .vpnconfiguration import VPNConfiguration
         vpnconfig = VPNConfiguration.from_factory(self.protocol)
         self._vpnconfig = vpnconfig(self._vpnserver, self._vpncredentials, self._settings)
         self._vpnconfig.use_certificate = self._use_certificate
@@ -315,12 +315,16 @@ class OpenVPN(NativeConnection):
         res._logger = logging.getLogger("NativeVPNConnection")
         res._temp_credentials_file=None
         res._tmp_cfg_file=None
-        res._read_props_file()
+        try:
+            res._read_props_file()
+            res._connection_found=True
+        except:
+            res._connection_found=False
         res._subprocess=None
         return res
 
     def _get_protonvpn_connection(self):
-        return True
+        return self._connection_found
 
 
 class OpenVPNTCP(OpenVPN):
@@ -346,18 +350,140 @@ class OpenVPNUDP(OpenVPN):
     def down(self):
         self._disconnect()
 
+class WGNativeConnectionPropertiesName:
+    NATIVE_PROPS_FILENAME = "wg-native-connection-props.json"
+
 class Wireguard(NativeConnection):
+    from proton.utils import ExecutionEnvironment
+    NATIVE_PROPS_FILEPATH = os.path.join(ExecutionEnvironment().path_runtime,WGNativeConnectionPropertiesName.NATIVE_PROPS_FILENAME)
+
     """Creates a Wireguard connection."""
     protocol = "wireguard"
 
+    @staticmethod
+    def _get_wg_quick_path():
+        return os.getenv("VPNCONNECTION_NATIVE_WGQUICK_PATH", "/usr/local/bin/wg-quick")
+
     def _setup(self):
-        pass
+        from .vpnconfiguration import VPNConfiguration
+        vpnconfig = VPNConfiguration.from_factory(self.protocol)
+        self._vpnconfig = vpnconfig(self._vpnserver, self._vpncredentials, self._settings)
+        self._create_cfg_file()
+        self._requires_sudo = (os.getenv("VPNCONNECTIONNATIVE_SUDO_WG", "True").lower() == "true")
+        ProtocolAdapter.register_log_level_trace()
+        self._logger = logging.getLogger("NativeVPNConnection")
+
+    def _create_cfg_file(self):
+        self._tmp_cfg_file = tempfile.NamedTemporaryFile(suffix=".conf")
+        self._wgconfig_filename = self._tmp_cfg_file.name
+        with open(self._tmp_cfg_file.name, "w") as f:
+            print(self._vpnconfig.generate())
+            f.write(self._vpnconfig.generate())
+
+    def _create_process(self):
+        commands = []
+        if self._requires_sudo:
+            commands += ["sudo"]
+        commands += [self._get_wg_quick_path(), "up", self._tmp_cfg_file.name ]
+        stdin = subprocess.DEVNULL
+        stdout = subprocess.DEVNULL
+        stderr = subprocess.DEVNULL
+        if self._logger.level < logging.DEBUG:
+            stdout = None
+            stderr = None
+        self._subprocess = subprocess.Popen(commands, stdin=stdin, stdout=stdout, stderr=stderr)
+        time_begin = time.time()
+        self._write_props_file()
+        counter=0
+        timeout_launch = 3
+        time_begin = time.time()
+        while True:
+            if time.time() - time_begin >= timeout_launch:
+                break
+            time.sleep(0.1)
+
+    def _write_props_file(self):
+        properties={}
+        with open(Wireguard.NATIVE_PROPS_FILEPATH,'w') as f:
+            properties['configuration_name']=self._wgconfig_filename
+            json.dump(properties,f)
+
+    def _read_props_file(self):
+        with open(Wireguard.NATIVE_PROPS_FILEPATH,'r') as f:
+            data=json.load(f)
+            self._wgconfig_filename=data['configuration_name']
+
+    def _remove_props_file(self):
+        os.unlink(Wireguard.NATIVE_PROPS_FILEPATH)
+
+    def _wgquickdown(self):
+        commands = []
+        if self._requires_sudo:
+            commands += ["sudo"]
+        conf_name=os.path.join(tempfile.gettempdir(),self._wgconfig_filename)
+        with open(conf_name,'w') as f:
+            commands += [self._get_wg_quick_path(), "down", conf_name ]
+            stdin = subprocess.DEVNULL
+            stdout = subprocess.DEVNULL
+            stderr = subprocess.DEVNULL
+            if self._logger.level < logging.DEBUG:
+                stdout = None
+                stderr = None
+            self._subprocess = subprocess.Popen(commands, stdin=stdin, stdout=stdout, stderr=stderr)
+
+    def terminate_process(self, ignore_failure=False):
+        if self._tmp_cfg_file:
+            self._tmp_cfg_file.close()
+        self._tmp_cfg_file = None
+
+        self._wgquickdown()
+
+        #if no subprocess, just wait a bit
+        if not self._subprocess:
+            time.sleep(1)
+            return
+
+        timeout_terminate = 5
+        time_begin = time.time()
+        while True:
+            status = self._subprocess.poll()
+            if status is not None:
+                break
+            if time.time() - time_begin >= timeout_terminate:
+                break
+            time.sleep(0.1)
+
+        del self._subprocess
+        self._subprocess = None
+        self._management_socket_name = None
+        self._mgmt_socket = None
+
+    def _disconnect(self, ignore_failure=False):
+        self._temp_credentials_file = None
+        self.terminate_process(ignore_failure=ignore_failure)
+        self._remove_props_file()
+
+    @staticmethod
+    def get_current_connection():
+        res=Wireguard(None,None)
+        ProtocolAdapter.register_log_level_trace()
+        res._logger = logging.getLogger("NativeVPNConnection")
+        res._tmp_cfg_file=None
+        res._read_props_file()
+        res._subprocess=None
+        res._requires_sudo = (os.getenv("VPNCONNECTIONNATIVE_SUDO_WG", "True").lower() == "true")
+        res._connection_found=True
+        return res
+
+    def _get_protonvpn_connection(self):
+        return self._connection_found
 
     def up(self):
-        pass
+        self._setup()
+        self._create_process()
 
     def down(self):
-        pass
+        self._disconnect()
 
 class Strongswan(NativeConnection):
     """Creates a Strongswan/IKEv2 connection."""

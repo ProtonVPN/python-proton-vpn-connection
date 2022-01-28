@@ -154,10 +154,27 @@ class OpenVPNUDPConfig(OVPNConfig):
 
 
 class WireguardConfig(VPNConfiguration):
-    _config_file = None
+    _protocol = "wireguard"
+    extension = ".conf"
 
-    def __enter__(self):
-        pass
+    def generate(self) -> str:
+        """Method that generates a wireguard vpn configuration.
+        """
 
-    def __exit__(self):
-        pass
+        from .constants import wireguard_template
+
+        j2_values = {
+            "wg_client_secret_key": self._vpncredentials.vpn_get_certificate_holder().vpn_client_private_wg_key,
+            "wg_ip": self._vpnserver.server_ip,
+            "wg_port": self._vpnserver.udp_ports[0],
+            "wg_server_pk": self._vpnserver.x25519pk
+        }
+
+        template = Environment(loader=BaseLoader).from_string(wireguard_template)
+
+        try:
+            return template.render(j2_values)
+        except jinja2.exceptions.TemplateNotFound as e:
+            raise jinja2.exceptions.TemplateNotFound(e)
+        except Exception as e:
+            pass

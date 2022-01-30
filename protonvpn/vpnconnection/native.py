@@ -178,7 +178,7 @@ class OpenVPN(NativeConnection):
         self._logger = logging.getLogger("NativeVPNConnection")
         self._buffer_mgmt_socket = []
         self._connect_timeout=10
-        self._logger.level= logging.INFO
+        self._logger.level= logging.DEBUG -3
 
     def _create_temporary_credential_file(self, username, password):
         self._temp_credentials_file = tempfile.NamedTemporaryFile(suffix=".tmp-credentials.txt")
@@ -447,7 +447,11 @@ class Wireguard(NativeConnection):
 
     @staticmethod
     def _get_wg_quick_path():
-        return os.getenv("VPNCONNECTION_NATIVE_WGQUICK_PATH", "/usr/local/bin/wg-quick")
+        paths_to_try=["/usr/bin/wg-quick", "/usr/local/bin/wg-quick"]
+        for path in paths_to_try:
+            if os.path.exists(path):
+                return path
+        return os.getenv("VPNCONNECTION_NATIVE_WGQUICK_PATH")
 
     def _setup(self):
         from .vpnconfiguration import VPNConfiguration
@@ -477,15 +481,8 @@ class Wireguard(NativeConnection):
             stdout = None
             stderr = None
         self._subprocess = subprocess.Popen(commands, stdin=stdin, stdout=stdout, stderr=stderr)
-        time_begin = time.time()
         self._write_props_file()
-        counter=0
-        timeout_launch = 3
-        time_begin = time.time()
-        while True:
-            if time.time() - time_begin >= timeout_launch:
-                break
-            time.sleep(0.1)
+        self._subprocess.communicate(timeout=10)
 
     def _write_props_file(self):
         properties={}

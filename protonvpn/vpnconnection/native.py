@@ -15,6 +15,8 @@ from .exceptions import ConnectionTimeoutError
 class MGMTSocketNotFoundError(Exception):
     pass
 
+class NativeVPNConnectionFailed(Exception):
+    pass
 
 class ProtocolAdapter:
     message_header = struct.Struct('>H')
@@ -175,6 +177,8 @@ class OpenVPN(NativeConnection):
         ProtocolAdapter.register_log_level_trace()
         self._logger = logging.getLogger("NativeVPNConnection")
         self._buffer_mgmt_socket = []
+        self._connect_timeout=10
+        self._logger.level= logging.INFO
 
     def _create_temporary_credential_file(self, username, password):
         self._temp_credentials_file = tempfile.NamedTemporaryFile(suffix=".tmp-credentials.txt")
@@ -188,7 +192,6 @@ class OpenVPN(NativeConnection):
     def _create_cfg_file(self):
         self._tmp_cfg_file = tempfile.NamedTemporaryFile(suffix=".tmp-config.ovpn")
         with open(self._tmp_cfg_file.name, "w") as f:
-            print(self._vpnconfig.generate())
             f.write(self._vpnconfig.generate())
 
     def _write_props_file(self):
@@ -198,11 +201,8 @@ class OpenVPN(NativeConnection):
             json.dump(properties,f)
 
     def _read_props_file(self):
-        print('reading props file')
         with open(OpenVPN.NATIVE_PROPS_FILEPATH,'r') as f:
-            print('props file opened')
             data=json.load(f)
-            print(data)
             self._management_socket_name=data['remote_ctrl_path']
 
     def _remove_props_file(self):
@@ -306,7 +306,6 @@ class OpenVPN(NativeConnection):
     @staticmethod
     def get_current_connection():
         ovpnkind=OpenVPN.get_by_protocol('udp')
-        print(f'Got a VPN Connection kind {ovpnkind}')
         res=ovpnkind(None,None)
         res._mgmt_socket=None
         res._buffer_mgmt_socket = []
@@ -326,6 +325,91 @@ class OpenVPN(NativeConnection):
     def _get_protonvpn_connection(self):
         return self._connection_found
 
+    def _get_state(self, ask_for_state):
+        if self._subprocess.poll() is not None:
+            raise NativeVPNConnectionFailed("openvpn subprocess has finished with returncode = {}".format(self._subprocess.returncode))
+        if ask_for_state:
+            self._trace("writing to mgmt socket : {}".format(b'state\n'))
+            self._write_to_mgmt_socket(b'state\n', flush=False)
+        timeout = 0.5
+        time_begin = time.time()
+        while True:
+            if ask_for_state:
+                self._read_input_mgmt_socket()
+            if not self._buffer_mgmt_socket:
+                self._trace("_get_state() : _read_input_mgmt_socket() finished ; _buffer_mgmt_socket = {} => quiting".format(self._buffer_mgmt_socket))
+                return None
+            buffer_utf8 = b''.join(self._buffer_mgmt_socket).decode("utf-8")
+            # self._trace("Read from mgmt socket :\n{}".format(buffer_utf8))
+            lines = buffer_utf8.split('\r\n')
+            # self._trace("Lines from mgmt socket :\n{}".format(lines))
+            all_blocks = []
+            current_block = []
+            for line in lines:
+                current_block.append(line)
+                if line.strip() == "END":
+                    all_blocks.append(current_block)
+                    current_block = []
+
+            state = None
+            for block in all_blocks:
+                reached_end_of_state = False
+                block_state = None
+                for line in block:
+                    if not line:
+                        continue
+                    if line.strip() == "END":
+                        # self._trace("   Found 'END' from management socket output ; state = {}".format(block_state))
+                        reached_end_of_state = True
+                        break
+                    tokens = line.split(",")
+                    if len(tokens) >= 4:
+                        # at least 4 comma-separated parameters : https://openvpn.net/community-resources/management-interface/
+                        try:
+                            _ = int(tokens[0])  # check 1st token is a unix timestamp
+                            state = tokens
+                        except:
+                            pass
+                if reached_end_of_state:
+                    if block_state:
+                        state = block_state
+                    # self._trace("    Read 'END' from management socket output")
+
+            if state:
+                self._trace("Found state in management socket : state = {}".format(state))
+                break
+
+            if time.time() - time_begin >= timeout:
+                self._trace("Not read 'END' from management socket output ; timeout : {} seconds ...")
+                raise TimeoutError("Not read 'END' from management buffer")
+            if not ask_for_state:
+                self._trace("Not read 'END' from management socket output ; ask_for_state = {} : break".format(ask_for_state))
+                break
+            time.sleep(0.2)
+            # self._trace("Not read 'END' from management socket output ; keep going...")
+
+        return state
+
+    @staticmethod
+    def _is_state_connected(state):
+        return state and state[1] == "CONNECTED"
+
+
+    def _waitstatus(self):
+        self._debug("Waiting VPN connection to be established...")
+        time_begin = time.time()
+        self._buffer_mgmt_socket = []
+        while True:
+            current_state = self._get_state(ask_for_state=True)
+            if self._is_state_connected(current_state):
+                break
+            self._trace("Waiting VPN connection to be established : current_state = {}...".format(current_state))
+            if time.time() - time_begin >= self._connect_timeout:
+                self._debug("Timeout establishing VPN connection ({} secs) : current_state = {}".format(self._connect_timeout, current_state))
+                raise TimeoutError("Timeout establishing VPN connection ({} secs)".format(self._connect_timeout))
+            time.sleep(0.5)
+        self._debug("        VPN connection       established : current_state = {}...".format(current_state))
+
 
 class OpenVPNTCP(OpenVPN):
     """Creates a OpenVPNTCP connection."""
@@ -334,6 +418,7 @@ class OpenVPNTCP(OpenVPN):
     def up(self):
         self._setup()
         self._create_process()
+        self._waitstatus()
 
     def down(self):
         self._disconnect()
@@ -469,10 +554,13 @@ class Wireguard(NativeConnection):
         ProtocolAdapter.register_log_level_trace()
         res._logger = logging.getLogger("NativeVPNConnection")
         res._tmp_cfg_file=None
-        res._read_props_file()
+        try:
+            res._read_props_file()
+            res._connection_found=True
+        except:
+            res._connection_found=False
         res._subprocess=None
         res._requires_sudo = (os.getenv("VPNCONNECTIONNATIVE_SUDO_WG", "True").lower() == "true")
-        res._connection_found=True
         return res
 
     def _get_protonvpn_connection(self):

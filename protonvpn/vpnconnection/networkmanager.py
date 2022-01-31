@@ -320,7 +320,6 @@ class Wireguard(NMConnection):
         peer.set_endpoint(f'{self._vpnserver.server_ip}:{self._vpnserver.udp_ports[0]}', True)
         peer.append_allowed_ip('0.0.0.0/0', False)
         s_wg.append_peer(peer)
-        print(connection)
         connection.commit_changes(True, None)
 
     def __setup_wg_connection(self):
@@ -329,7 +328,6 @@ class Wireguard(NMConnection):
         self.__configure_connection()
         # FIXME : Update connections cache, NMclient is a mess
         nm_client = NM.Client.new(None)
-        print(self._unique_id)
         self.connection = nm_client.get_connection_by_uuid(self._unique_id)
 
         self.connection.commit_changes(True, None)

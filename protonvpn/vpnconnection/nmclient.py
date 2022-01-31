@@ -6,6 +6,7 @@ from gi.repository import NM, GLib
 class NMClient:
     nm_client = NM.Client.new(None)
     main_loop = GLib.MainLoop()
+    failure=None
 
     def _commit_changes_async(self, new_connection):
         new_connection.commit_changes_async(
@@ -18,6 +19,8 @@ class NMClient:
             )
         )
         self.main_loop.run()
+        if NMClient.failure!=None:
+            raise NMClient.failure
 
     def _add_connection_async(self, connection):
         self.nm_client.add_connection_async(
@@ -31,6 +34,8 @@ class NMClient:
             )
         )
         self.main_loop.run()
+        if NMClient.failure!=None:
+            raise NMClient.failure
 
     def _start_connection_async(self, connection):
         """Start ProtonVPN connection."""
@@ -46,6 +51,8 @@ class NMClient:
             )
         )
         self.main_loop.run()
+        if NMClient.failure!=None:
+            raise NMClient.failure
 
     def _remove_connection_async(self, connection):
 
@@ -63,6 +70,8 @@ class NMClient:
             )
         )
         self.main_loop.run()
+        if NMClient.failure!=None:
+            raise NMClient.failure
 
     def _stop_connection_async(self, connection):
         """Stop ProtonVPN connection.
@@ -80,6 +89,8 @@ class NMClient:
             )
         )
         self.main_loop.run()
+        if NMClient.failure!=None:
+            raise NMClient.failure
 
     def __dynamic_callback(self, client, result, data):
         """Dynamic callback method.
@@ -124,7 +135,9 @@ class NMClient:
             #     conn_name,
             #     callback_type_dict[callback_type]["msg"]
             # )
+        except KeyError:
+            pass
         except Exception as e:
-            print(e)
+            NMClient.failure=e
 
         self.main_loop.quit()

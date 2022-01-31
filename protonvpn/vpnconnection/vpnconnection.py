@@ -18,8 +18,8 @@ class VPNConnection:
     ::
         from protonvpn.vpnconnection import VPNConnection
 
-        vpnconnection = VPNConnection.get_from_factory()
-        vpnconnection(vpnserver, vpncredentials)
+        vpnconnection_type = VPNConnection.get_from_factory()
+        vpnconnection=vpnconnection_type(vpnserver, vpncredentials)
 
         # Before establishing you should also decide if you would like to
         # subscribe to the connection status updates with:
@@ -33,7 +33,8 @@ class VPNConnection:
 
     Or you could directly use a protocol from a specific backend:
     ::
-        vpnconnection = VPNConnection.get_from_factory("wireguard")
+        vpnconnection_type = VPNConnection.get_from_factory("wireguard")
+        vpnconnection=vpnconnection_type(vpnserver, vpncredentials)
         vpnconnection.up()
 
     If a specific backend supports it, a VPNConnection object is persistent

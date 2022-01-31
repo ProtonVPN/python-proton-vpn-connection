@@ -99,7 +99,11 @@ class OpenVPN(NativeConnection):
 
     @staticmethod
     def _get_openvpn_path():
-        return os.getenv("VPNCONNECTION_NATIVE_OPENVPN_PATH", "/usr/sbin/openvpn")
+        paths_to_try=["/usr/local/opt/openvpn/sbin/openvpn","/usr/sbin/openvpn"]
+        for path in paths_to_try:
+            if os.path.exists(path):
+                return path
+        return os.getenv("VPNCONNECTION_NATIVE_OPENVPN_PATH")
 
     def _debug(self, *args):
         self._logger.debug(*args)

@@ -14,7 +14,6 @@ Welcome to python-protonvpn-connection's documentation!
    02_backends
    03_networkmanager
    04_devprotocol
-   05_devbackend
 
 
 Indices and tables

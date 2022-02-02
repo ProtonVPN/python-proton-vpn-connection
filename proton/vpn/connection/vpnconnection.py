@@ -344,8 +344,8 @@ class VPNConnection:
         """
         pass
 
-    @staticmethod
-    def _priority() -> int:
+    @classmethod
+    def _get_priority(cls) -> int:
         """*For developers*
 
         Priority value determines which backend takes precedence.
@@ -371,14 +371,18 @@ class VPNConnection:
                 ...
 
                 @classmethod
-                def _priority(cls):
+                def _get_priority(cls):
                     # Either return a hard-coded value (which is discoureaged),
                     # or calculate it based on some system settings
                     return 150
 
         Note: Some code has been ommitted for readability.
         """
-        raise NotImplementedError
+        return None
+
+    @classmethod
+    def _validate(cls):
+        return False
 
     def _ensure_unique_id_is_set(self) -> None:
         """*For developers*

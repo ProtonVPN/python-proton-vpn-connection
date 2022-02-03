@@ -114,25 +114,21 @@ class VPNConnection:
                   VPNConnection, then that backend is to be returned instead.
             :type backend: str
         """
-        backends = []
-        try:
-            from .networkmanager import NMConnection
-            backends.append(NMConnection)
-        except: # noqa
-            pass
-        from .native import NativeConnection
-        backends.append(NativeConnection)
-        if not protocol:
-            protocol = "openvpn_udp"
+        from proton.loader import Loader
+        all_backends = Loader.get_all("backend")
+        sorted_backends = sorted(all_backends, key=lambda _b: _b.priority, reverse=True)
 
-        if backend == "networkmanager":
-            return NMConnection.factory(protocol)
-        elif backend == "native":
-            return NativeConnection.factory(protocol)
+        if backend:
+            try:
+                return [_b.cls for _b in sorted_backends if _b.class_name == backend][0].cls.factory(protocol)
+            except (IndexError, AttributeError):
+                return None
 
-        backends.sort(key=lambda x: x._priority())
+        for backend in sorted_backends:
+            if not backend.cls._validate():
+                continue
 
-        return backends[0].factory(protocol)
+            return backend.cls.factory(protocol)
 
     @classmethod
     def get_current_connection(self) -> Optional['VPNConnection']:
@@ -344,8 +340,8 @@ class VPNConnection:
         """
         pass
 
-    @staticmethod
-    def _priority() -> int:
+    @classmethod
+    def _get_priority(cls) -> int:
         """*For developers*
 
         Priority value determines which backend takes precedence.
@@ -371,14 +367,18 @@ class VPNConnection:
                 ...
 
                 @classmethod
-                def _priority(cls):
+                def _get_priority(cls):
                     # Either return a hard-coded value (which is discoureaged),
                     # or calculate it based on some system settings
                     return 150
 
         Note: Some code has been ommitted for readability.
         """
-        raise NotImplementedError
+        return None
+
+    @classmethod
+    def _validate(cls):
+        return False
 
     def _ensure_unique_id_is_set(self) -> None:
         """*For developers*

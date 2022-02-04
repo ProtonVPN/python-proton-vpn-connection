@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 
 setup(
     name="python-protonvpn-connection",
@@ -9,7 +9,7 @@ setup(
     author="Proton Technologies",
     author_email="contact@protonmail.com",
     url="https://github.com/ProtonMail/pyhon-protonvpn-connection",
-    packages=find_packages(),
+    packages=find_namespace_packages(include=['proton.vpn.connection']),
     include_package_data=True,
     license="GPLv3",
     platforms="OS Independent",

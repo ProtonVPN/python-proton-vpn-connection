@@ -121,9 +121,13 @@ class VPNConnection:
 
         if backend:
             try:
-                return [_b.cls for _b in sorted_backends if _b.class_name == backend][0].cls.factory(protocol)
+                return [
+                    _b.cls for _b in sorted_backends if _b.class_name == backend
+                ][0].factory(protocol)
             except (IndexError, AttributeError):
-                return None
+                raise RuntimeError(
+                    "Backend \"{}\" could not be found".format(backend)
+                )
 
         for backend in sorted_backends:
             if not backend.cls._validate():

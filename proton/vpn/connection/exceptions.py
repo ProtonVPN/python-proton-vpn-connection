@@ -28,5 +28,9 @@ class MissingBackendDetails(VPNConnectionError):
     """
 
 
+class MissingVPNConnectionError(VPNConnectionError):
+    """When a down() is attempted but there is not vpn connection, thus exception is thrown."""
+
+
 class UnexpectedError(VPNConnectionError):
     """For any unexpected or unhandled error this exception will be thrown."""

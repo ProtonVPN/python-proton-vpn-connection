@@ -93,6 +93,7 @@ class VPNConnection:
     def down(self) -> None:
         """Down method to stop a vpn connection.
 
+        :raises MissingVPNConnectionError: When there is no connection to disconnect.
         :raises UnexpectedError: When an expected/unhandled error occurs.
         """
         pass
@@ -137,19 +138,27 @@ class VPNConnection:
 
             :return: :class:`VPNConnection`
         """
-        backends = []
-        try:
-            from .networkmanager import NMConnection
-            backends.append(NMConnection)
-        except: # noqa
-            pass
-        from .native import NativeConnection
-        backends.append(NativeConnection)
+        from proton.loader import Loader
+        all_backends = Loader.get_all("backend")
+        sorted_backends = sorted(all_backends, key=lambda _b: _b.priority, reverse=True)
 
-        for backend in backends:
-            conn = backend._get_connection()
+        for backend in sorted_backends:
+            conn = backend.cls._get_connection()
             if conn:
                 return conn
+
+    @abstractmethod
+    def cancel(self) -> bool:
+        """
+        If for some reasons you would like to stop the current connection before it's established,
+        then you can use the cancel method, which cancels the current connection activity.
+
+        Has to be overriden by all classes that derive from VPNConnection
+
+            :return: if connection was cancelled or not
+            :rtype: bool
+        """
+        raise NotImplementedError
 
     @property
     def settings(self) -> Settings:

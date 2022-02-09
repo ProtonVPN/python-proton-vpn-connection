@@ -2,6 +2,7 @@ from abc import abstractmethod
 from typing import Callable, Optional
 from .interfaces import VPNServer, Settings, VPNCredentials
 from .enum import ConnectionStateEnum
+from .exceptions import CurrentConnectionFoundError
 
 
 class VPNConnection:
@@ -85,6 +86,7 @@ class VPNConnection:
         :raises AuthenticationError: The credentials used to authenticate on the VPN are not correct
         :raises ConnectionTimeoutError: No answer from the VPN server for too long
         :raises MissingBackendDetails: The backend cannot be used.
+        :raises CurrentConnectionFoundError: When another current connection is found.
         :raises UnexpectedError: When an expected/unhandled error occurs.
         """
         pass
@@ -97,6 +99,21 @@ class VPNConnection:
         :raises UnexpectedError: When an expected/unhandled error occurs.
         """
         pass
+
+    def _ensure_there_are_no_other_current_protonvpn_connections(self):
+        """
+        Ensures that there are no other current protonvpn connection.
+        Check *Limitations* in class description.
+
+        Should be the first line in overriden ``up()`` methods.
+
+        :raises CurrentConnectionFoundError: When there another current connection.
+        """
+        if self.get_current_connection():
+            raise CurrentConnectionFoundError(
+                "Another current connection was found. "
+                "Stop existing connections to start a new one"
+            )
 
     @classmethod
     def get_from_factory(cls, protocol: str = None, backend: str = None):

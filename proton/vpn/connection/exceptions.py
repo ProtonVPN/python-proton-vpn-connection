@@ -28,6 +28,17 @@ class MissingBackendDetails(VPNConnectionError):
     """
 
 
+class CurrentConnectionFoundError(VPNConnectionError):
+    """
+    When attempting an up(), if for some reason another current connection is found,
+    this exception thrown. Since no two simultaneous connections are allowed, the user of this
+    componenet will have to first stop the current connection and then connect with a new one.
+
+    Ideally this should be handled automatically by the state machine, but if for some reason
+    a cleanup is not possible, then it should get detected on up().
+    """
+
+
 class MissingVPNConnectionError(VPNConnectionError):
     """When a down() is attempted but there is not vpn connection, thus exception is thrown."""
 

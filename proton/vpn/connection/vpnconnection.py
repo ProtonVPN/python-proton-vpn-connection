@@ -168,19 +168,6 @@ class VPNConnection:
             if conn:
                 return conn
 
-    @abstractmethod
-    def cancel(self) -> bool:
-        """
-        If for some reasons you would like to stop the current connection before it's established,
-        then you can use the cancel method, which cancels the current connection activity.
-
-        Has to be overriden by all classes that derive from VPNConnection
-
-            :return: if connection was cancelled or not
-            :rtype: bool
-        """
-        raise NotImplementedError
-
     @property
     def settings(self) -> Settings:
         """ Current settings of the connection :

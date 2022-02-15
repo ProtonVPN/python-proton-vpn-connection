@@ -77,11 +77,16 @@ class VPNConnection:
         self._subscribers = {}
 
     @abstractmethod
-    def up(self) -> None:
-        """Up method to establish a vpn connection.
+    def _start_connection(self) -> None:
+        raise NotImplementedError
 
-        Before start a connection it must be setup, thus it's
-        up to the one implement the class to build it.
+    @abstractmethod
+    def _stop_connection(self) -> None:
+        raise NotImplementedError
+
+    def up(self) -> None:
+        """
+        Establish a vpn connection
 
         :raises AuthenticationError: The credentials used to authenticate on the VPN are not correct
         :raises ConnectionTimeoutError: No answer from the VPN server for too long
@@ -89,16 +94,27 @@ class VPNConnection:
         :raises CurrentConnectionFoundError: When another current connection is found.
         :raises UnexpectedError: When an expected/unhandled error occurs.
         """
-        pass
+        self._ensure_there_are_no_other_current_protonvpn_connections()
+        self._start_connection()
+        self._persist_connection()
 
-    @abstractmethod
     def down(self) -> None:
         """Down method to stop a vpn connection.
 
         :raises MissingVPNConnectionError: When there is no connection to disconnect.
         :raises UnexpectedError: When an expected/unhandled error occurs.
         """
-        pass
+        import time
+        counter = 3
+
+        self._stop_connection()
+        while counter > 0:
+            if not self._get_protonvpn_connection():
+                self._remove_connection_persistence()
+                break
+
+            time.sleep(1)
+            counter -= 1
 
     def _ensure_there_are_no_other_current_protonvpn_connections(self):
         """
@@ -109,7 +125,10 @@ class VPNConnection:
 
         :raises CurrentConnectionFoundError: When there another current connection.
         """
-        if self.get_current_connection():
+        # FIX ME: Should check if the current connection is the same as new connection
+        # If it is then it should not throw an exception
+
+        if VPNConnection.get_current_connection():
             raise CurrentConnectionFoundError(
                 "Another current connection was found. "
                 "Stop existing connections to start a new one"
@@ -355,7 +374,7 @@ class VPNConnection:
 
         Note: Some code has been ommitted for readability.
         """
-        pass
+        raise NotImplementedError
 
     @classmethod
     def _get_priority(cls) -> int:

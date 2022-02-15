@@ -220,6 +220,96 @@ class VPNCredentials:
         raise NotImplementedError
 
 
+class Features:
+    """
+    This class is used to define which features are supported.
+    Even though there are multiple features that can be passed, they're not
+    mandatory. In fact you could override one of the features that you would
+    like to pass.
+
+    Usage:
+    ::
+        from protonvpn.vpnconnection import Features
+
+        class VPNFeatures(Settings):
+
+            @property
+            def netshield(self):
+                return 0
+
+            @property
+            def vpn_accelerator(self):
+                return True
+
+            @property
+            def port_forwarding(self):
+                return False
+
+            @property
+            def random_nat(self):
+                return True
+
+            @property
+            def safe_mode(self):
+                return True
+
+    Note: Not all fields are mandatory to override, only those that are actually needed, ie:
+    ::
+        from protonvpn.vpnconnection import Settings
+
+        class VPNSettings(Settings):
+
+            @property
+            def netshield(self):
+                return 0
+
+    Passing only this is perfectly fine.
+    """
+
+    @property
+    def netshield(self):
+        """
+        It will always return int since _transform_features_to_flags()
+        uses those values directly
+
+        :return: netshield state value
+        :rtype: int
+        """
+        return None
+
+    @property
+    def vpn_accelerator(self):
+        """
+        :return: vpn accelerator state value
+        :rtype: bool
+        """
+        return None
+
+    @property
+    def port_forwarding(self):
+        """
+        :return: port forwarding state value
+        :rtype: bool
+        """
+        return None
+
+    @property
+    def random_nat(self):
+        """
+        :return: random nat state value
+        :rtype: bool
+        """
+        return None
+
+    @property
+    def safe_mode(self):
+        """
+        :return: safe mode state value
+        :rtype: bool
+        """
+        return None
+
+
 class Settings:
     """Optional.
 
@@ -241,10 +331,6 @@ class Settings:
             @property
             def split_tunneling_ips(self):
                 return ["182.24.1.3", "89.1.32.1"]
-
-            @property
-            def netshield(self):
-                return "f0"
 
             @property
             def disable_ipv6(self):
@@ -284,15 +370,6 @@ class Settings:
         return []
 
     @property
-    def netshield(self) -> str:
-        """Optional.
-
-        :return: the value of netshield in string format. Can either be `f0`, `f1` or `f2`
-        :rtype: str
-        """
-        return ""
-
-    @property
     def ipv6(self) -> bool:
         """Optional.
 
@@ -300,3 +377,12 @@ class Settings:
         :rtype: bool
         """
         return False
+
+    @property
+    def features(self) -> Features:
+        """Optional.
+
+        :return: object with features
+        :rtype: Features
+        """
+        return Features()

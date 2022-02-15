@@ -28,7 +28,7 @@ class MissingBackendDetails(VPNConnectionError):
     """
 
 
-class CurrentConnectionFoundError(VPNConnectionError):
+class ConflictError(VPNConnectionError):
     """
     When attempting an up(), if for some reason another current connection is found,
     this exception thrown. Since no two simultaneous connections are allowed, the user of this

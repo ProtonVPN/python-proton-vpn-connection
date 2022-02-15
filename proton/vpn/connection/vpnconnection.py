@@ -2,7 +2,7 @@ from abc import abstractmethod
 from typing import Callable, Optional
 from .interfaces import VPNServer, Settings, VPNCredentials
 from .enum import ConnectionStateEnum
-from .exceptions import CurrentConnectionFoundError
+from .exceptions import ConflictError
 
 
 class VPNConnection:
@@ -91,7 +91,7 @@ class VPNConnection:
         :raises AuthenticationError: The credentials used to authenticate on the VPN are not correct
         :raises ConnectionTimeoutError: No answer from the VPN server for too long
         :raises MissingBackendDetails: The backend cannot be used.
-        :raises CurrentConnectionFoundError: When another current connection is found.
+        :raises ConflictError: When another current connection is found.
         :raises UnexpectedError: When an expected/unhandled error occurs.
         """
         self._ensure_there_are_no_other_current_protonvpn_connections()
@@ -123,13 +123,13 @@ class VPNConnection:
 
         Should be the first line in overriden ``up()`` methods.
 
-        :raises CurrentConnectionFoundError: When there another current connection.
+        :raises ConflictError: When there another current connection.
         """
         # FIX ME: Should check if the current connection is the same as new connection
         # If it is then it should not throw an exception
 
         if VPNConnection.get_current_connection():
-            raise CurrentConnectionFoundError(
+            raise ConflictError(
                 "Another current connection was found. "
                 "Stop existing connections to start a new one"
             )

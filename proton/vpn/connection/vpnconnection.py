@@ -128,7 +128,7 @@ class VPNConnection:
         # FIX ME: Should check if the current connection is the same as new connection
         # If it is then it should not throw an exception
 
-        if self.get_current_connection():
+        if VPNConnection.get_current_connection():
             raise CurrentConnectionFoundError(
                 "Another current connection was found. "
                 "Stop existing connections to start a new one"
@@ -374,7 +374,7 @@ class VPNConnection:
 
         Note: Some code has been ommitted for readability.
         """
-        pass
+        raise NotImplementedError
 
     @classmethod
     def _get_priority(cls) -> int:

@@ -2,7 +2,7 @@ from abc import abstractmethod
 from typing import Callable, Optional
 from .interfaces import VPNServer, Settings, VPNCredentials
 from .enum import ConnectionStateEnum
-from .exceptions import ConflictError
+from .exceptions import ConflictError, UnexpectedError
 
 
 class VPNConnection:
@@ -53,7 +53,6 @@ class VPNConnection:
     *Limitations*:Currently you can only handle 1 persistent connection at a time.
 
     """
-
     def __init__(
         self,
         vpnserver: VPNServer,
@@ -79,7 +78,16 @@ class VPNConnection:
         self._vpncredentials = vpncredentials
         self._settings = settings
         self._unique_id = None
-        self._subscribers = {}
+        self.__subscribers = []
+        self.__state = ConnectionStateEnum.DISCONNECTED
+
+    @property
+    def state(self):
+        return self.__state
+
+    def __update_state(self, new_state):
+        self.__state = new_state
+        self._notify_subscribers(new_state)
 
     @abstractmethod
     def _start_connection(self) -> None:
@@ -99,9 +107,23 @@ class VPNConnection:
         :raises ConflictError: When another current connection is found.
         :raises UnexpectedError: When an expected/unhandled error occurs.
         """
-        self._ensure_there_are_no_other_current_protonvpn_connections()
-        self._start_connection()
-        self._persist_connection()
+        while True:
+            if self.state == ConnectionStateEnum.DISCONNECTED:
+                self._ensure_there_are_no_other_current_protonvpn_connections()
+                self._start_connection()
+                self._persist_connection()
+                self.__update_state(ConnectionStateEnum.CONNECTING)
+            elif self.state == ConnectionStateEnum.CONNECTING:
+                if self._get_connection():
+                    self.__update_state(ConnectionStateEnum.CONNECTED)
+            elif self.state == ConnectionStateEnum.TRANSCIENT_ERROR:
+                # FIX ME: Logic for reconnecting ?
+                self.__update_state(ConnectionStateEnum.DISCONNECTING)
+            elif self.state == ConnectionStateEnum.DISCONNECTING:
+                if not self._get_connection():
+                    self.__update_state(ConnectionStateEnum.DISCONNECTED)
+            elif self.state == ConnectionStateEnum.CONNECTED:
+                break
 
     def down(self) -> None:
         """Down method to stop a vpn connection.
@@ -109,17 +131,19 @@ class VPNConnection:
         :raises MissingVPNConnectionError: When there is no connection to disconnect.
         :raises UnexpectedError: When an expected/unhandled error occurs.
         """
-        import time
-        counter = 3
+        if self._get_connection():
+            self.__state = ConnectionStateEnum.CONNECTED
 
-        self._stop_connection()
-        while counter > 0:
-            if not self._get_connection():
-                self._remove_connection_persistence()
+        while True:
+            if self.state in [ConnectionStateEnum.CONNECTED, ConnectionStateEnum.CONNECTING]:
+                self._stop_connection()
+                self.__update_state(ConnectionStateEnum.DISCONNECTING)
+            elif self.state == ConnectionStateEnum.DISCONNECTING:
+                if not self._get_connection():
+                    self._remove_connection_persistence()
+                    self.__update_state(ConnectionStateEnum.DISCONNECTED)
+            elif self.state == ConnectionStateEnum.DISCONNECTED:
                 break
-
-            time.sleep(1)
-            counter -= 1
 
     def _ensure_there_are_no_other_current_protonvpn_connections(self):
         """
@@ -133,7 +157,7 @@ class VPNConnection:
         # FIX ME: Should check if the current connection is the same as new connection
         # If it is then it should not throw an exception
 
-        if VPNConnection.get_current_connection():
+        if self._get_connection():
             raise ConflictError(
                 "Another current connection was found. "
                 "Stop existing connections to start a new one"
@@ -191,6 +215,8 @@ class VPNConnection:
             conn = backend.cls._get_connection()
             if conn:
                 return conn
+
+        return None
 
     @property
     def settings(self) -> Settings:
@@ -272,10 +298,7 @@ class VPNConnection:
             )
 
         """
-        if not callback:
-            callback = getattr(who, "_connection_status_update")
-
-        self._subscribers[who] = callback
+        self.__subscribers.append(who)
 
     def unregister(self, who) -> None:
         """
@@ -309,7 +332,7 @@ class VPNConnection:
 
         """
         try:
-            del self._subscribers[who]
+            self.__subscribers.remove(who)
         except KeyError:
             pass
 
@@ -358,8 +381,8 @@ class VPNConnection:
 
         Note: Some code has been ommitted for readability.
         """
-        for subscriber, callback in self._subscribers.items():
-            callback(connection_status)
+        for subscriber in self.__subscribers:
+            subscriber.status_update(self.__state)
 
     @abstractmethod
     def _get_connection(self) -> 'VPNConnection':

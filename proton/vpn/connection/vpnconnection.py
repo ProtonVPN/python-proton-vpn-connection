@@ -109,7 +109,7 @@ class VPNConnection:
 
         self._stop_connection()
         while counter > 0:
-            if not self._get_protonvpn_connection():
+            if not self._get_connection():
                 self._remove_connection_persistence()
                 break
 
@@ -541,7 +541,7 @@ class VPNConnection:
                         # Then add the username and password to the configurations
 
         """
-        user_data = self._vpncredentials.vpn_get_username_and_password()
+        user_data = self._vpncredentials.userpass_credentials
         username = user_data.username
         if apply_feature_flags:
             flags = self._get_feature_flags()

@@ -116,8 +116,9 @@ class OVPNConfig(VPNConfiguration):
             "split": True if len(self._settings.split_tunneling_ips) > 0 else False,
         }
         if self._use_certificate:
-            j2_values["cert"] = self._vpncredentials.vpn_get_certificate_holder().vpn_client_api_pem_certificate
-            j2_values["priv_key"] = self._vpncredentials.vpn_get_certificate_holder().vpn_client_private_openvpn_key
+
+            j2_values["cert"] = self._vpncredentials.pubkey_credentials.certificate_pem
+            j2_values["priv_key"] = self._vpncredentials.pubkey_credentials.openvpn_private_key
 
         if len(self._settings.split_tunneling_ips) > 0:
             ip_nm_pairs = []

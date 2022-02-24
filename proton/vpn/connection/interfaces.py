@@ -1,4 +1,4 @@
-from typing import List, NamedTuple
+from typing import List, NamedTuple, Optional
 
 
 class VPNServer:
@@ -88,7 +88,7 @@ class VPNServer:
         return None
 
 
-class VPNCertificate:
+class VPNPubkeyCredentials:
     """
     Object that gets certificates and privates keys
     for certificate based connections.
@@ -115,7 +115,7 @@ class VPNCertificate:
     """
 
     @property
-    def vpn_client_api_pem_certificate(self) -> str:
+    def certificate_pem(self) -> str:
         """
         :return: X509 client certificate in PEM format
         :rtype: str
@@ -123,7 +123,7 @@ class VPNCertificate:
         raise NotImplementedError
 
     @property
-    def vpn_client_private_wg_key(self) -> str:
+    def wg_private_key(self) -> str:
         """
         :return: Wireguard private key in base64 format
         :rtype: str
@@ -131,7 +131,7 @@ class VPNCertificate:
         raise NotImplementedError
 
     @property
-    def vpn_client_private_openvpn_key(self) -> str:
+    def openvpn_private_key(self) -> str:
         """
         :return: OpenVPN private key in PEM format
         :rtype: str
@@ -139,7 +139,7 @@ class VPNCertificate:
         raise NotImplementedError
 
 
-class VPNUserPass(NamedTuple):
+class VPNUserPassCredentials(NamedTuple):
     """Provides username and password for username/password VPN authentication.
 
     Usage:
@@ -181,18 +181,21 @@ class VPNCredentials:
     for username/password and certificates.
     """
 
-    def vpn_get_username_and_password(self) -> VPNUserPass:
+    @property
+    def pubkey_credentials(self) -> Optional[VPNPubkeyCredentials]:
         """
-        :return: named tuple with username and password
-        :rtype: VPNUserPass
+        :return: instance of VPNPubkeyCredentials, which allows to make connections
+            with certificates
+        :rtype: VPNPubkeyCredentials]
         """
         raise NotImplementedError
 
-    def vpn_get_certificate_holder(self) -> VPNCertificate:
+    @property
+    def userpass_credentials(self) -> Optional[VPNUserPassCredentials]:
         """
-        :return: instance of VPNCertificate, which allows to make connections
-            with certificates
-        :rtype: VPNCertificate
+        :return: instance of VPNUserPassCredentials, which allows to make connections
+            with user/password
+        :rtype: VPNUserPassCredentials
         """
         raise NotImplementedError
 

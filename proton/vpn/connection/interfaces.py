@@ -7,7 +7,9 @@ class VPNServer:
     Most of the properties are mandatory as they contain crucial information for connection establishment.
 
     Usage:
-    ::
+
+    .. code-block::
+
         from protonvpn.vpnconnection import VPNServer
 
         class MyVPNServer(VPNServer):
@@ -35,7 +37,8 @@ class VPNServer:
     Note:
         1. Since `servername` is optional, it has been ommited.
         2. If you intend to connect via a non-wireguard protocol then `wg_public_key_x25519`
-          can just return `None` as it won't be used, as this is specific to the wireguard protocol.
+           can just return `None` as it won't be used, as this is specific to the wireguard protocol.
+
     """
 
     @property
@@ -96,7 +99,9 @@ class VPNPubkeyCredentials:
     An instance of this class is to be passed to VPNCredentials.
 
     Usage:
-    ::
+
+    .. code-block::
+
         from protonvpn.vpnconnection import VPNCertificate
 
         class MyVPNCertificate(VPNCertificate):
@@ -143,7 +148,9 @@ class VPNUserPassCredentials(NamedTuple):
     """Provides username and password for username/password VPN authentication.
 
     Usage:
-    ::
+
+    .. code-block::
+
         from protonvpn.vpnconnection import VPNUserPass
 
         myuserpass = VPNUserPass(
@@ -163,7 +170,9 @@ class VPNCredentials:
     irrelevant.
 
     Usage:
-    ::
+
+    .. code-block::
+
         class MyVPNCredentials(VPNCredentials):
 
             def vpn_get_username_and_password(self):
@@ -207,7 +216,9 @@ class Settings:
     configuration then you should derive from this class and override its methods.
 
     Usage:
-    ::
+
+    .. code-block::
+
         from protonvpn.vpnconnection import Settings
 
         class VPNSettings(Settings):
@@ -229,7 +240,9 @@ class Settings:
                 return False
 
     Note: Not all fields are mandatory to override, only those that are actually needed, ie:
-    ::
+    
+    .. code-block::
+
         from protonvpn.vpnconnection import Settings
 
         class VPNSettings(Settings):

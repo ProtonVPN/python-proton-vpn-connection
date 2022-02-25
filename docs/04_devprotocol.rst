@@ -192,3 +192,4 @@ At this point, the class should look like this:
         # connection is ready to be used
 
 4. Given that setup is correct and that the ``self._unique_id`` is set, you can use this vpn connection to establish a wireguard vpn tunnel.
+

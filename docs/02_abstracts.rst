@@ -20,19 +20,19 @@ VPNCredentials
    :show-inheritance:
 
 
-VPNCertificate
-###############
+VPNPubkeyCredentials
+#####################
 
-.. autoclass:: proton.vpn.connection.interfaces.VPNCertificate
+.. autoclass:: proton.vpn.connection.interfaces.VPNPubkeyCredentials
    :members:
    :undoc-members:
    :private-members:
    :show-inheritance:
 
-VPNUserPass
-############
+VPNUserPassCredentials
+#######################
 
-.. autoclass:: proton.vpn.connection.interfaces.VPNUserPass
+.. autoclass:: proton.vpn.connection.interfaces.VPNUserPassCredentials
    :members:
    :undoc-members:
    :private-members:
@@ -46,3 +46,4 @@ Settings
    :undoc-members:
    :private-members:
    :show-inheritance:
+

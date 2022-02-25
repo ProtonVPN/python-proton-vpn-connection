@@ -12,6 +12,7 @@ VPNConnection
 Exceptions
 ----------
 
-.. automodule:: protonvpn.vpn.connection.exceptions
+.. automodule:: proton.vpn.connection.exceptions
    :members:
    :inherited-members:
+

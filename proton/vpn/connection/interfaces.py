@@ -24,7 +24,7 @@ class VPNServer:
 
             @property
             def wg_public_key_x25519(self):
-                return "50A864D6C91158719A14040787F0177E968E606DB669DC37359F42E36853085C"
+                return "wOnn8kz6l6l3Tbwi7F7rvg/iyFB9yQneYETbp4xMJF0="
 
             @property
             def tcp_ports(self):
@@ -108,15 +108,15 @@ class VPNPubkeyCredentials:
 
             @property
             def vpn_client_api_pem_certificate(self):
-                return "PEM certificate in string type"
+                return "-----BEGIN CERTIFICATE-----\\nMIICJjCCAdigAwIBAgIECTD...=\\n-----END CERTIFICATE-----\\n"
 
             @property
             def vpn_client_private_wg_key(self):
-                return "50A864D6C91158719A14040787F0177E968E606DB669DC37359F42E36853085C"
+                return "wOnn8kz6l6l3Tbwi7F7rvg/iyFB9yQneYETbp4xMJF0="
 
             @property
             def vpn_client_private_openvpn_key(self):
-                return "50A864D6C91158719A14040787F0177E968E606DB669DC37359F42E36853085C"
+                return "-----BEGIN PRIVATE KEY-----\\nMC4CAQAwBQYDK2VwBCIEIKzVt3S+Q...\\n-----END PRIVATE KEY-----\\n"
     """
 
     @property

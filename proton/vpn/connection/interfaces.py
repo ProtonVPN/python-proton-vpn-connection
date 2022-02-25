@@ -10,7 +10,7 @@ class VPNServer:
 
     .. code-block::
 
-        from protonvpn.vpnconnection import VPNServer
+        from proton.vpn.connection import VPNServer
 
         class MyVPNServer(VPNServer):
 
@@ -102,20 +102,20 @@ class VPNPubkeyCredentials:
 
     .. code-block::
 
-        from protonvpn.vpnconnection import VPNCertificate
+        from proton.vpn.connection import VPNPubkeyCredentials
 
-        class MyVPNCertificate(VPNCertificate):
+        class MyVPNPubkeyCredentials(VPNPubkeyCredentials):
 
             @property
-            def vpn_client_api_pem_certificate(self):
+            def certificate_pem(self):
                 return "-----BEGIN CERTIFICATE-----\\nMIICJjCCAdigAwIBAgIECTD...=\\n-----END CERTIFICATE-----\\n"
 
             @property
-            def vpn_client_private_wg_key(self):
+            def wg_privage_key(self):
                 return "wOnn8kz6l6l3Tbwi7F7rvg/iyFB9yQneYETbp4xMJF0="
 
             @property
-            def vpn_client_private_openvpn_key(self):
+            def openvpn_private_key(self):
                 return "-----BEGIN PRIVATE KEY-----\\nMC4CAQAwBQYDK2VwBCIEIKzVt3S+Q...\\n-----END PRIVATE KEY-----\\n"
     """
 
@@ -151,9 +151,9 @@ class VPNUserPassCredentials(NamedTuple):
 
     .. code-block::
 
-        from protonvpn.vpnconnection import VPNUserPass
+        from proton.vpn.connection import VPNUserPassCredentials
 
-        myuserpass = VPNUserPass(
+        myuserpass = VPNUserPassCredentials(
             username = "my-openvpn/ikev2-username",
             password = "my-openvpn/ikev2-password"
         )
@@ -175,13 +175,13 @@ class VPNCredentials:
 
         class MyVPNCredentials(VPNCredentials):
 
-            def vpn_get_username_and_password(self):
-                # See how you can create a VPNUserPass object at `VPNUserPass`
-                return VPNUserPass
+            def userpass_credentials(self):
+                # See how you can create a VPNUserPass object at `VPNUserPassCredentials`
+                return VPNUserPassCredentials
 
-            def vpn_get_certificate_holder(self):
-                # See how you can create a VPNCertificate object at `VPNCertificate`
-                return VPNCertificate
+            def pubkey_credentials(self):
+                # See how you can create a VPNCertificate object at `VPNPubkeyCredentials`
+                return VPNPubkeyCredentials
 
     Limitation:
     You can override only one of the methods, though at the cost that you won't be able
@@ -219,7 +219,7 @@ class Settings:
 
     .. code-block::
 
-        from protonvpn.vpnconnection import Settings
+        from proton.vpn.connection import Settings
 
         class VPNSettings(Settings):
 
@@ -243,7 +243,7 @@ class Settings:
     
     .. code-block::
 
-        from protonvpn.vpnconnection import Settings
+        from proton.vpn.connection import Settings
 
         class VPNSettings(Settings):
 

@@ -7,7 +7,6 @@ from .exceptions import ConflictError
 
 class VPNConnection:
     """
-
     VPNConnection is the base class for which all types of connection need to derive from.
     It contains most of the logic that is needed for either creating a new backend
     or protocol.
@@ -16,7 +15,9 @@ class VPNConnection:
     vpnconnections via its factory.
 
     Usage:
-    ::
+
+    .. code-block::
+
         from protonvpn.vpnconnection import VPNConnection
 
         vpnconnection_type = VPNConnection.get_from_factory()
@@ -33,7 +34,9 @@ class VPNConnection:
         vpnconnection.down()
 
     Or you could directly use a protocol from a specific backend:
-    ::
+
+    .. code-block::
+
         vpnconnection_type = VPNConnection.get_from_factory("wireguard")
         vpnconnection=vpnconnection_type(vpnserver, vpncredentials)
         vpnconnection.up()
@@ -41,7 +44,9 @@ class VPNConnection:
     If a specific backend supports it, a VPNConnection object is persistent
     accross client-code exits. For instance, if you started a VPNConnection with
     :meth:`up`, you can get it back like this in another instance of your client code :
-    ::
+
+    .. code-block::
+
         vpnconnection = VPNConnection.get_current_connection()
         vpnconnection.down()
 
@@ -225,7 +230,9 @@ class VPNConnection:
             :type callback: Callable
 
         Usage:
-        ::
+
+        .. code-block::
+
             class StatusUpdateReceiver:
 
                 def _connection_status_update(self, status):
@@ -244,7 +251,9 @@ class VPNConnection:
         to guarantee that the callback is always called. If the subscriber does not provide
         `_connection_status_update()` method, then subscribers needs toe ensure that the
         alternative callback method is passed, ie:
-        ::
+
+        .. code-block::
+
             class StatusUpdateReceiver:
 
                 def _my_custom_method(self, status):
@@ -276,7 +285,9 @@ class VPNConnection:
             :type who: str
 
         Usage:
-        ::
+
+        .. code-block::
+
             class StatusUpdateReceiver:
 
                 def _connection_status_update(self, status):
@@ -314,7 +325,9 @@ class VPNConnection:
             :type connection_status: ConnectionStateEnum
 
         Usage:
-        ::
+
+        .. code-block::
+
             from protonvpn.vpnconnection import VPNConnection
 
             class CustomBackend(VPNConnection):
@@ -357,7 +370,9 @@ class VPNConnection:
             :rtype: VPNConnection | None
 
         Usage:
-        ::
+
+        .. code-block::
+
             from protonvpn.vpnconnection import VPNConnection
 
             class CustomBackend(VPNConnection):
@@ -394,7 +409,9 @@ class VPNConnection:
         will take precedence.
 
         Usage:
-        ::
+
+        .. code-block::
+
             from protonvpn.vpnconnection import VPNConnection
 
             class CustomBackend(VPNConnection):
@@ -423,7 +440,9 @@ class VPNConnection:
         where it can be empty is when there is no VPN connection.
 
         Suppose the following:
-        ::
+
+        .. code-block::
+
             vpnconnection = VPNConnection.get_current_connection()
             if not vpnconnection:
                 print("There is no connection")
@@ -456,7 +475,8 @@ class VPNConnection:
         and backend and stored to a file.
 
         Usage:
-        ::
+
+        .. code-block::
 
             from protonvpn.vpnconnection import VPNConnection
 
@@ -523,7 +543,8 @@ class VPNConnection:
         suffixed with different options, of which are fetched from `self._settings`
 
         Usage:
-        ::
+
+        .. code-block::
 
             from protonvpn.vpnconnection import VPNConnection
 

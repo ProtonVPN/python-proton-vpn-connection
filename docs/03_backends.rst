@@ -4,46 +4,31 @@ VPN Connection backends
 Network Manager VPN Connection
 -------------------------------
 
-NMConnection
+LinuxNetworkManager
+####################
+
+.. autoclass:: proton.vpn.backend.linux.networkmanager.LinuxNetworkManager
+   :show-inheritance:
+
+LinuxNative
 #############
 
-.. autoclass:: proton.vpn.connection.networkmanager.NMConnection
-   :members:
+.. autoclass:: proton.vpn.backend.linux.native.LinuxNative
    :show-inheritance:
+   :members:
    :private-members:
-
-OpenVPN
-#############
-
-.. autoclass:: proton.vpn.connection.networkmanager.OpenVPN
-   :members:
-   :show-inheritance:
-
-OpenVPNTCP
-#############
-
-.. autoclass:: proton.vpn.connection.networkmanager.OpenVPNTCP
-   :members:
-   :show-inheritance:
-
-OpenVPNUDP
-#############
-
-.. autoclass:: proton.vpn.connection.networkmanager.OpenVPNUDP
-   :members:
-   :show-inheritance:
 
 Wireguard
 #############
 
-.. autoclass:: proton.vpn.connection.networkmanager.Wireguard
+.. autoclass:: proton.vpn.backend.linux.networkmanager.protocol.wireguard.Wireguard
    :members:
    :show-inheritance:
 
 IKEv2
 #############
 
-.. autoclass:: proton.vpn.connection.networkmanager.Strongswan
+.. autoclass:: proton.vpn.backend.linux.networkmanager.protocol.strongswan.Strongswan
    :members:
    :show-inheritance:
 
@@ -51,39 +36,31 @@ IKEv2
 Native VPN Connection
 -------------------------------
 
-NativeConnection
-#################
-
-.. autoclass:: proton.vpn.connection.native.NativeConnection
-   :members:
-   :show-inheritance:
-   :private-members:
-
 OpenVPN
 #############
 
-.. autoclass:: proton.vpn.connection.native.OpenVPN
+.. autoclass:: proton.vpn.backend.linux.native.protocol.openvpn.OpenVPN
    :members:
    :show-inheritance:
 
 OpenVPNTCP
 #############
 
-.. autoclass:: proton.vpn.connection.native.OpenVPNTCP
+.. autoclass:: proton.vpn.backend.linux.native.protocol.openvpn.OpenVPNTCP
    :members:
    :show-inheritance:
 
 OpenVPNUDP
 #############
 
-.. autoclass:: proton.vpn.connection.native.OpenVPNUDP
+.. autoclass:: proton.vpn.backend.linux.native.protocol.openvpn.OpenVPNUDP
    :members:
    :show-inheritance:
 
 Wireguard
 #############
 
-.. autoclass:: proton.vpn.connection.native.Wireguard
+.. autoclass:: proton.vpn.backend.linux.native.protocol.wireguard.Wireguard
    :members:
    :show-inheritance:
 
@@ -93,3 +70,4 @@ IKEv2
 .. autoclass:: proton.vpn.connection.native.Strongswan
    :members:
    :show-inheritance:
+

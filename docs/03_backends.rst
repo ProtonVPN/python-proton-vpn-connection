@@ -10,14 +10,6 @@ LinuxNetworkManager
 .. autoclass:: proton.vpn.backend.linux.networkmanager.LinuxNetworkManager
    :show-inheritance:
 
-LinuxNative
-#############
-
-.. autoclass:: proton.vpn.backend.linux.native.LinuxNative
-   :show-inheritance:
-   :members:
-   :private-members:
-
 Wireguard
 #############
 
@@ -35,6 +27,14 @@ IKEv2
 
 Native VPN Connection
 -------------------------------
+
+LinuxNative
+#############
+
+.. autoclass:: proton.vpn.backend.linux.native.LinuxNative
+   :show-inheritance:
+   :members:
+   :private-members:
 
 OpenVPN
 #############

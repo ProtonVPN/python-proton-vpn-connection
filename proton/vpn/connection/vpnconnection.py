@@ -18,7 +18,7 @@ class VPNConnection:
 
     .. code-block::
 
-        from protonvpn.vpnconnection import VPNConnection
+        from proton.vpn.connection import VPNConnection
 
         vpnconnection_type = VPNConnection.get_from_factory()
         vpnconnection=vpnconnection_type(vpnserver, vpncredentials)
@@ -241,7 +241,7 @@ class VPNConnection:
 
             status_update_receives = StatusUpdateReceiver()
 
-            from protonvpn.vpnconnection import VPNConnection
+            from proton.vpn.connection import VPNConnection
 
             vpnconnection = VPNConnection.get_from_factory()
             vpnconnection(vpnserver, vpncredentials)
@@ -262,7 +262,7 @@ class VPNConnection:
 
             status_update_receives = StatusUpdateReceiver()
 
-            from protonvpn.vpnconnection import VPNConnection
+            from proton.vpn.connection import VPNConnection
 
             vpnconnection = VPNConnection.get_from_factory()
             vpnconnection(vpnserver, vpncredentials)
@@ -296,7 +296,7 @@ class VPNConnection:
 
             status_update_receives = StatusUpdateReceiver()
 
-            from protonvpn.vpnconnection import VPNConnection
+            from proton.vpn.connection import VPNConnection
 
             vpnconnection = VPNConnection.get_from_factory()
             vpnconnection(vpnserver, vpncredentials)
@@ -328,7 +328,7 @@ class VPNConnection:
 
         .. code-block::
 
-            from protonvpn.vpnconnection import VPNConnection
+            from proton.vpn.connection import VPNConnection
 
             class CustomBackend(VPNConnection):
                 backend = "custom_backend"
@@ -373,7 +373,7 @@ class VPNConnection:
 
         .. code-block::
 
-            from protonvpn.vpnconnection import VPNConnection
+            from proton.vpn.connection import VPNConnection
 
             class CustomBackend(VPNConnection):
                 backend = "custom_backend"
@@ -412,7 +412,7 @@ class VPNConnection:
 
         .. code-block::
 
-            from protonvpn.vpnconnection import VPNConnection
+            from proton.vpn.connection import VPNConnection
 
             class CustomBackend(VPNConnection):
                 backend = "custom_backend"
@@ -478,7 +478,7 @@ class VPNConnection:
 
         .. code-block::
 
-            from protonvpn.vpnconnection import VPNConnection
+            from proton.vpn.connection import VPNConnection
 
             class CustomBackend(VPNConnection):
                 backend = "custom_backend"
@@ -546,7 +546,7 @@ class VPNConnection:
 
         .. code-block::
 
-            from protonvpn.vpnconnection import VPNConnection
+            from proton.vpn.connection import VPNConnection
 
             class CustomBackend(VPNConnection):
                 backend = "custom_backend"

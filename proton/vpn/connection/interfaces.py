@@ -144,7 +144,7 @@ class VPNPubkeyCredentials:
         raise NotImplementedError
 
 
-class VPNUserPassCredentials(NamedTuple):
+class VPNUserPassCredentials:
     """Provides username and password for username/password VPN authentication.
 
     Usage:
@@ -153,14 +153,25 @@ class VPNUserPassCredentials(NamedTuple):
 
         from proton.vpn.connection import VPNUserPassCredentials
 
-        myuserpass = VPNUserPassCredentials(
-            username = "my-openvpn/ikev2-username",
-            password = "my-openvpn/ikev2-password"
-        )
+        class MyVPNUserPassCredentials(VPNUserPassCredentials):
+
+            @property
+            def username(self):
+                return "my-openvpn/ikev2-username"
+
+            @property
+            def password(self):
+                return "my-openvpn/ikev2-password"
+
     """
 
-    username: str
-    password: str
+    @property
+    def username(self) -> str :
+        raise NotImplementedError
+
+    @property
+    def password(self) -> str:
+        raise NotImplementedError
 
 
 class VPNCredentials:
@@ -173,7 +184,7 @@ class VPNCredentials:
 
     .. code-block::
 
-        class MyVPNCredentials(VPNCredentials):
+        class MyVPNCredentials:
 
             def userpass_credentials(self):
                 # See how you can create a VPNUserPass object at `VPNUserPassCredentials`
@@ -184,7 +195,7 @@ class VPNCredentials:
                 return VPNPubkeyCredentials
 
     Limitation:
-    You can override only one of the methods, though at the cost that you won't be able
+    You could define only userpass_credentials, though at the cost that you won't be able
     to connect to wireguard (since it's based on certificates) and/or openvpn and ikev2 based
     with certificates. To guarantee maximum compatibility, it is recommended to pass both objects
     for username/password and certificates.
@@ -195,7 +206,7 @@ class VPNCredentials:
         """
         :return: instance of VPNPubkeyCredentials, which allows to make connections
             with certificates
-        :rtype: VPNPubkeyCredentials]
+        :rtype: VPNPubkeyCredentials
         """
         raise NotImplementedError
 

@@ -42,7 +42,7 @@ class VPNServer:
     """
 
     @property
-    def server_ip(self) -> str:
+    def server_ip(self) -> "str":
         """
         :return: server ip to connect to
         :rtype: str
@@ -50,7 +50,7 @@ class VPNServer:
         raise NotImplementedError
 
     @property
-    def domain(self) -> str:
+    def domain(self) -> "str":
         """
         :return: domain to be used for x509 verification
         :rtype: str
@@ -58,7 +58,7 @@ class VPNServer:
         raise NotImplementedError
 
     @property
-    def wg_public_key_x25519(self) -> str:
+    def wg_public_key_x25519(self) -> "str":
         """
         :return: x25519 public key for wg peer verification
         :rtype: str
@@ -66,7 +66,7 @@ class VPNServer:
         raise NotImplementedError
 
     @property
-    def tcp_ports(self) -> List[int]:
+    def tcp_ports(self) -> "List[int]":
         """
         :return: list with tcp ports
         :rtype: List[int]
@@ -74,7 +74,7 @@ class VPNServer:
         raise NotImplementedError
 
     @property
-    def udp_ports(self) -> List[int]:
+    def udp_ports(self) -> "List[int]":
         """
         :return: list with udp ports
         :rtype: List[int]
@@ -82,7 +82,7 @@ class VPNServer:
         raise NotImplementedError
 
     @property
-    def servername(self) -> str:
+    def servername(self) -> "str":
         """Optional.
 
         :return: human readeable servername
@@ -120,7 +120,7 @@ class VPNPubkeyCredentials:
     """
 
     @property
-    def certificate_pem(self) -> str:
+    def certificate_pem(self) -> "str":
         """
         :return: X509 client certificate in PEM format
         :rtype: str
@@ -128,7 +128,7 @@ class VPNPubkeyCredentials:
         raise NotImplementedError
 
     @property
-    def wg_private_key(self) -> str:
+    def wg_private_key(self) -> "str":
         """
         :return: Wireguard private key in base64 format
         :rtype: str
@@ -136,7 +136,7 @@ class VPNPubkeyCredentials:
         raise NotImplementedError
 
     @property
-    def openvpn_private_key(self) -> str:
+    def openvpn_private_key(self) -> "str":
         """
         :return: OpenVPN private key in PEM format
         :rtype: str
@@ -166,11 +166,11 @@ class VPNUserPassCredentials:
     """
 
     @property
-    def username(self) -> str :
+    def username(self) -> "str":
         raise NotImplementedError
 
     @property
-    def password(self) -> str:
+    def password(self) -> "str":
         raise NotImplementedError
 
 
@@ -202,7 +202,7 @@ class VPNCredentials:
     """
 
     @property
-    def pubkey_credentials(self) -> Optional[VPNPubkeyCredentials]:
+    def pubkey_credentials(self) -> "Optional[VPNPubkeyCredentials]":
         """
         :return: instance of VPNPubkeyCredentials, which allows to make connections
             with certificates
@@ -211,7 +211,7 @@ class VPNCredentials:
         raise NotImplementedError
 
     @property
-    def userpass_credentials(self) -> Optional[VPNUserPassCredentials]:
+    def userpass_credentials(self) -> "Optional[VPNUserPassCredentials]":
         """
         :return: instance of VPNUserPassCredentials, which allows to make connections
             with user/password
@@ -337,7 +337,7 @@ class Settings:
                 return False
 
     Note: Not all fields are mandatory to override, only those that are actually needed, ie:
-    
+
     .. code-block::
 
         from proton.vpn.connection import Settings
@@ -352,7 +352,7 @@ class Settings:
     """
 
     @property
-    def dns_custom_ips(self) -> List[str]:
+    def dns_custom_ips(self) -> "List[str]":
         """Optional.
 
         :return: a list with alternative IPs for DNS queries
@@ -361,7 +361,7 @@ class Settings:
         return []
 
     @property
-    def split_tunneling_ips(self) -> List[str]:
+    def split_tunneling_ips(self) -> "List[str]":
         """Optional.
 
         :return: a list with IPs to exclude from VPN tunnel
@@ -370,7 +370,7 @@ class Settings:
         return []
 
     @property
-    def ipv6(self) -> bool:
+    def ipv6(self) -> "bool":
         """Optional.
 
         :return: if ipv6 should be disabled
@@ -379,7 +379,7 @@ class Settings:
         return False
 
     @property
-    def features(self) -> Features:
+    def features(self) -> "Features":
         """Optional.
 
         :return: object with features

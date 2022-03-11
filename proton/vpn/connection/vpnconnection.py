@@ -1,11 +1,12 @@
 from abc import abstractmethod
-from typing import Callable, Optional
+from typing import Optional
 from .interfaces import VPNServer, Settings, VPNCredentials
-from .enum import ConnectionStateEnum
-from .exceptions import ConflictError, UnexpectedError
+from .enum import StateMachineEventEnum
+from .exceptions import ConflictError
+from .state_machine import VPNStateMachine
 
 
-class VPNConnection:
+class VPNConnection(VPNStateMachine):
     """
     VPNConnection is the base class for which all types of connection need to derive from.
     It contains most of the logic that is needed for either creating a new backend
@@ -74,28 +75,11 @@ class VPNConnection:
         This will set the interal properties which will be used by each backend/protocol
         to create its configuration file, so that it's ready to establish a VPN connection.
         """
+        VPNStateMachine.__init__(self)
         self._vpnserver = vpnserver
         self._vpncredentials = vpncredentials
         self._settings = settings
         self._unique_id = None
-        self.__subscribers = []
-        self.__state = ConnectionStateEnum.DISCONNECTED
-
-    @property
-    def state(self):
-        return self.__state
-
-    def __update_state(self, new_state):
-        self.__state = new_state
-        self._notify_subscribers(new_state)
-
-    @abstractmethod
-    def _start_connection(self) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def _stop_connection(self) -> None:
-        raise NotImplementedError
 
     def up(self) -> None:
         """
@@ -107,23 +91,7 @@ class VPNConnection:
         :raises ConflictError: When another current connection is found.
         :raises UnexpectedError: When an expected/unhandled error occurs.
         """
-        while True:
-            if self.state == ConnectionStateEnum.DISCONNECTED:
-                self._ensure_there_are_no_other_current_protonvpn_connections()
-                self._start_connection()
-                self._persist_connection()
-                self.__update_state(ConnectionStateEnum.CONNECTING)
-            elif self.state == ConnectionStateEnum.CONNECTING:
-                if self._get_connection():
-                    self.__update_state(ConnectionStateEnum.CONNECTED)
-            elif self.state == ConnectionStateEnum.TRANSCIENT_ERROR:
-                # FIX ME: Logic for reconnecting ?
-                self.__update_state(ConnectionStateEnum.DISCONNECTING)
-            elif self.state == ConnectionStateEnum.DISCONNECTING:
-                if not self._get_connection():
-                    self.__update_state(ConnectionStateEnum.DISCONNECTED)
-            elif self.state == ConnectionStateEnum.CONNECTED:
-                break
+        self.on_event(StateMachineEventEnum.UP)
 
     def down(self) -> None:
         """Down method to stop a vpn connection.
@@ -131,19 +99,7 @@ class VPNConnection:
         :raises MissingVPNConnectionError: When there is no connection to disconnect.
         :raises UnexpectedError: When an expected/unhandled error occurs.
         """
-        if self._get_connection():
-            self.__state = ConnectionStateEnum.CONNECTED
-
-        while True:
-            if self.state in [ConnectionStateEnum.CONNECTED, ConnectionStateEnum.CONNECTING]:
-                self._stop_connection()
-                self.__update_state(ConnectionStateEnum.DISCONNECTING)
-            elif self.state == ConnectionStateEnum.DISCONNECTING:
-                if not self._get_connection():
-                    self._remove_connection_persistence()
-                    self.__update_state(ConnectionStateEnum.DISCONNECTED)
-            elif self.state == ConnectionStateEnum.DISCONNECTED:
-                break
+        self.on_event(StateMachineEventEnum.DOWN)
 
     def _ensure_there_are_no_other_current_protonvpn_connections(self):
         """
@@ -232,6 +188,7 @@ class VPNConnection:
     def settings(self, new_value: Settings):
         """ Change the current settings of the connection, only valid for the RW settings of the connection.
         """
+        # FIX-ME: Should be defined when settings can be set
         self._settings = new_value
 
     @property
@@ -244,145 +201,6 @@ class VPNConnection:
                 use_certificate = True
 
         return use_certificate
-
-    def register(self, who: object, callback: Callable = None) -> None:
-        """
-        Register a subscriber to receive connection status updates.
-
-            :param who: object/class instance that wants to receive connection status updates
-            :type who: object
-            :param callback: Optional.
-                Pass an alternative callback method.
-            :type callback: Callable
-
-        Usage:
-
-        .. code-block::
-
-            class StatusUpdateReceiver:
-
-                def _connection_status_update(self, status):
-                    print(status)
-                    # or do something else with the received status
-
-            status_update_receives = StatusUpdateReceiver()
-
-            from proton.vpn.connection import VPNConnection
-
-            vpnconnection = VPNConnection.get_from_factory()
-            vpnconnection(vpnserver, vpncredentials)
-            vpnconnection.register(status_update_receives)
-
-        Each subscriber should expose `_connection_status_update()` method,
-        to guarantee that the callback is always called. If the subscriber does not provide
-        `_connection_status_update()` method, then subscribers needs toe ensure that the
-        alternative callback method is passed, ie:
-
-        .. code-block::
-
-            class StatusUpdateReceiver:
-
-                def _my_custom_method(self, status):
-                    print(status)
-                    # or do something else with the received status
-
-            status_update_receives = StatusUpdateReceiver()
-
-            from proton.vpn.connection import VPNConnection
-
-            vpnconnection = VPNConnection.get_from_factory()
-            vpnconnection(vpnserver, vpncredentials)
-            vpnconnection.register(
-                status_update_receives,
-                callback = status_update_receives._my_custom_method
-            )
-
-        """
-        self.__subscribers.append(who)
-
-    def unregister(self, who) -> None:
-        """
-        Unregister subscriber to stop receiving connection status updates.
-
-            :param who: who is the subscriber, smallcaps letters
-            :type who: str
-
-        Usage:
-
-        .. code-block::
-
-            class StatusUpdateReceiver:
-
-                def _connection_status_update(self, status):
-                    print(status)
-                    # or do something else with the received status
-
-            status_update_receives = StatusUpdateReceiver()
-
-            from proton.vpn.connection import VPNConnection
-
-            vpnconnection = VPNConnection.get_from_factory()
-            vpnconnection(vpnserver, vpncredentials)
-            vpnconnection.register(status_update_receives)
-
-            # lower in the code I then decide that I no longer wish to
-            # receive connection status updates, so I decide to
-            # unregister myself as a subscriber:
-            vpnconnection.unregister(status_update_receives)
-
-        """
-        try:
-            self.__subscribers.remove(who)
-        except KeyError:
-            pass
-
-    def _notify_subscribers(self, connection_status: ConnectionStateEnum) -> None:
-        """*For developers*
-
-        Notifies the subscribers about connection state changes.
-
-        Each backend and/or protocol have to call this method whenever the connection
-        state changes, so that each subscriber can receive states changes whenever they occur.
-
-            :param connection_status: the current status of the connection
-            :type connection_status: ConnectionStateEnum
-
-        Usage:
-
-        .. code-block::
-
-            from proton.vpn.connection import VPNConnection
-
-            class CustomBackend(VPNConnection):
-                backend = "custom_backend"
-
-                ...
-
-                def up(self):
-                    self._notify_subscribers(ConnectionStateEnum.DISCONNECTED)
-                    self._setup()
-                    self._persist_connection()
-                    self._start_connection()
-                    # Connection has been established
-                    self._notify_subscribers(ConnectionStateEnum.CONNECTED)
-
-                def down(self):
-                    self._stop_connection()
-                    self._remove_connection_persistence()
-
-                def _stop_connection(self):
-                    self._notify_subscribers(ConnectionStateEnum.DISCONNECTING)
-                    # stopped connection
-                    self._notify_subscribers(ConnectionStateEnum.DISCONNECTED)
-
-                def _setup(self):
-                    # setup connection
-                    self._notify_subscribers(ConnectionStateEnum.CONNECTING)
-
-        Note: Some code has been ommitted for readability.
-        """
-        for subscriber in self.__subscribers:
-            subscriber.status_update(self.__state)
 
     @abstractmethod
     def _get_connection(self) -> 'VPNConnection':

@@ -91,7 +91,8 @@ class VPNConnection(VPNStateMachine):
         :raises ConflictError: When another current connection is found.
         :raises UnexpectedError: When an expected/unhandled error occurs.
         """
-        self.on_event(StateMachineEventEnum.UP)
+        from proton.vpn.connection import event
+        self.on_event(event.Up())
 
     def down(self) -> None:
         """Down method to stop a vpn connection.
@@ -99,7 +100,8 @@ class VPNConnection(VPNStateMachine):
         :raises MissingVPNConnectionError: When there is no connection to disconnect.
         :raises UnexpectedError: When an expected/unhandled error occurs.
         """
-        self.on_event(StateMachineEventEnum.DOWN)
+        from proton.vpn.connection import event
+        self.on_event(event.Down())
 
     def _ensure_there_are_no_other_current_protonvpn_connections(self):
         """

@@ -17,4 +17,6 @@ class StateMachineEventEnum(Enum):
     DISCONNECTED = 3
     TIMEOUT = 4
     AUTH_DENIED = 5
-    UNKOWN_ERROR = 6
+    TUNNEL_SETUP_FAIL = 6
+    RETRY = 7
+    UNKOWN_ERROR = 8

@@ -34,7 +34,10 @@ class DisconnectedState(State):
         if e.event == event.Up.event:
             state_machine._start_connection()
             return ConnectingState()
-
+        else:
+            # FIX-ME: unsure if only logs should be enough
+            # or should do anything else
+            pass
         return self
 
 
@@ -50,6 +53,10 @@ class ConnectingState(State):
             event.UnknownError.event
         ]:
             return ErrorState(e.context)
+        else:
+            # FIX-ME: unsure if only logs should be enough
+            # or should do anything else
+            pass
 
         return self
 
@@ -68,6 +75,10 @@ class ConnectedState(State):
             event.UnknownError.event.event
         ]:
             return ErrorState(e.context)
+        else:
+            # FIX-ME: unsure if only logs should be enough
+            # or should do anything else
+            pass
 
         return self
 
@@ -78,6 +89,10 @@ class DisconnectingState(State):
     def on_event(self, e, state_machine):
         if e.event == event.Disconnected.event:
             return DisconnectedState()
+        else:
+            # FIX-ME: unsure if only logs should be enough
+            # or should do anything else
+            pass
 
         return self
 
@@ -95,6 +110,10 @@ class TransientState(State):
             event.UnknownError.event,
         ]:
             return ErrorState(e.context)
+        else:
+            # FIX-ME: unsure if only logs should be enough
+            # or should do anything else
+            pass
 
         return self
 

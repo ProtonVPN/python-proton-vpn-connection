@@ -46,6 +46,7 @@ class ConnectingState(State):
 
     def on_event(self, e, state_machine):
         if e.event == event.Connected.event:
+            state_machine._add_persistence()
             return ConnectedState()
         elif e.event in [
             event.Timeout.event,
@@ -71,8 +72,8 @@ class ConnectedState(State):
         if e.event == event.Timeout.event:
             return TransientState(e.context)
         elif e.event in [
-            event.AuthDenied.event.event,
-            event.UnknownError.event.event
+            event.AuthDenied.event,
+            event.UnknownError.event
         ]:
             return ErrorState(e.context)
         else:
@@ -88,6 +89,7 @@ class DisconnectingState(State):
 
     def on_event(self, e, state_machine):
         if e.event == event.Disconnected.event:
+            state_machine._remove_persistence()
             return DisconnectedState()
         else:
             # FIX-ME: unsure if only logs should be enough

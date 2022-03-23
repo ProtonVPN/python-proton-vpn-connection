@@ -1,7 +1,6 @@
 from abc import abstractmethod
 from typing import Optional
 from .interfaces import VPNServer, Settings, VPNCredentials
-from .enum import StateMachineEventEnum
 from .exceptions import ConflictError
 from .state_machine import VPNStateMachine
 
@@ -310,7 +309,7 @@ class VPNConnection(VPNStateMachine):
 
         self._unique_id = self._unique_id.replace(self._persistence_prefix, "")
 
-    def _persist_connection(self):
+    def _add_persistence(self):
         """*For developers*
 
         If for some reason the component crashes, we need to know which connection we
@@ -363,7 +362,7 @@ class VPNConnection(VPNStateMachine):
         conn_id = self._persistence_prefix + self._unique_id
         persistence.persist(conn_id)
 
-    def _remove_connection_persistence(self):
+    def _remove_persistence(self):
         """*For developers*
 
         Works in the opposite way of _persist_connection. It removes the persitence

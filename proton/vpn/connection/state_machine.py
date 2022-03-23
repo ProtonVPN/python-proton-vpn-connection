@@ -1,7 +1,6 @@
 from abc import abstractmethod
 
 from .publisher import Publisher
-from .state import DisconnectedState
 
 
 class VPNStateMachine(Publisher):
@@ -16,14 +15,20 @@ class VPNStateMachine(Publisher):
         return self.__current_state
 
     def on_event(self, event) -> "None":
-        self.__previous_state = self.__current_state
-        self.__current_state = self.__current_state.on_event(event, self)
+        self._update_connection_state(
+            self.__current_state.on_event(event, self)
+        )
         self._notify_subscribers(self.__current_state)
 
+    def _update_connection_state(self, newstate) -> "None":
+        self.__previous_state = self.__current_state
+        self.__current_state = newstate
+
+    @abstractmethod
     def _determine_initial_state(self) -> "None":
         # FIX-ME: Each backend should have it's
         # own implementation of determining initial state
-        self.__current_state = DisconnectedState()
+        raise NotImplementedError
 
     @abstractmethod
     def _start_connection() -> "None":
@@ -31,4 +36,12 @@ class VPNStateMachine(Publisher):
 
     @abstractmethod
     def _stop_connection() -> "None":
+        raise NotImplementedError
+
+    @abstractmethod
+    def _add_persistence(self) -> "None":
+        raise NotImplementedError
+
+    @abstractmethod
+    def _remove_persistence(self) -> "None":
         raise NotImplementedError

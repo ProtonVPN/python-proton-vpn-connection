@@ -2,17 +2,17 @@ import os
 from .utils import ExecutionEnvironment
 
 
-class ConnectionPeristence:
+class ConnectionPersistence:
 
     def __init__(self):
         self._dir_path = self._get_built_path("connection_persistence")
         if not os.path.isdir(self._dir_path):
-            os.mkdir(self._dir_path)
+            os.makedirs(self._dir_path)
 
     def get_persisted(self, prefix):
         dir_list = os.listdir(self._dir_path)
         if len(dir_list) == 0:
-            return False
+            return None
 
         for filename in dir_list:
             if filename.startswith(prefix):

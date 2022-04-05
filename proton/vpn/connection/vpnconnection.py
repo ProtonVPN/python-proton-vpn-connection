@@ -1,4 +1,3 @@
-from abc import abstractmethod
 from typing import Optional
 from .interfaces import VPNServer, Settings, VPNCredentials
 from .exceptions import ConflictError
@@ -90,8 +89,8 @@ class VPNConnection(VPNStateMachine):
         :raises ConflictError: When another current connection is found.
         :raises UnexpectedError: When an expected/unhandled error occurs.
         """
-        from proton.vpn.connection import event
-        self.on_event(event.Up())
+        from proton.vpn.connection import events
+        self.on_event(events.Up())
 
     def down(self) -> None:
         """Down method to stop a vpn connection.
@@ -99,8 +98,8 @@ class VPNConnection(VPNStateMachine):
         :raises MissingVPNConnectionError: When there is no connection to disconnect.
         :raises UnexpectedError: When an expected/unhandled error occurs.
         """
-        from proton.vpn.connection import event
-        self.on_event(event.Down())
+        from proton.vpn.connection import events
+        self.on_event(events.Down())
 
     def _ensure_there_are_no_other_current_protonvpn_connections(self):
         """
@@ -198,12 +197,12 @@ class VPNConnection(VPNStateMachine):
         use_certificate = False
         env_var = os.environ.get("PROTONVPN_USE_CERTIFICATE", False)
         if isinstance(env_var, str):
-            if env_var.lower() == "true":
+            env_filtered = env_var.strip("").replace(" ", "").lower()
+            if env_filtered == "true" or "true" in env_filtered:
                 use_certificate = True
 
         return use_certificate
 
-    @abstractmethod
     def _get_connection(self) -> 'VPNConnection':
         """*For developers*
         Each backend has to provide a classmethod of getting a connection.
@@ -295,16 +294,14 @@ class VPNConnection(VPNStateMachine):
 
         The unique ID is also used to find connections in NetworkManager.
         """
-        from .persistence import ConnectionPeristence
-        persistence = ConnectionPeristence()
+        from proton.vpn.connection.persistence import ConnectionPersistence
+        persistence = ConnectionPersistence()
 
-        try:
-            if not self._unique_id:
-                self._unique_id = persistence.get_persisted(self._persistence_prefix)
-        except AttributeError:
-            self._unique_id = persistence.get_persisted(self._persistence_prefix)
-
-        if not self._unique_id:
+        persisted_id = persistence.get_persisted(self._persistence_prefix)
+        if not self._unique_id and persisted_id:
+            self._unique_id = persisted_id
+        elif not self._unique_id and not persisted_id:
+            self._unique_id = None
             return
 
         self._unique_id = self._unique_id.replace(self._persistence_prefix, "")
@@ -357,8 +354,8 @@ class VPNConnection(VPNStateMachine):
 
         Note: Some code has been ommitted for readability.
         """
-        from .persistence import ConnectionPeristence
-        persistence = ConnectionPeristence()
+        from proton.vpn.connection.persistence import ConnectionPersistence
+        persistence = ConnectionPersistence()
         conn_id = self._persistence_prefix + self._unique_id
         persistence.persist(conn_id)
 
@@ -369,8 +366,8 @@ class VPNConnection(VPNStateMachine):
         file. This is used in conjunction with down, since if the connection is turned down,
         we don't want to keep any persistence files.
         """
-        from .persistence import ConnectionPeristence
-        persistence = ConnectionPeristence()
+        from proton.vpn.connection.persistence import ConnectionPersistence
+        persistence = ConnectionPersistence()
         conn_id = self._persistence_prefix + self._unique_id
         persistence.remove_persist(conn_id)
 
@@ -428,10 +425,11 @@ class VPNConnection(VPNStateMachine):
 
         Transform the flags into features to be suffixed to username.
         """
-        features = self._settings
-        if features is None:
+        if self._settings is None:
             list_flags.append("nsm")
             return
+
+        features = self._settings.features
 
         v = features.netshield
         list_flags.append(f"f{v}")

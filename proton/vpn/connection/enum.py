@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import IntEnum
 
 
-class ConnectionStateEnum(Enum):
+class ConnectionStateEnum(IntEnum):
     DISCONNECTED = 0
     CONNECTING = 1
     CONNECTED = 2
@@ -10,7 +10,7 @@ class ConnectionStateEnum(Enum):
     ERROR = 5
 
 
-class StateMachineEventEnum(Enum):
+class StateMachineEventEnum(IntEnum):
     UP = 0
     DOWN = 1
     CONNECTED = 2

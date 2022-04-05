@@ -1,5 +1,3 @@
-from abc import abstractmethod
-
 from .publisher import Publisher
 
 
@@ -24,24 +22,17 @@ class VPNStateMachine(Publisher):
         self.__previous_state = self.__current_state
         self.__current_state = newstate
 
-    @abstractmethod
     def _determine_initial_state(self) -> "None":
-        # FIX-ME: Each backend should have it's
-        # own implementation of determining initial state
         raise NotImplementedError
 
-    @abstractmethod
-    def _start_connection() -> "None":
+    def _start_connection(self) -> "None":
         raise NotImplementedError
 
-    @abstractmethod
-    def _stop_connection() -> "None":
+    def _stop_connection(self) -> "None":
         raise NotImplementedError
 
-    @abstractmethod
     def _add_persistence(self) -> "None":
         raise NotImplementedError
 
-    @abstractmethod
     def _remove_persistence(self) -> "None":
         raise NotImplementedError

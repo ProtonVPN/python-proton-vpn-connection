@@ -1,6 +1,5 @@
 from proton.vpn.connection.enum import ConnectionStateEnum
 from proton.vpn.connection import events
-from abc import abstractmethod
 
 
 def ensure_event_has_necessary_properties(func):
@@ -26,7 +25,6 @@ class BaseState:
     def context(self):
         return self.__context
 
-    @abstractmethod
     def on_event(e, state_machine):
         raise NotImplementedError
 

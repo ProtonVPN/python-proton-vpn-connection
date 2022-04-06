@@ -3,7 +3,6 @@ import os
 from .interfaces import Settings
 import jinja2
 from jinja2 import Environment, BaseLoader
-import re
 
 
 class DummySettings(Settings):
@@ -102,15 +101,13 @@ class VPNConfiguration:
         return str(subnet.netmask)
 
     def is_valid_ipv4(self, ip):
-        valid_ip_re = re.compile(
-            r'^(25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)\.'
-            r'(25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)\.'
-            r'(25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)\.'
-            r'(25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)'
-            r'(/(3[0-2]|[12][0-9]|[1-9]))?$'  # Matches CIDR
-        )
+        import ipaddress
+        try:
+            ipaddress.ip_address(ip)
+        except ValueError:
+            return False
 
-        return True if valid_ip_re.match(ip) else False
+        return True
 
 
 class OVPNConfig(VPNConfiguration):
@@ -137,31 +134,12 @@ class OVPNConfig(VPNConfiguration):
             "ipv6_disabled": self._settings.ipv6,
             "ca_certificate": ca_cert,
             "certificate_based": self.use_certificate,
-            "split_tunneling": True if len(self._settings.split_tunneling_ips) > 0 else False,
             "custom_dns": True if len(self._settings.dns_custom_ips) > 0 else False,
         }
         if self.use_certificate:
 
             j2_values["cert"] = self._vpncredentials.pubkey_credentials.certificate_pem
             j2_values["priv_key"] = self._vpncredentials.pubkey_credentials.openvpn_private_key
-
-        if len(self._settings.split_tunneling_ips) > 0:
-            ip_nm_pairs = []
-            for ip in self._settings.split_tunneling_ips:
-                netmask = "255.255.255.255"
-
-                if not self.is_valid_ipv4(ip):
-                    continue
-
-                if "/" in ip:
-                    ip, cidr = ip.split("/")
-                    netmask = self.cidr_to_netmask(int(cidr))
-                else:
-                    ip = ip
-
-                ip_nm_pairs.append({"ip": ip, "nm": netmask})
-
-            j2_values["ip_nm_pairs"] = ip_nm_pairs
 
         if len(self._settings.dns_custom_ips) > 0:
             dns_ips = []

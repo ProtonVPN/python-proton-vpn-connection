@@ -1,13 +1,14 @@
 import os
 
 import pytest
-from proton.vpn.connection.vpnconfiguration import (OVPNConfig,
+from proton.vpn.connection.vpnconfiguration import (OpenVPNTCPConfig,
+                                                    OpenVPNUDPConfig,
+                                                    OVPNConfig,
                                                     VPNConfiguration,
                                                     WireguardConfig)
 
 from .common import (CWD, MalformedVPNCredentials, MalformedVPNServer,
                      MockSettings, MockVpnCredentials, MockVpnServer)
-
 
 
 @pytest.fixture
@@ -132,7 +133,13 @@ def test_cidr_to_netmask(cidr, expected_mask):
 
 
 @pytest.mark.parametrize("ipv4", ["192.168.1.1", "109.162.10.9", "1.1.1.1", "10.10.10.10"])
-def test_is_valid_ip(ipv4):
+def test_valid_ips(ipv4):
+    cfg = MockVpnConfiguration(MockVpnServer(), MockVpnCredentials())
+    cfg.is_valid_ipv4(ipv4)
+
+
+@pytest.mark.parametrize("ipv4", ["192.168.1.90451", "109.", "1.-.1.1", "1111.10.10.10"])
+def test_not_valid_ips(ipv4):
     cfg = MockVpnConfiguration(MockVpnServer(), MockVpnCredentials())
     cfg.is_valid_ipv4(ipv4)
 
@@ -142,9 +149,6 @@ def test_ovpnconfig_with_default_settings(protocol, modified_exec_env):
     ovpn_cfg = OVPNConfig(MockVpnServer(), MockVpnCredentials(), MockSettings())
     ovpn_cfg._protocol = protocol
     output = ovpn_cfg.generate()
-    assert all(
-        [True if ip.split("/")[0] in output else False for ip in ovpn_cfg.settings.split_tunneling_ips]
-        )
     assert ovpn_cfg._vpnserver.server_ip in output
 
 
@@ -211,3 +215,15 @@ def test_wireguard_with_non_certificate():
     with pytest.raises(RuntimeError):
         with wg_cfg:
             pass
+
+
+@pytest.mark.parametrize(
+    "protocol, expected_class", [
+        ("openvpn_tcp", OpenVPNTCPConfig),
+        ("openvpn_udp", OpenVPNUDPConfig),
+        ("wireguard", WireguardConfig),
+    ]
+)
+def test_get_expected_config_from_factory(protocol, expected_class):
+    config = VPNConfiguration.from_factory(protocol)
+    assert isinstance(config(MockVpnServer(), MockVpnCredentials()), expected_class)

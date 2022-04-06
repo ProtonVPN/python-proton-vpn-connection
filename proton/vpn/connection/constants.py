@@ -87,25 +87,17 @@ persist-tun
 reneg-sec 0
 
 remote-cert-tls server
+
 {%- if not certificate_based %}
 auth-user-pass
 {%- endif %}
+
 pull
 fast-io
 
 {%- if ipv6_disabled %}
-
-# Remove IPv6 related configurations
 pull-filter ignore "ifconfig-ipv6"
 pull-filter ignore "route-ipv6"
-{%- endif %}
-
-{%- if split_tunneling %}
-
-# Split Tunneling
-{%- for ip_nm_pair in ip_nm_pairs %}
-route {{ ip_nm_pair.ip }} {{ ip_nm_pair.nm }} net_gateway
-{%- endfor %}
 {%- endif %}
 
 <ca>

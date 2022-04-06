@@ -86,7 +86,7 @@ class MockSettings(Settings):
 
     @property
     def split_tunneling_ips(self):
-        return ["192.168.1.102", "192.168.5.99", "192.168.1.12/16"]
+        return ["192.168.1.102", "192.168.5.99", "192.168.1.12"]
 
     @property
     def ipv6(self):

@@ -39,6 +39,161 @@ def modified_exec_env():
     ExecutionEnvironment.path_runtime = m
 
 
+# <<<<<<<<<<<<< Needed classes to test `get_from_factory()`
+
+class classproperty(object):
+    def __init__(self, f):
+        self.f = f
+
+    def __get__(self, obj, owner):
+        return self.f(owner)
+
+
+class MockOptimalBackend:
+    backend = "optimal"
+
+    def __init__(self, protocol):
+        self.protocol = protocol
+
+    @classproperty
+    def class_name(cls):
+        return MockOptimalBackend.backend
+
+    @classproperty
+    def priority(cls):
+        return 100
+
+    @classproperty
+    def cls(cls):
+        return MockCls
+
+
+class MockBackendLowPriority:
+    backend = "lowpriority"
+
+    def __init__(self, protocol):
+        self.protocol = protocol
+
+    @classproperty
+    def class_name(cls):
+        return MockBackendLowPriority.backend
+
+    @classproperty
+    def priority(cls):
+        return 10
+
+    @classproperty
+    def cls(cls):
+        return MockLowPriorityCls
+
+
+class MockBackendNotValid:
+    backend = "notvalid"
+
+    def __init__(self, protocol):
+        self.protocol = protocol
+
+    @classproperty
+    def class_name(cls):
+        return MockBackendNotValid.backend
+
+    @classproperty
+    def priority(cls):
+        return 50
+
+    @classproperty
+    def cls(cls):
+        return MockNotValidCls
+
+
+class MockCls:
+
+    @classmethod
+    def factory(cls, protocol):
+        backend = MockOptimalBackend(protocol)
+        return backend
+
+    @classmethod
+    def _validate(cls):
+        return True
+
+    @classmethod
+    def _get_connection(cls):
+        return MockOptimalBackend.backend
+
+
+class MockLowPriorityCls:
+
+    @classmethod
+    def factory(cls, protocol):
+        backend = MockBackendLowPriority(protocol)
+        return backend
+
+    @classmethod
+    def _validate(cls):
+        return True
+
+    @classmethod
+    def _get_connection(cls):
+        return MockBackendLowPriority.backend
+
+
+class MockNotValidCls:
+
+    @classmethod
+    def factory(cls, protocol):
+        backend = MockBackendNotValid(protocol)
+        return backend
+
+    @classmethod
+    def _validate(cls):
+        return False
+
+    @classmethod
+    def _get_connection(cls):
+        return MockBackendNotValid.backend
+
+
+def modified_single_get_all(self, *args):
+    return [MockOptimalBackend]
+
+
+def modified_multiple_get_all(self, *args):
+    return [MockOptimalBackend, MockBackendLowPriority, MockBackendNotValid]
+
+
+@pytest.fixture
+def modified_loader_single_backend():
+    from proton.loader import Loader
+    m = Loader.get_all
+    Loader.get_all = modified_single_get_all
+    yield Loader
+    Loader.get_all = m
+
+
+@pytest.fixture
+def modified_loader_multiple_backend():
+    from proton.loader import Loader
+    m = Loader.get_all
+    Loader.get_all = modified_multiple_get_all
+    yield Loader
+    Loader.get_all = m
+
+
+@pytest.fixture
+def modified_loader_with_not_valid_backend():
+    def _loader(self):
+        return [MockBackendNotValid]
+
+    from proton.loader import Loader
+    m = Loader.get_all
+    Loader.get_all = _loader
+    yield Loader
+    Loader.get_all = m
+
+# >>>>>>>>>>>>>>>>>>>>>>
+
+
 class MockVpnConnection(VPNConnection):
     _persistence_prefix = PREFIX
 
@@ -286,3 +441,34 @@ def test_down(vpn_server, vpn_credentials):
     assert vpnconn.status.state == states.Disconnecting().state and old_state != vpnconn.status.state
 
     MockVpnConnection._determine_initial_state = m
+
+
+def test_get_from_factory_single_backend(modified_loader_single_backend):
+    backend = VPNConnection.get_from_factory()
+    assert isinstance(backend, MockOptimalBackend)
+
+
+def test_get_from_factory_multiple_backends(modified_loader_multiple_backend):
+    backend = VPNConnection.get_from_factory()
+    assert isinstance(backend, MockOptimalBackend)
+
+
+def test_get_low_priority_backend_from_factory(modified_loader_multiple_backend):
+    backend = VPNConnection.get_from_factory(backend="lowpriority")
+    assert isinstance(backend, MockBackendLowPriority)
+
+
+def test_get_not_valid_from_factory(modified_loader_multiple_backend):
+    from proton.vpn.connection.exceptions import MissingBackendDetails
+    with pytest.raises(MissingBackendDetails):
+        VPNConnection.get_from_factory(backend="notvalid")
+
+
+def test_get_connection_from_optimal_backend(modified_loader_multiple_backend):
+    conn = VPNConnection.get_current_connection()
+    assert conn == MockOptimalBackend.backend
+
+
+def test_get_connection_from_not_valid_backend(modified_loader_with_not_valid_backend):
+    conn = VPNConnection.get_current_connection()
+    assert conn is None

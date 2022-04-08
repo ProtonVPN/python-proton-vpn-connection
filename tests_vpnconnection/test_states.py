@@ -4,16 +4,16 @@ import pytest
 
 
 class MockStateMachine:
-    def _start_connection(self):
+    def start_connection(self):
         pass
 
-    def _stop_connection(self):
+    def stop_connection(self):
         pass
 
-    def _add_persistence(self):
+    def add_persistence(self):
         pass
 
-    def _remove_persistence(self):
+    def remove_persistence(self):
         pass
 
 
@@ -79,33 +79,76 @@ def test_expected_state(state, event, expected_state):
 @pytest.mark.parametrize(
     "state, event, expected_state",
     [
-        (states.Disconnected(), None, states.Disconnected),
-        (states.Disconnected(), True, states.Disconnected),
-        (states.Disconnected(), "Test", states.Disconnected),
-        (states.Disconnected(), [], states.Disconnected),
-        (states.Disconnected(), {}, states.Disconnected),
-        (states.Connecting(), None, states.Connecting),
-        (states.Connecting(), True, states.Connecting),
-        (states.Connecting(), "Test", states.Connecting),
-        (states.Connecting(), [], states.Connecting),
-        (states.Connecting(), {}, states.Connecting),
-        (states.Connected(), None, states.Connected),
-        (states.Connected(), True, states.Connected),
-        (states.Connected(), "Test", states.Connected),
-        (states.Connected(), [], states.Connected),
-        (states.Connected(), {}, states.Connected),
-        (states.Disconnecting(), None, states.Disconnecting),
-        (states.Disconnecting(), True, states.Disconnecting),
-        (states.Disconnecting(), "Test", states.Disconnecting),
-        (states.Disconnecting(), [], states.Disconnecting),
-        (states.Disconnecting(), {}, states.Disconnecting),
-        (states.Transient(), None, states.Transient),
-        (states.Transient(), True, states.Transient),
-        (states.Transient(), "Test", states.Transient),
-        (states.Transient(), [], states.Transient),
-        (states.Transient(), {}, states.Transient)
+        (states.Disconnected(), events.Connected(), states.Disconnected),
+        (states.Disconnected(), events.Timeout(), states.Disconnected),
+        (states.Disconnected(), events.AuthDenied(), states.Disconnected),
+        (states.Disconnected(), events.UnknownError(), states.Disconnected),
+        (states.Disconnected(), events.Down(), states.Disconnected),
+        (states.Disconnected(), events.Disconnected(), states.Disconnected),
+        (states.Disconnected(), events.TunnelSetupFail(), states.Disconnected),
+        (states.Disconnected(), events.Retry(), states.Disconnected),
+
+        (states.Connecting(), events.Down(), states.Connecting),
+        (states.Connecting(), events.Disconnected(), states.Connecting),
+        (states.Connecting(), events.TunnelSetupFail(), states.Connecting),
+        (states.Connecting(), events.Retry(), states.Connecting),
+        (states.Connecting(), events.Up(), states.Connecting),
+
+        (states.Connected(), events.Disconnected(), states.Connected),
+        (states.Connected(), events.TunnelSetupFail(), states.Connected),
+        (states.Connected(), events.Retry(), states.Connected),
+        (states.Connected(), events.Up(), states.Connected),
+
+        (states.Disconnecting(), events.Connected(), states.Disconnecting),
+        (states.Disconnecting(), events.Timeout(), states.Disconnecting),
+        (states.Disconnecting(), events.AuthDenied(), states.Disconnecting),
+        (states.Disconnecting(), events.UnknownError(), states.Disconnecting),
+        (states.Disconnecting(), events.Down(), states.Disconnecting),
+        (states.Disconnecting(), events.TunnelSetupFail(), states.Disconnecting),
+        (states.Disconnecting(), events.Retry(), states.Disconnecting),
+
+        (states.Transient(), events.Up(), states.Transient),
+        (states.Transient(), events.Retry(), states.Transient),
+        (states.Transient(), events.TunnelSetupFail(), states.Transient),
+        (states.Transient(), events.Disconnected(), states.Transient),
+        (states.Transient(), events.Connected(), states.Transient)
     ]
 )
-def test_unexpected_event_type(state, event, expected_state):
+def test_expected_self_event_type(state, event, expected_state):
     new_state = state.on_event(event, MockStateMachine())
     assert new_state.state == expected_state.state
+
+
+@pytest.mark.parametrize(
+    "state, event",
+    [
+        (states.Disconnected(), None),
+        (states.Disconnected(), True),
+        (states.Disconnected(), "Test"),
+        (states.Disconnected(), []),
+        (states.Disconnected(), {}),
+        (states.Connecting(), None),
+        (states.Connecting(), True),
+        (states.Connecting(), "Test"),
+        (states.Connecting(), []),
+        (states.Connecting(), {}),
+        (states.Connected(), None),
+        (states.Connected(), True),
+        (states.Connected(), "Test"),
+        (states.Connected(), []),
+        (states.Connected(), {}),
+        (states.Disconnecting(), None),
+        (states.Disconnecting(), True),
+        (states.Disconnecting(), "Test"),
+        (states.Disconnecting(), []),
+        (states.Disconnecting(), {}),
+        (states.Transient(), None),
+        (states.Transient(), True),
+        (states.Transient(), "Test"),
+        (states.Transient(), []),
+        (states.Transient(), {})
+    ]
+)
+def test_unexpected_event_type(state, event):
+    with pytest.raises(AttributeError):
+        state.on_event(event, MockStateMachine())

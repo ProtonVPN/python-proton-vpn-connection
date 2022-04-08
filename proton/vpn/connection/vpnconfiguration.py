@@ -10,6 +10,8 @@ class DummySettings(Settings):
 
 
 class VPNConfiguration:
+    EXTENSION = None
+
     def __init__(self, vpnserver, vpncredentials, settings=None):
         self._configfile = None
         self.__use_certificate = False
@@ -61,7 +63,7 @@ class VPNConfiguration:
             self.__delete_existing_configuration()
             self._configfile = tempfile.NamedTemporaryFile(
                 dir=self.__base_path, delete=False,
-                prefix='ProtonVPN-', suffix=self.extension, mode='w'
+                prefix='ProtonVPN-', suffix=self.EXTENSION, mode='w'
             )
             self._configfile.write(self.generate())
             self._configfile.close()
@@ -82,7 +84,7 @@ class VPNConfiguration:
 
     def __delete_existing_configuration(self):
         for file in self.__base_path:
-            if file.endswith(".{}".format(self.extension)):
+            if file.endswith(".{}".format(self.EXTENSION)):
                 os.remove(
                     os.path.join(self.__base_path, file)
                 )
@@ -111,7 +113,7 @@ class VPNConfiguration:
 
 
 class OVPNConfig(VPNConfiguration):
-    extension = ".ovpn"
+    EXTENSION = ".ovpn"
 
     def generate(self):
         """Method that generates a vpn config file.
@@ -172,7 +174,7 @@ class OpenVPNUDPConfig(OVPNConfig):
 
 class WireguardConfig(VPNConfiguration):
     _protocol = "wireguard"
-    extension = ".conf"
+    EXTENSION = ".conf"
 
     def generate(self) -> str:
         """Method that generates a wireguard vpn configuration.

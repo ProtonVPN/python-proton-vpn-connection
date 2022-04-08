@@ -2,17 +2,6 @@ from proton.vpn.connection.enum import ConnectionStateEnum
 from proton.vpn.connection import events
 
 
-def ensure_event_has_necessary_properties(func):
-    def inner(self, e, state_machine):
-        _e = e
-        if not hasattr(e, "event"):
-            _e = events.BaseEvent
-
-        return func(self, _e, state_machine)
-
-    return inner
-
-
 class BaseState:
     state = None
 
@@ -25,17 +14,16 @@ class BaseState:
     def context(self):
         return self.__context
 
-    def on_event(e, state_machine):
+    def on_event(e: "events.BaseEvent", state_machine: "VPNStateMachine"):
         raise NotImplementedError
 
 
 class Disconnected(BaseState):
     state = ConnectionStateEnum.DISCONNECTED
 
-    @ensure_event_has_necessary_properties
-    def on_event(self, e, state_machine):
+    def on_event(self, e: "events.BaseEvent", state_machine: "VPNStateMachine"):
         if e.event == events.Up.event:
-            state_machine._start_connection()
+            state_machine.start_connection()
             return Connecting()
         else:
             # FIX-ME: log
@@ -47,15 +35,16 @@ class Disconnected(BaseState):
 class Connecting(BaseState):
     state = ConnectionStateEnum.CONNECTING
 
-    @ensure_event_has_necessary_properties
-    def on_event(self, e, state_machine):
+    def on_event(self, e: "events.BaseEvent", state_machine: "VPNStateMachine"):
         if e.event == events.Connected.event:
-            state_machine._add_persistence()
+            state_machine.add_persistence()
             return Connected()
         elif e.event in [
             events.Timeout.event,
             events.AuthDenied.event,
-            events.UnknownError.event
+            events.UnknownError.event,
+            events.TunnelSetupFail.event,
+            events.Disconnected.event
         ]:
             return Error(e.context)
         else:
@@ -68,10 +57,9 @@ class Connecting(BaseState):
 class Connected(BaseState):
     state = ConnectionStateEnum.CONNECTED
 
-    @ensure_event_has_necessary_properties
-    def on_event(self, e, state_machine):
+    def on_event(self, e: "events.BaseEvent", state_machine: "VPNStateMachine"):
         if e.event == events.Down.event:
-            state_machine._stop_connection()
+            state_machine.stop_connection()
             return Disconnecting(e.context)
         if e.event == events.Timeout.event:
             return Transient(e.context)
@@ -90,10 +78,12 @@ class Connected(BaseState):
 class Disconnecting(BaseState):
     state = ConnectionStateEnum.DISCONNECTING
 
-    @ensure_event_has_necessary_properties
-    def on_event(self, e, state_machine):
-        if e.event == events.Disconnected.event:
-            state_machine._remove_persistence()
+    def on_event(self, e: "events.BaseEvent", state_machine: "VPNStateMachine"):
+        if e.event in [
+            events.Disconnected.event,
+            events.UnknownError.event,
+        ]:
+            state_machine.remove_persistence()
             return Disconnected()
         else:
             # FIX-ME: log
@@ -103,10 +93,9 @@ class Disconnecting(BaseState):
 
 
 class Transient(BaseState):
-    state = ConnectionStateEnum.TRANSCIENT_ERROR
+    state = ConnectionStateEnum.TRANSIENT_ERROR
 
-    @ensure_event_has_necessary_properties
-    def on_event(self, e, state_machine):
+    def on_event(self, e: "events.BaseEvent", state_machine: "VPNStateMachine"):
         if e.event == events.Timeout.event:
             # FIX ME: Attempt to reconnect
             return self
@@ -126,6 +115,6 @@ class Transient(BaseState):
 class Error(BaseState):
     state = ConnectionStateEnum.ERROR
 
-    def on_event(self, e, state_machine):
-        state_machine._stop_connection()
+    def on_event(self, e: "events.BaseEvent", state_machine: "VPNStateMachine"):
+        state_machine.stop_connection()
         return Disconnecting()

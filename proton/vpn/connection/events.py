@@ -48,4 +48,4 @@ class Retry(BaseEvent):
 
 
 class UnknownError(BaseEvent):
-    event = StateMachineEventEnum.UNKOWN_ERROR
+    event = StateMachineEventEnum.UNKNOWN_ERROR

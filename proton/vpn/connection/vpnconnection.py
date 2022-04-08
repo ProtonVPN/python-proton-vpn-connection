@@ -52,6 +52,9 @@ class VPNConnection(VPNStateMachine):
     *Limitations*:Currently you can only handle 1 persistent connection at a time.
 
     """
+    _persistence_prefix = None
+    _unique_id = None
+
     def __init__(
         self,
         vpnserver: VPNServer,
@@ -77,7 +80,6 @@ class VPNConnection(VPNStateMachine):
         self._vpnserver = vpnserver
         self._vpncredentials = vpncredentials
         self._settings = settings
-        self._unique_id = None
 
     def up(self) -> None:
         """
@@ -302,15 +304,13 @@ class VPNConnection(VPNStateMachine):
         persistence = ConnectionPersistence()
 
         persisted_id = persistence.get_persisted(self._persistence_prefix)
-        if not self._unique_id and persisted_id:
-            self._unique_id = persisted_id
-        elif not self._unique_id and not persisted_id:
+        if not persisted_id:
             self._unique_id = None
             return
 
-        self._unique_id = self._unique_id.replace(self._persistence_prefix, "")
+        self._unique_id = persisted_id.replace(self._persistence_prefix, "")
 
-    def _add_persistence(self):
+    def add_persistence(self):
         """*For developers*
 
         If for some reason the component crashes, we need to know which connection we
@@ -363,7 +363,7 @@ class VPNConnection(VPNStateMachine):
         conn_id = self._persistence_prefix + self._unique_id
         persistence.persist(conn_id)
 
-    def _remove_persistence(self):
+    def remove_persistence(self):
         """*For developers*
 
         Works in the opposite way of _persist_connection. It removes the persitence

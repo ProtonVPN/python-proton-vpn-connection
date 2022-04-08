@@ -10,7 +10,7 @@ class VPNStateMachine(Publisher):
         super().__init__()
         self.__previous_state = None
         self.__current_state = None
-        self._determine_initial_state()
+        self.determine_initial_state()
 
     @property
     def status(self) -> "State":
@@ -28,26 +28,26 @@ class VPNStateMachine(Publisher):
         A copy of the previous state is always stored internally
         in `self.__previous_state`
         """
-        self._update_connection_state(
+        self.update_connection_state(
             self.__current_state.on_event(event, self)
         )
         self._notify_subscribers(self.__current_state)
 
-    def _update_connection_state(self, newstate) -> "None":
+    def update_connection_state(self, newstate) -> "None":
         self.__previous_state = self.__current_state
         self.__current_state = newstate
 
-    def _determine_initial_state(self) -> "None":
+    def determine_initial_state(self) -> "None":
         raise NotImplementedError
 
-    def _start_connection(self) -> "None":
+    def start_connection(self) -> "None":
         raise NotImplementedError
 
-    def _stop_connection(self) -> "None":
+    def stop_connection(self) -> "None":
         raise NotImplementedError
 
-    def _add_persistence(self) -> "None":
+    def add_persistence(self) -> "None":
         raise NotImplementedError
 
-    def _remove_persistence(self) -> "None":
+    def remove_persistence(self) -> "None":
         raise NotImplementedError

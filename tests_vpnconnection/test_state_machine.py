@@ -6,6 +6,8 @@ import enum
 import time
 from threading import Thread
 
+TIMEOUT_LIMIT = 10
+
 
 class FlowTestCases(enum.IntEnum):
     DISCONNECTED_TO_CONNECTED = 0
@@ -15,19 +17,19 @@ class FlowTestCases(enum.IntEnum):
 
 
 class DummyStateMachine(VPNStateMachine):
-    def _determine_initial_state(self):
-        self._update_connection_state(states.Disconnected())
+    def determine_initial_state(self):
+        self.update_connection_state(states.Disconnected())
 
-    def _start_connection(self):
+    def start_connection(self):
         self.on_event(events.Connected())
 
-    def _stop_connection(self):
+    def stop_connection(self):
         self.on_event(events.Disconnected())
 
-    def _add_persistence(self):
+    def add_persistence(self):
         pass
 
-    def _remove_persistence(self):
+    def remove_persistence(self):
         pass
 
     def _async_start(self):
@@ -118,21 +120,21 @@ def test_create_state_machine_without_overriding_initial_state_method():
 
 def test_create_state_machine_without_overriding_other_methods():
     class MissingMethodsStateMachine(VPNStateMachine):
-        def _determine_initial_state(self):
-            self._update_connection_state(states.Disconnected())
+        def determine_initial_state(self):
+            self.update_connection_state(states.Disconnected())
 
     sm = MissingMethodsStateMachine()
     with pytest.raises(NotImplementedError):
-        sm._start_connection()
+        sm.start_connection()
 
     with pytest.raises(NotImplementedError):
-        sm._stop_connection()
+        sm.stop_connection()
 
     with pytest.raises(NotImplementedError):
-        sm._add_persistence()
+        sm.add_persistence()
 
     with pytest.raises(NotImplementedError):
-        sm._remove_persistence()
+        sm.remove_persistence()
 
 
 def test_expected_initial_state(dummy_state_machine):
@@ -147,7 +149,7 @@ def test_unexpected_initial_state(dummy_state_machine):
 
 def test_from_disconnected_to_connected(dummy_state_machine, dummy_listener_object):
 
-    def _start_connection(self):
+    def start_connection(self):
         thread = Thread(target=self._async_start)
         thread.start()
 
@@ -155,21 +157,27 @@ def test_from_disconnected_to_connected(dummy_state_machine, dummy_listener_obje
         time.sleep(0.2)
         self.on_event(events.Connected())
 
-    dummy_state_machine._start_connection = _start_connection
+    dummy_state_machine.start_connection = start_connection
     dummy_state_machine._async_start = _async_start
     sm = dummy_state_machine()
     lc = dummy_listener_object()
     sm.register(lc)
+
+    assert sm.status.state == states.Disconnected().state
+
     sm.on_event(events.Up())
 
+    start = time.time()
     while True:
         if sm.status.state == states.Connected.state:
             break
+        elif time.time() - start >= TIMEOUT_LIMIT:
+            sm.on_event(events.Timeout())
 
 
 def test_from_disconnected_to_error(dummy_state_machine, dummy_listener_object):
 
-    def _stop_connection(self):
+    def stop_connection(self):
         thread = Thread(target=self._async_stop)
         thread.start()
 
@@ -177,7 +185,7 @@ def test_from_disconnected_to_error(dummy_state_machine, dummy_listener_object):
         time.sleep(0.2)
         self.on_event(events.Disconnected())
 
-    def _start_connection(self):
+    def start_connection(self):
         thread = Thread(target=self._async_start)
         thread.start()
 
@@ -185,28 +193,34 @@ def test_from_disconnected_to_error(dummy_state_machine, dummy_listener_object):
         time.sleep(0.2)
         self.on_event(events.AuthDenied())
 
-    dummy_state_machine._stop_connection = _stop_connection
+    dummy_state_machine.stop_connection = stop_connection
     dummy_state_machine._async_stop = _async_stop
-    dummy_state_machine._start_connection = _start_connection
+    dummy_state_machine.start_connection = start_connection
     dummy_state_machine._async_start = _async_start
     sm = dummy_state_machine()
     lc = dummy_listener_object()
     lc.test_flow = FlowTestCases.DISCONNECTED_TO_ERROR
     sm.register(lc)
+
+    assert sm.status.state == states.Disconnected().state
+
     sm.on_event(events.Up())
 
+    start = time.time()
     while True:
         if sm.status.state == states.Disconnected.state:
             break
         elif sm.status.state == states.Error.state:
             sm.on_event(events.Down())
+        elif time.time() - start >= TIMEOUT_LIMIT:
+            sm.on_event(events.Timeout())
 
 
 def test_from_connected_to_disconnected(dummy_state_machine, dummy_listener_object):
-    def _determine_initial_state(self):
-        self._update_connection_state(states.Connected())
+    def determine_initial_state(self):
+        self.update_connection_state(states.Connected())
 
-    def _stop_connection(self):
+    def stop_connection(self):
         thread = Thread(target=self._async_stop)
         thread.start()
 
@@ -214,25 +228,31 @@ def test_from_connected_to_disconnected(dummy_state_machine, dummy_listener_obje
         time.sleep(0.2)
         self.on_event(events.Disconnected())
 
-    dummy_state_machine._determine_initial_state = _determine_initial_state
-    dummy_state_machine._stop_connection = _stop_connection
+    dummy_state_machine.determine_initial_state = determine_initial_state
+    dummy_state_machine.stop_connection = stop_connection
     dummy_state_machine._async_stop = _async_stop
     sm = dummy_state_machine()
     lc = dummy_listener_object()
     lc.test_flow = FlowTestCases.CONNECTED_TO_DISCONNECTED
     sm.register(lc)
+
+    assert sm.status.state == states.Connected().state
+
     sm.on_event(events.Down())
 
+    start = time.time()
     while True:
         if sm.status.state == states.Disconnected.state:
             break
+        elif time.time() - start >= TIMEOUT_LIMIT:
+            sm.on_event(events.Timeout())
 
 
 def test_from_connected_to_error(dummy_state_machine, dummy_listener_object):
-    def _determine_initial_state(self):
-        self._update_connection_state(states.Connected())
+    def determine_initial_state(self):
+        self.update_connection_state(states.Connected())
 
-    def _stop_connection(self):
+    def stop_connection(self):
         thread = Thread(target=self._async_stop)
         thread.start()
 
@@ -240,17 +260,23 @@ def test_from_connected_to_error(dummy_state_machine, dummy_listener_object):
         time.sleep(0.2)
         self.on_event(events.Disconnected())
 
-    dummy_state_machine._determine_initial_state = _determine_initial_state
-    dummy_state_machine._stop_connection = _stop_connection
+    dummy_state_machine.determine_initial_state = determine_initial_state
+    dummy_state_machine.stop_connection = stop_connection
     dummy_state_machine._async_stop = _async_stop
     sm = dummy_state_machine()
     lc = dummy_listener_object()
     lc.test_flow = FlowTestCases.CONNECTED_TO_ERROR
     sm.register(lc)
+
+    assert sm.status.state == states.Connected().state
+
     sm.on_event(events.AuthDenied())
 
+    start = time.time()
     while True:
         if sm.status.state == states.Disconnected.state:
             break
         elif sm.status.state == states.Error.state:
             sm.on_event(events.Down())
+        elif time.time() - start >= TIMEOUT_LIMIT:
+            sm.on_event(events.Timeout())

@@ -39,7 +39,9 @@ def modified_exec_env():
     ExecutionEnvironment.path_runtime = m
 
 
-# <<<<<<<<<<<<< Needed classes to test `get_from_factory()`
+# <<<<<<<<<<<<<
+# <<<<<<<<<<<<< Needed mocks classes for testing
+# <<<<<<<<<<<<<
 
 class classproperty(object):
     def __init__(self, f):
@@ -192,18 +194,20 @@ def modified_loader_with_not_valid_backend():
     Loader.get_all = m
 
 # >>>>>>>>>>>>>>>>>>>>>>
+# >>>>>>>>>>>>>>>>>>>>>>
+# >>>>>>>>>>>>>>>>>>>>>>
 
 
 class MockVpnConnection(VPNConnection):
     _persistence_prefix = PREFIX
 
-    def _determine_initial_state(self):
-        self._update_connection_state(states.Disconnected())
+    def determine_initial_state(self):
+        self.update_connection_state(states.Disconnected())
 
-    def _start_connection(self):
+    def start_connection(self):
         pass
 
-    def _stop_connection(self):
+    def stop_connection(self):
         pass
 
     def _get_connection(self):
@@ -213,13 +217,13 @@ class MockVpnConnection(VPNConnection):
 class MockVpnConnectionMissingGetConnection(VPNConnection):
     _persistence_prefix = PREFIX
 
-    def _determine_initial_state(self):
-        self._update_connection_state(states.Disconnected())
+    def determine_initial_state(self):
+        self.update_connection_state(states.Disconnected())
 
-    def _start_connection(self):
+    def start_connection(self):
         pass
 
-    def _stop_connection(self):
+    def stop_connection(self):
         pass
 
 
@@ -289,7 +293,7 @@ def test_ensure_unique_id_is_set_with_persistence(vpn_server, vpn_credentials, m
 
     vpnconn._persistence_prefix = _prefix
     vpnconn._unique_id = "test-unique-id"
-    vpnconn._add_persistence()
+    vpnconn.add_persistence()
 
     assert os.path.isfile(
         os.path.join(
@@ -313,7 +317,7 @@ def test_ensure_unique_id_is_set_with_persistence(vpn_server, vpn_credentials, m
 def test_add_persistence(vpn_server, vpn_credentials, modified_exec_env):
     vpnconn = MockVpnConnection(vpn_server, vpn_credentials)
     vpnconn._unique_id = "add-persistance"
-    vpnconn._add_persistence()
+    vpnconn.add_persistence()
     assert os.path.isfile(
         os.path.join(
             PERSISTANCE_CWD, "{}{}".format(
@@ -322,13 +326,13 @@ def test_add_persistence(vpn_server, vpn_credentials, modified_exec_env):
             )
         )
     )
-    vpnconn._remove_persistence()
+    vpnconn.remove_persistence()
 
 
 def test_remove_persistence(vpn_server, vpn_credentials, modified_exec_env):
     vpnconn = MockVpnConnection(vpn_server, vpn_credentials)
     vpnconn._unique_id = "remove-persistance"
-    vpnconn._add_persistence()
+    vpnconn.add_persistence()
     assert os.path.isfile(
         os.path.join(
             PERSISTANCE_CWD, "{}{}".format(
@@ -337,7 +341,7 @@ def test_remove_persistence(vpn_server, vpn_credentials, modified_exec_env):
             )
         )
     )
-    vpnconn._remove_persistence()
+    vpnconn.remove_persistence()
     assert not os.path.isfile(
         os.path.join(
             PERSISTANCE_CWD, "{}{}".format(
@@ -426,11 +430,11 @@ def test_up(vpn_server, vpn_credentials):
 
 
 def test_down(vpn_server, vpn_credentials):
-    def _determine_initial_state(self):
-        self._update_connection_state(states.Connected())
+    def determine_initial_state(self):
+        self.update_connection_state(states.Connected())
 
-    m = MockVpnConnection._determine_initial_state
-    MockVpnConnection._determine_initial_state = _determine_initial_state
+    m = MockVpnConnection.determine_initial_state
+    MockVpnConnection.determine_initial_state = determine_initial_state
 
     vpnconn = MockVpnConnection(vpn_server, vpn_credentials)
     vpnconn.register(MockListenerClass())
@@ -438,7 +442,7 @@ def test_down(vpn_server, vpn_credentials):
     vpnconn.down()
     assert vpnconn.status.state == states.Disconnecting().state
 
-    MockVpnConnection._determine_initial_state = m
+    MockVpnConnection.determine_initial_state = m
 
 
 def test_get_from_factory_single_backend(modified_loader_single_backend):

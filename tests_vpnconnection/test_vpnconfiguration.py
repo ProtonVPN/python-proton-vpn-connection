@@ -9,13 +9,26 @@ from proton.vpn.connection.vpnconfiguration import (OpenVPNTCPConfig,
 
 from .common import (CWD, MalformedVPNCredentials, MalformedVPNServer,
                      MockSettings, MockVpnCredentials, MockVpnServer)
+import shutil
+
+VPNCONFIG_DIR = os.path.join(CWD, "vpnconfig")
+
+
+def setup_module(module):
+    if not os.path.isdir(VPNCONFIG_DIR):
+        os.makedirs(VPNCONFIG_DIR)
+
+
+def teardown_module(module):
+    if os.path.isdir(VPNCONFIG_DIR):
+        shutil.rmtree(VPNCONFIG_DIR)
 
 
 @pytest.fixture
 def modified_exec_env():
     from proton.vpn.connection.utils import ExecutionEnvironment
     m = ExecutionEnvironment().path_runtime
-    ExecutionEnvironment.path_runtime = CWD
+    ExecutionEnvironment.path_runtime = VPNCONFIG_DIR
     yield ExecutionEnvironment().path_runtime
     ExecutionEnvironment.path_runtime = m
 
@@ -153,20 +166,20 @@ def test_ovpnconfig_with_default_settings(protocol, modified_exec_env):
 
 
 @pytest.mark.parametrize("protocol", ["udp", "tcp"])
-def test_ovpnconfig_with_missing_settings(protocol):
+def test_ovpnconfig_with_missing_settings(protocol, modified_exec_env):
     ovpn_cfg = OVPNConfig(MockVpnServer(), MockVpnCredentials())
     ovpn_cfg._protocol = protocol
     ovpn_cfg.generate()
 
 
 @pytest.mark.parametrize("protocol", ["udp", "tcp"])
-def test_ovpnconfig_with_malformed_params(protocol):
+def test_ovpnconfig_with_malformed_params(protocol, modified_exec_env):
     with pytest.raises(TypeError):
         OVPNConfig(None, None, None)
 
 
 @pytest.mark.parametrize("protocol", ["udp", "tcp"])
-def test_ovpnconfig_with_certificate_and_malformed_credentials(protocol):
+def test_ovpnconfig_with_certificate_and_malformed_credentials(protocol, modified_exec_env):
     ovpn_cfg = OVPNConfig(MockVpnServer(), MalformedVPNCredentials())
     ovpn_cfg._protocol = protocol
     ovpn_cfg.use_certificate = True
@@ -175,7 +188,7 @@ def test_ovpnconfig_with_certificate_and_malformed_credentials(protocol):
 
 
 @pytest.mark.parametrize("protocol", ["udp", "tcp"])
-def test_ovpnconfig_with_malformed_server(protocol):
+def test_ovpnconfig_with_malformed_server(protocol, modified_exec_env):
     ovpn_cfg = OVPNConfig(MalformedVPNServer(), MockVpnCredentials())
     ovpn_cfg._protocol = protocol
     with pytest.raises(AttributeError):
@@ -183,14 +196,14 @@ def test_ovpnconfig_with_malformed_server(protocol):
 
 
 @pytest.mark.parametrize("protocol", ["udp", "tcp"])
-def test_ovpnconfig_with_malformed_server_and_credentials(protocol):
+def test_ovpnconfig_with_malformed_server_and_credentials(protocol, modified_exec_env):
     ovpn_cfg = OVPNConfig(MalformedVPNServer(), MalformedVPNCredentials())
     ovpn_cfg._protocol = protocol
     with pytest.raises(AttributeError):
         ovpn_cfg.generate()
 
 
-def test_wireguard_expected_configurations():
+def test_wireguard_expected_configurations(modified_exec_env):
     wg_cfg = WireguardConfig(MockVpnServer(), MockVpnCredentials())
     wg_cfg.use_certificate = True
     with wg_cfg as f:
@@ -202,7 +215,7 @@ def test_wireguard_expected_configurations():
             assert MockVpnServer().server_ip in content
 
 
-def test_wireguard_with_malformed_credentials():
+def test_wireguard_with_malformed_credentials(modified_exec_env):
     wg_cfg = WireguardConfig(MockVpnServer(), MalformedVPNCredentials())
     wg_cfg.use_certificate = True
     with pytest.raises(AttributeError):
@@ -210,7 +223,7 @@ def test_wireguard_with_malformed_credentials():
             pass
 
 
-def test_wireguard_with_non_certificate():
+def test_wireguard_with_non_certificate(modified_exec_env):
     wg_cfg = WireguardConfig(MockVpnServer(), MockVpnCredentials())
     with pytest.raises(RuntimeError):
         with wg_cfg:

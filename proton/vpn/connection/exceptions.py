@@ -28,6 +28,12 @@ class MissingBackendDetails(VPNConnectionError):
     """
 
 
+class MissingProtocolDetails(VPNConnectionError):
+    """
+    When no VPN protocol is found (OpenVPN, Wireguard, IKEv2, etc) then this exception is thrown.
+    """
+
+
 class ConflictError(VPNConnectionError):
     """
     When attempting an up(), if for some reason another current connection is found,

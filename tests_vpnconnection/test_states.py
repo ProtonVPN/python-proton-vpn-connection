@@ -89,8 +89,8 @@ def test_expected_state(state, event, expected_state):
         (states.Disconnected(), events.Retry(), states.Disconnected),
 
         (states.Connecting(), events.Down(), states.Connecting),
-        (states.Connecting(), events.Disconnected(), states.Connecting),
-        (states.Connecting(), events.TunnelSetupFail(), states.Connecting),
+        (states.Connecting(), events.Disconnected(), states.Error),
+        (states.Connecting(), events.TunnelSetupFail(), states.Error),
         (states.Connecting(), events.Retry(), states.Connecting),
         (states.Connecting(), events.Up(), states.Connecting),
 
@@ -102,7 +102,7 @@ def test_expected_state(state, event, expected_state):
         (states.Disconnecting(), events.Connected(), states.Disconnecting),
         (states.Disconnecting(), events.Timeout(), states.Disconnecting),
         (states.Disconnecting(), events.AuthDenied(), states.Disconnecting),
-        (states.Disconnecting(), events.UnknownError(), states.Disconnecting),
+        (states.Disconnecting(), events.Disconnected(), states.Disconnected),
         (states.Disconnecting(), events.Down(), states.Disconnecting),
         (states.Disconnecting(), events.TunnelSetupFail(), states.Disconnecting),
         (states.Disconnecting(), events.Retry(), states.Disconnecting),

@@ -52,7 +52,6 @@ class VPNConnection(VPNStateMachine):
     *Limitations*:Currently you can only handle 1 persistent connection at a time.
 
     """
-    _persistence_prefix = None
     _unique_id = None
 
     def __init__(
@@ -76,6 +75,8 @@ class VPNConnection(VPNStateMachine):
         This will set the interal properties which will be used by each backend/protocol
         to create its configuration file, so that it's ready to establish a VPN connection.
         """
+        self._persistence_prefix = "{}_{}_".format(self.backend, self.protocol)
+
         VPNStateMachine.__init__(self)
         self._vpnserver = vpnserver
         self._vpncredentials = vpncredentials

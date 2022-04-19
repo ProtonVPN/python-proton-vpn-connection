@@ -200,6 +200,8 @@ def modified_loader_with_not_valid_backend():
 
 class MockVpnConnection(VPNConnection):
     _persistence_prefix = PREFIX
+    backend = "mock-backend2"
+    protocol = "mock-protocol2"
 
     def determine_initial_state(self):
         self.update_connection_state(states.Disconnected())
@@ -216,6 +218,8 @@ class MockVpnConnection(VPNConnection):
 
 class MockVpnConnectionMissingGetConnection(VPNConnection):
     _persistence_prefix = PREFIX
+    backend = "mock-backend"
+    protocol = "mock-protocol"
 
     def determine_initial_state(self):
         self.update_connection_state(states.Disconnected())

@@ -97,12 +97,14 @@ class VPNConfiguration:
         from .utils import ExecutionEnvironment
         return ExecutionEnvironment().path_runtime
 
-    def cidr_to_netmask(self, cidr):
+    @staticmethod
+    def cidr_to_netmask(cidr):
         import ipaddress
         subnet = ipaddress.IPv4Network("0.0.0.0/{0}".format(cidr))
         return str(subnet.netmask)
 
-    def is_valid_ipv4(self, ip):
+    @staticmethod
+    def is_valid_ipv4(ip):
         import ipaddress
         try:
             ipaddress.ip_address(ip)
@@ -150,7 +152,7 @@ class OVPNConfig(VPNConfiguration):
                 # FIX-ME: Should custom DNS IPs be tested
                 # if they are in a valid form ?
                 #
-                # if not self.is_valid_ipv4(ip):
+                # if not VPNConfiguration.is_valid_ipv4(ip):
                 #     continue
                 dns_ips.append(ip)
 

@@ -1,4 +1,7 @@
 from .enum import ConnectionStateEnum
+from typing import TypeVar
+
+Subscriber = TypeVar("T")
 
 
 class Publisher:
@@ -6,13 +9,12 @@ class Publisher:
     def __init__(self):
         self.__subscribers = []
 
-    def register(self, listener: object) -> None:
+    def register(self, subscriber: Subscriber):
         """
         Register a subscriber to receive connection status updates.
 
-            :param listener: object/class instance that wants to receive
+            :param subscriber: object/class instance that wants to receive
                 connection status updates
-            :type listener: object
 
         Usage:
 
@@ -34,24 +36,27 @@ class Publisher:
 
         Each subscriber should have a `status_update()`
         method to receive updates.
-        """
-        if listener is None:
-            raise TypeError("Listener can not be None")
 
-        if listener in self.__subscribers:
+        :raises TypeError: if subscriber is not of valid type
+        :raises AttributeError: if subscriber hasn't implemented required callback
+        """
+        if subscriber is None:
+            raise TypeError("Subscriber can not be None")
+
+        if subscriber in self.__subscribers:
             return
 
-        if not hasattr(listener, "status_update"):
+        if not hasattr(subscriber, "status_update"):
             raise AttributeError("Missing `status_update` callback")
 
-        self.__subscribers.append(listener)
+        self.__subscribers.append(subscriber)
 
-    def unregister(self, listener) -> None:
+    def unregister(self, subscriber: Subscriber):
         """
         Unregister subscriber to stop receiving connection status updates.
 
-            :param listener: the subscriber object
-            :type listener: obj
+            :param subscriber: the subscriber object
+            :type subscriber: obj
 
         Usage:
 
@@ -78,11 +83,11 @@ class Publisher:
 
         """
         try:
-            self.__subscribers.remove(listener)
+            self.__subscribers.remove(subscriber)
         except ValueError:
             pass
 
-    def _notify_subscribers(self, connection_status: ConnectionStateEnum) -> None:
+    def _notify_subscribers(self, connection_status: ConnectionStateEnum):
         """*For developers*
 
         Notifies the subscribers about connection state changes.

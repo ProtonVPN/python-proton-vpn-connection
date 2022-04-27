@@ -60,14 +60,9 @@ def test_on_not_implemented_event():
         (states.Connecting(), events.AuthDenied(), states.Error),
         (states.Connecting(), events.UnknownError(), states.Error),
         (states.Connected(), events.Down(), states.Disconnecting),
-        (states.Connected(), events.Timeout(), states.Transient),
         (states.Connected(), events.AuthDenied(), states.Error),
         (states.Connected(), events.UnknownError(), states.Error),
         (states.Disconnecting(), events.Disconnected(), states.Disconnected),
-        (states.Transient(), events.Timeout(), states.Transient),
-        (states.Transient(), events.Down(), states.Error),
-        (states.Transient(), events.AuthDenied(), states.Error),
-        (states.Transient(), events.UnknownError(), states.Error),
         (states.Error(), events.UnknownError(), states.Disconnecting)
     ]
 )
@@ -106,12 +101,6 @@ def test_expected_state(state, event, expected_state):
         (states.Disconnecting(), events.Down(), states.Disconnecting),
         (states.Disconnecting(), events.TunnelSetupFail(), states.Disconnecting),
         (states.Disconnecting(), events.Retry(), states.Disconnecting),
-
-        (states.Transient(), events.Up(), states.Transient),
-        (states.Transient(), events.Retry(), states.Transient),
-        (states.Transient(), events.TunnelSetupFail(), states.Transient),
-        (states.Transient(), events.Disconnected(), states.Transient),
-        (states.Transient(), events.Connected(), states.Transient)
     ]
 )
 def test_expected_self_event_type(state, event, expected_state):
@@ -142,11 +131,6 @@ def test_expected_self_event_type(state, event, expected_state):
         (states.Disconnecting(), "Test"),
         (states.Disconnecting(), []),
         (states.Disconnecting(), {}),
-        (states.Transient(), None),
-        (states.Transient(), True),
-        (states.Transient(), "Test"),
-        (states.Transient(), []),
-        (states.Transient(), {})
     ]
 )
 def test_unexpected_event_type(state, event):

@@ -23,11 +23,6 @@ class BaseState:
         3) Disconnect succesfully path:    Connected -> Disconnecting -> Disconnected
         4) Connection error path:          Connected -> Error -> Disconnecting -> Disconnected
 
-    There's also a 5th state transition, which is for transient errors (only when already connected):
-
-        5*) Connected -> TransientError  ->  Connected
-                                    \---->  Error -> Disconnecting -> Disconnected
-
     Certain states will have to call methods from the state machine (see `Disconnected`, `Connected`).
     Both of these states call `state_machine.start_connection()` and `state_machine.stop_connection()`. It should be
     noted that these methods should be run in a async way so that it does not block the execution of the next line.
@@ -35,8 +30,6 @@ class BaseState:
     States also have `context` (which are fetched from events). These can help in discovering potential issues
     on why certain states might an unexpected behaviour. It is worth mentioning though that the contexts will always
     be backend specific.
-
-    *This last state transition is as of yet not fully described.
     """
     state = None
 
@@ -130,9 +123,8 @@ class Connected(BaseState):
         if e.event == events.Down.event:
             state_machine.stop_connection()
             return Disconnecting(e.context)
-        if e.event == events.Timeout.event:
-            return Transient(e.context)
         elif e.event in [
+            events.Timeout.event,
             events.AuthDenied.event,
             events.UnknownError.event
         ]:
@@ -164,39 +156,6 @@ class Disconnecting(BaseState):
         ]:
             state_machine.remove_persistence()
             return Disconnected()
-        else:
-            # FIX-ME: log
-            pass
-
-        return self
-
-
-class Transient(BaseState):
-    """
-    Transient is a temporary (transitioning) error state.
-    Usually this should only happen when the connection
-    is already established and for some reason it temporarily drops.
-    Ideally this state should attempt to restore the connection.
-
-    FIX-ME: Not fully describred/implemented on how this should work.
-
-    Path:
-                    |-----------|
-        Connected ->| Transient |-> Connected (transitioning state)
-                    |-----------|
-    """
-    state = ConnectionStateEnum.TRANSIENT_ERROR
-
-    def on_event(self, e: "BaseEvent", state_machine: "VPNStateMachine"):
-        if e.event == events.Timeout.event:
-            # FIX ME: Attempt to reconnect
-            return self
-        elif e.event in [
-            events.Down.event,
-            events.AuthDenied.event,
-            events.UnknownError.event,
-        ]:
-            return Error(e.context)
         else:
             # FIX-ME: log
             pass

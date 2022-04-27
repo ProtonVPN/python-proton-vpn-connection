@@ -77,10 +77,10 @@ class VPNConnection(VPNStateMachine):
         """
         self._persistence_prefix = "{}_{}_".format(self.backend, self.protocol)
 
-        VPNStateMachine.__init__(self)
         self._vpnserver = vpnserver
         self._vpncredentials = vpncredentials
         self._settings = settings
+        VPNStateMachine.__init__(self)
 
     def up(self) -> None:
         """
@@ -93,6 +93,7 @@ class VPNConnection(VPNStateMachine):
         :raises UnexpectedError: When an expected/unhandled error occurs.
         """
         from proton.vpn.connection import events
+        self._ensure_there_are_no_other_current_protonvpn_connections()
         self.on_event(events.Up())
 
     def down(self) -> None:
@@ -112,10 +113,12 @@ class VPNConnection(VPNStateMachine):
         Should be the first line in overriden ``up()`` methods.
 
         :raises ConflictError: When there another current connection.
-        """
-        # FIX ME: Should check if the current connection is the same as new connection
-        # If it is then it should not throw an exception
 
+        It was decided for this check to be strict, for the simple reason that
+        stricter is better the looser. This though can be subject to change in
+        the future. Thus `ConflictError` will always be thrown if there is a
+        connection created by this library.
+        """
         if self._get_connection():
             raise ConflictError(
                 "Another current connection was found. "
@@ -281,7 +284,7 @@ class VPNConnection(VPNStateMachine):
     def _validate(cls):
         return False
 
-    def _ensure_unique_id_is_set(self) -> None:
+    def _ensure_unique_id_is_set(self, force=False) -> None:
         """*For developers*
 
         It is crucial that unique_id is always set and current. The only times
@@ -301,6 +304,9 @@ class VPNConnection(VPNStateMachine):
 
         The unique ID is also used to find connections in NetworkManager.
         """
+        if self._unique_id and not force:
+            return
+
         from proton.vpn.connection.persistence import ConnectionPersistence
         persistence = ConnectionPersistence()
 

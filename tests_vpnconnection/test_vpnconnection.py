@@ -246,6 +246,34 @@ def test_init(vpn_server, vpn_credentials, settings):
     MockVpnConnection(vpn_server, vpn_credentials, settings)
 
 
+def test_up(vpn_server, vpn_credentials):
+    def _get_connection():
+        return False
+
+    MockVpnConnection
+    vpnconn = MockVpnConnection(vpn_server, vpn_credentials)
+    vpnconn._get_connection = _get_connection
+    vpnconn.register(MockListenerClass())
+    vpnconn.up()
+    assert vpnconn.status.state == states.Connecting().state
+
+
+def test_down(vpn_server, vpn_credentials):
+    def determine_initial_state(self):
+        self.update_connection_state(states.Connected())
+
+    m = MockVpnConnection.determine_initial_state
+    MockVpnConnection.determine_initial_state = determine_initial_state
+
+    vpnconn = MockVpnConnection(vpn_server, vpn_credentials)
+    vpnconn.register(MockListenerClass())
+
+    vpnconn.down()
+    assert vpnconn.status.state == states.Disconnecting().state
+
+    MockVpnConnection.determine_initial_state = m
+
+
 def test_ensure_settings_change(vpn_server, vpn_credentials, settings):
     vpnconn = MockVpnConnection(vpn_server, vpn_credentials, settings)
     assert vpnconn.settings.split_tunneling_ips == settings.split_tunneling_ips
@@ -424,29 +452,6 @@ def test_get_user_with_features(vpn_server, vpn_credentials, ns, accel, pf, rn, 
     assert user == _u
 
     MockSettings.features = m
-
-
-def test_up(vpn_server, vpn_credentials):
-    vpnconn = MockVpnConnection(vpn_server, vpn_credentials)
-    vpnconn.register(MockListenerClass())
-    vpnconn.up()
-    assert vpnconn.status.state == states.Connecting().state
-
-
-def test_down(vpn_server, vpn_credentials):
-    def determine_initial_state(self):
-        self.update_connection_state(states.Connected())
-
-    m = MockVpnConnection.determine_initial_state
-    MockVpnConnection.determine_initial_state = determine_initial_state
-
-    vpnconn = MockVpnConnection(vpn_server, vpn_credentials)
-    vpnconn.register(MockListenerClass())
-
-    vpnconn.down()
-    assert vpnconn.status.state == states.Disconnecting().state
-
-    MockVpnConnection.determine_initial_state = m
 
 
 def test_get_from_factory_single_backend(modified_loader_single_backend):

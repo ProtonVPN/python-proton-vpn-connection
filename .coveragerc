@@ -1,0 +1,8 @@
+[run]
+omit = 
+    proton/vpn/connection/constants.py
+    proton/vpn/connection/exceptions.py 
+    proton/vpn/connection/enum.py
+    proton/vpn/connection/metaclass.py
+    proton/vpn/connection/interfaces.py
+    proton/vpn/connection/utils.py

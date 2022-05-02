@@ -140,11 +140,20 @@ aeb893d9a96d1f15519bb3c4dcb40ee3
 wireguard_template = """
 [Interface]
 PrivateKey = {{ wg_client_secret_key }}
+{%- if ipv6_disabled %}
 Address = 10.2.0.2/32
 DNS = 10.2.0.1
+{%- else %}
+Address = 10.2.0.2/32, fd54:20a4:d33b:b10c:0:2:0:2/128
+DNS = 10.2.0.1, fd54:20a4:d33b:b10c:0:2:0:1
+{%- endif %}
 
 [Peer]
 PublicKey = {{ wg_server_pk }}
 Endpoint = {{ wg_ip }}:{{ wg_port }}
+{%- if ipv6_disabled %}
 AllowedIPs = 0.0.0.0/0
+{%- else %}
+AllowedIPs = 0.0.0.0/0, ::/0
+{%- endif %}
 """

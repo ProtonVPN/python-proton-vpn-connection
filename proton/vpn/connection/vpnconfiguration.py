@@ -192,7 +192,7 @@ class WireguardConfig(VPNConfiguration):
             "wg_ip": self._vpnserver.server_ip,
             "wg_port": self._vpnserver.udp_ports[0],
             "wg_server_pk": self._vpnserver.wg_public_key_x25519,
-            "ipv6_disabled": self._settings.ipv6
+            "ipv6_disabled": self.settings.ipv6
         }
 
         template = Environment(loader=BaseLoader).from_string(wireguard_template)

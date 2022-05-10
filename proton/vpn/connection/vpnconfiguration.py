@@ -128,17 +128,14 @@ class OVPNConfig(VPNConfiguration):
 
         ports = self._vpnserver.tcp_ports if "tcp" == self._protocol else self._vpnserver.udp_ports
 
-        if not isinstance(self._settings, Settings):
-            self._settings = DummySettings()
-
         j2_values = {
             "openvpn_protocol": self._protocol,
             "serverlist": [self._vpnserver.server_ip],
             "openvpn_ports": ports,
-            "ipv6_disabled": self._settings.ipv6,
+            "ipv6_disabled": self.settings.ipv6,
             "ca_certificate": ca_cert,
             "certificate_based": self.use_certificate,
-            "custom_dns": True if len(self._settings.dns_custom_ips) > 0 else False,
+            "custom_dns": True if len(self.settings.dns_custom_ips) > 0 else False,
         }
         if self.use_certificate:
 

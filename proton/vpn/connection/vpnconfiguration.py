@@ -5,7 +5,7 @@ import jinja2
 from jinja2 import Environment, BaseLoader
 
 
-class DummySettings(Settings):
+class DefaultSettings(Settings):
     pass
 
 
@@ -43,14 +43,14 @@ class VPNConfiguration:
     @property
     def settings(self):
         if self._settings is None:
-            self._settings = DummySettings()
+            self._settings = DefaultSettings()
 
         return self._settings
 
     @settings.setter
     def settings(self, new_value):
         if new_value is None:
-            self._settings = DummySettings()
+            self._settings = DefaultSettings()
         else:
             self._settings = new_value
 
@@ -132,7 +132,7 @@ class OVPNConfig(VPNConfiguration):
             "openvpn_protocol": self._protocol,
             "serverlist": [self._vpnserver.server_ip],
             "openvpn_ports": ports,
-            "ipv6_disabled": self.settings.ipv6,
+            "ipv6_enabled": self.settings.ipv6,
             "ca_certificate": ca_cert,
             "certificate_based": self.use_certificate,
             "custom_dns": True if len(self.settings.dns_custom_ips) > 0 else False,
@@ -189,7 +189,7 @@ class WireguardConfig(VPNConfiguration):
             "wg_ip": self._vpnserver.server_ip,
             "wg_port": self._vpnserver.udp_ports[0],
             "wg_server_pk": self._vpnserver.wg_public_key_x25519,
-            "ipv6_disabled": self.settings.ipv6
+            "ipv6_enabled": self.settings.ipv6
         }
 
         template = Environment(loader=BaseLoader).from_string(wireguard_template)

@@ -95,7 +95,7 @@ auth-user-pass
 pull
 fast-io
 
-{%- if ipv6_disabled %}
+{%- if not ipv6_enabled %}
 pull-filter ignore "ifconfig-ipv6"
 pull-filter ignore "route-ipv6"
 {%- endif %}
@@ -151,9 +151,9 @@ DNS = 10.2.0.1, fd54:20a4:d33b:b10c:0:2:0:1
 [Peer]
 PublicKey = {{ wg_server_pk }}
 Endpoint = {{ wg_ip }}:{{ wg_port }}
-{%- if ipv6_disabled %}
-AllowedIPs = 0.0.0.0/0
-{%- else %}
+{%- if ipv6_enabled %}
 AllowedIPs = 0.0.0.0/0, ::/0
+{%- else %}
+AllowedIPs = 0.0.0.0/0
 {%- endif %}
 """

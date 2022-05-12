@@ -373,7 +373,7 @@ class Settings:
     def ipv6(self) -> "bool":
         """Optional.
 
-        :return: if ipv6 should be disabled
+        :return: True if IPv6 should be enabled and False otherwise.
         :rtype: bool
         """
         return False

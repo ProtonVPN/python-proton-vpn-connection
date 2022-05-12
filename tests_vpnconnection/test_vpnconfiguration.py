@@ -158,18 +158,23 @@ def test_not_valid_ips(ipv4):
 
 
 @pytest.mark.parametrize("protocol", ["udp", "tcp"])
-def test_ovpnconfig_with_default_settings(protocol, modified_exec_env):
+def test_ovpnconfig_with_settings(protocol, modified_exec_env):
     ovpn_cfg = OVPNConfig(MockVpnServer(), MockVpnCredentials(), MockSettings())
     ovpn_cfg._protocol = protocol
     output = ovpn_cfg.generate()
     assert ovpn_cfg._vpnserver.server_ip in output
+    assert 'pull-filter ignore "ifconfig-ipv6"' not in output  # MockSettings().ipv6 is True
+    assert 'pull-filter ignore "route-ipv6"' not in output  # MockSettings().ipv6 is True
 
 
 @pytest.mark.parametrize("protocol", ["udp", "tcp"])
-def test_ovpnconfig_with_missing_settings(protocol, modified_exec_env):
+def test_ovpnconfig_with_missing_settings_applies_expected_defaults(protocol, modified_exec_env):
     ovpn_cfg = OVPNConfig(MockVpnServer(), MockVpnCredentials())
     ovpn_cfg._protocol = protocol
-    ovpn_cfg.generate()
+    generated_cfg = ovpn_cfg.generate()
+    # By default, IPv6 should be disabled
+    assert 'pull-filter ignore "ifconfig-ipv6"' in generated_cfg
+    assert 'pull-filter ignore "route-ipv6"' in generated_cfg
 
 
 @pytest.mark.parametrize("protocol", ["udp", "tcp"])
@@ -203,31 +208,40 @@ def test_ovpnconfig_with_malformed_server_and_credentials(protocol, modified_exe
         ovpn_cfg.generate()
 
 
-def test_wireguard_expected_configurations(modified_exec_env):
-    wg_cfg = WireguardConfig(MockVpnServer(), MockVpnCredentials())
+def test_wireguard_config_content_generation(modified_exec_env):
+    server = MockVpnServer()
+    credentials = MockVpnCredentials()
+    settings = MockSettings()
+    wg_cfg = WireguardConfig(server, credentials, settings)
     wg_cfg.use_certificate = True
-    with wg_cfg as f:
-        assert os.path.isfile(f)
-        with open(f) as _f:
-            content = _f.read()
-            assert MockVpnCredentials().pubkey_credentials.wg_private_key in content
-            assert MockVpnServer().wg_public_key_x25519 in content
-            assert MockVpnServer().server_ip in content
+    generated_cfg = wg_cfg.generate()
+    assert credentials.pubkey_credentials.wg_private_key in generated_cfg
+    assert server.wg_public_key_x25519 in generated_cfg
+    assert server.server_ip in generated_cfg
+    assert "AllowedIPs = 0.0.0.0/0, ::/0" in generated_cfg  # MockSettings().ipv6 is True
 
 
 def test_wireguard_with_malformed_credentials(modified_exec_env):
     wg_cfg = WireguardConfig(MockVpnServer(), MalformedVPNCredentials())
     wg_cfg.use_certificate = True
     with pytest.raises(AttributeError):
-        with wg_cfg:
-            pass
+        wg_cfg.generate()
 
 
 def test_wireguard_with_non_certificate(modified_exec_env):
     wg_cfg = WireguardConfig(MockVpnServer(), MockVpnCredentials())
     with pytest.raises(RuntimeError):
-        with wg_cfg:
-            pass
+        wg_cfg.generate()
+
+
+def test_wireguard_without_settings(modified_exec_env):
+    server = MockVpnServer()
+    credentials = MockVpnCredentials()
+    wg_cfg = WireguardConfig(server, credentials, settings=None)
+    wg_cfg.use_certificate = True
+    generated_cfg = wg_cfg.generate()
+    generated_cfg_lines = generated_cfg.splitlines()
+    assert "AllowedIPs = 0.0.0.0/0" in generated_cfg_lines
 
 
 @pytest.mark.parametrize(

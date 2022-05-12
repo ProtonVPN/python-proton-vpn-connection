@@ -90,4 +90,4 @@ class MockSettings(Settings):
 
     @property
     def ipv6(self):
-        return False
+        return True

@@ -27,7 +27,7 @@ setup(
     author_email="contact@protonmail.com",
     url="https://github.com/ProtonMail/pyhon-protonvpn-connection",
     packages=find_namespace_packages(include=['proton.vpn.connection']),
-    install_requires=["proton-core"],
+    install_requires=["jinja2", "proton-core"],
     include_package_data=True,
     python_requires=">=3.8",
     license="GPLv3",

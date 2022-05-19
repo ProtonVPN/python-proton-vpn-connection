@@ -1,4 +1,4 @@
-# Python Protonvpn Vpn Connection
+# Proton VPN Connection
 
 The `proton-vpn-connection` component defines the interface that VPN connection backends should implement.
 

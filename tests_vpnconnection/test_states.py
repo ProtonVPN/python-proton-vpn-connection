@@ -83,7 +83,7 @@ def test_expected_state(state, event, expected_state):
         (states.Disconnected(), events.TunnelSetupFail(), states.Disconnected),
         (states.Disconnected(), events.Retry(), states.Disconnected),
 
-        (states.Connecting(), events.Down(), states.Connecting),
+        (states.Connecting(), events.Down(), states.Disconnecting),
         (states.Connecting(), events.Disconnected(), states.Error),
         (states.Connecting(), events.TunnelSetupFail(), states.Error),
         (states.Connecting(), events.Retry(), states.Connecting),

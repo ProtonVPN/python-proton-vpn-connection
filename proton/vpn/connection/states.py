@@ -88,6 +88,9 @@ class Connecting(BaseState):
         if e.event == events.Connected.event:
             state_machine.add_persistence()
             return Connected()
+        if e.event == events.Down.event:
+            state_machine.stop_connection()
+            return Disconnecting(e.context)
         elif e.event in [
             events.Timeout.event,
             events.AuthDenied.event,

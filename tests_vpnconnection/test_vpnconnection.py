@@ -184,7 +184,7 @@ def modified_loader_multiple_backend():
 
 @pytest.fixture
 def modified_loader_with_not_valid_backend():
-    def _loader(self):
+    def _loader(self, *args, **kwargs):
         return [MockBackendNotValid]
 
     from proton.loader import Loader
@@ -472,12 +472,9 @@ def test_get_low_priority_backend_from_factory(modified_loader_multiple_backend)
 def test_get_not_valid_from_factory(modified_loader_multiple_backend):
     from proton.vpn.connection.exceptions import MissingBackendDetails
     with pytest.raises(MissingBackendDetails):
-        VPNConnection.get_from_factory(backend="notvalid")
+        VPNConnection.get_from_factory(backend="nonexistent")
 
 
 def test_get_connection_from_optimal_backend(modified_loader_multiple_backend):
     assert VPNConnection.get_current_connection()
 
-
-def test_get_connection_from_not_valid_backend(modified_loader_with_not_valid_backend):
-    assert VPNConnection.get_current_connection() is None

@@ -143,25 +143,14 @@ class VPNConnection(VPNStateMachine):
             :type backend: str
         """
         from proton.loader import Loader
-        all_backends = Loader.get_all("backend")
-        sorted_backends = sorted(all_backends, key=lambda _b: _b.priority, reverse=True)
+        try:
+            backend = Loader.get("backend", class_name=backend)
+        except RuntimeError as e:
+            raise MissingBackendDetails(
+                "Backend \"{}\" could not be found".format(backend)
+            ) from e
 
-        if backend:
-            try:
-                return [
-                    _b.cls for _b in sorted_backends
-                    if _b.class_name == backend and _b.cls._validate()
-                ][0].factory(protocol)
-            except (IndexError, AttributeError):
-                raise MissingBackendDetails(
-                    "Backend \"{}\" could not be found".format(backend)
-                )
-
-        for backend in sorted_backends:
-            if not backend.cls._validate():
-                continue
-
-            return backend.cls.factory(protocol)
+        return backend.factory(protocol)
 
     @classmethod
     def get_current_connection(self) -> Optional['VPNConnection']:
@@ -171,18 +160,8 @@ class VPNConnection(VPNStateMachine):
             :return: :class:`VPNConnection`
         """
         from proton.loader import Loader
-        all_backends = Loader.get_all("backend")
-        sorted_backends = sorted(all_backends, key=lambda _b: _b.priority, reverse=True)
-
-        for backend in sorted_backends:
-            if not backend.cls._validate():
-                continue
-
-            conn = backend.cls._get_connection()
-            if conn:
-                return conn
-
-        return None
+        backend = Loader.get("backend")
+        return backend._get_connection()
 
     @property
     def settings(self) -> Settings:

@@ -11,8 +11,8 @@ Welcome to python-protonvpn-connection's documentation!
    :caption: Contents:
 
    01_vpnconnection
-   02_backends
-   03_networkmanager
+   02_abstracts
+   03_backends
    04_devprotocol
 
 

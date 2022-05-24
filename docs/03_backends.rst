@@ -67,7 +67,7 @@ Wireguard
 IKEv2
 #############
 
-.. autoclass:: proton.vpn.connection.native.Strongswan
+.. autoclass:: proton.vpn.backend.linux.native.protocol.strongswan.Strongswan
    :members:
    :show-inheritance:
 

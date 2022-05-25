@@ -153,14 +153,14 @@ class VPNConnection(VPNStateMachine):
         return backend.factory(protocol)
 
     @classmethod
-    def get_current_connection(self) -> Optional['VPNConnection']:
+    def get_current_connection(self,backend: str = None) -> Optional['VPNConnection']:
         """ Get the current VPNConnection or None if there no current connection. current VPNConnection
             is persistent and can be called after client code exit.
 
             :return: :class:`VPNConnection`
         """
         from proton.loader import Loader
-        backend = Loader.get("backend")
+        backend = Loader.get("backend", class_name=backend)
         return backend._get_connection()
 
     @property

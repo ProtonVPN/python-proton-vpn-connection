@@ -7,7 +7,7 @@ Network Manager VPN Connection
 LinuxNetworkManager
 ####################
 
-.. autoclass:: proton.vpn.backend.linux.networkmanager.LinuxNetworkManager
+.. autoclass:: proton.vpn.backend.linux.networkmanager.core.LinuxNetworkManager
    :show-inheritance:
 
 Wireguard

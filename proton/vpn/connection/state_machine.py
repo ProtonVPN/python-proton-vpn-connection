@@ -1,5 +1,8 @@
+import logging
+
 from .publisher import Publisher
 
+logger = logging.getLogger(__name__)
 
 class VPNStateMachine(Publisher):
     """
@@ -73,6 +76,9 @@ class VPNStateMachine(Publisher):
         """
         self.__previous_state = self.__current_state
         self.__current_state = newstate
+        logger.info(f"Connection state updated from "
+                    f"{self.__previous_state.state.name if self.__previous_state else None} "
+                    f"to {self.__current_state.state.name}.")
 
     def determine_initial_state(self):
         raise NotImplementedError

@@ -1,7 +1,10 @@
+import logging
+
 from proton.vpn.connection.enum import ConnectionStateEnum
 from proton.vpn.connection import events
 from proton.vpn.connection.events import BaseEvent
 
+logger = logging.getLogger(__name__)
 
 class BaseState:
     """
@@ -61,6 +64,7 @@ class Disconnected(BaseState):
     state = ConnectionStateEnum.DISCONNECTED
 
     def on_event(self, e: "events.BaseEvent", state_machine: "VPNStateMachine"):
+        logger.info(f"State {self.state.name} received event {e.event.name}.")
         if e.event == events.Up.event:
             state_machine.start_connection()
             return Connecting()
@@ -85,6 +89,7 @@ class Connecting(BaseState):
     state = ConnectionStateEnum.CONNECTING
 
     def on_event(self, e: "BaseEvent", state_machine: "VPNStateMachine"):
+        logger.info(f"State {self.state.name} received event {e.event.name}.")
         if e.event == events.Connected.event:
             state_machine.add_persistence()
             return Connected()
@@ -123,6 +128,7 @@ class Connected(BaseState):
     state = ConnectionStateEnum.CONNECTED
 
     def on_event(self, e: "BaseEvent", state_machine: "VPNStateMachine"):
+        logger.info(f"State {self.state.name} received event {e.event.name}.")
         if e.event == events.Down.event:
             state_machine.stop_connection()
             return Disconnecting(e.context)
@@ -153,6 +159,7 @@ class Disconnecting(BaseState):
     state = ConnectionStateEnum.DISCONNECTING
 
     def on_event(self, e: "BaseEvent", state_machine: "VPNStateMachine"):
+        logger.info(f"State {self.state.name} received event {e.event.name}.")
         if e.event in [
             events.Disconnected.event,
             events.UnknownError.event,
@@ -182,5 +189,6 @@ class Error(BaseState):
     state = ConnectionStateEnum.ERROR
 
     def on_event(self, e: "BaseEvent", state_machine: "VPNStateMachine"):
+        logger.info(f"State {self.state.name} received event {e.event.name}.")
         state_machine.stop_connection()
         return Disconnecting()

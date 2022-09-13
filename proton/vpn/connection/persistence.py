@@ -6,8 +6,7 @@ class ConnectionPersistence:
 
     def __init__(self):
         self._dir_path = self._get_built_path("connection_persistence")
-        if not os.path.isdir(self._dir_path):
-            os.makedirs(self._dir_path)
+        os.makedirs(self._dir_path, exist_ok=True)
 
     def get_persisted(self, prefix):
         dir_list = os.listdir(self._dir_path)

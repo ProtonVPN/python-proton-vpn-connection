@@ -1,4 +1,5 @@
 import logging
+from dataclasses import dataclass
 
 from proton.vpn.connection.enum import ConnectionStateEnum
 from proton.vpn.connection import events
@@ -6,18 +7,26 @@ from proton.vpn.connection.events import BaseEvent
 
 logger = logging.getLogger(__name__)
 
+
+@dataclass
+class StateContext:
+    """Relevant state context data."""
+    event: BaseEvent = None  # event that led to the current state
+    connection: "VPNConnection" = None  # current VPN connection
+
+
 class BaseState:
     """
     This is the base state from which all other states derive from. Each new
     state has to implement the `on_event` method.
 
     Since these states are backend agnostic. When implement a new backend the person
-    implenting it has to have special care in correctly translating
+    implementing it has to have special care in correctly translating
     the backend specific events to known events (see `proton.vpn.connection.events`)
 
     Each state acts on the `on_event` method. Generally, if a state receives an unexpected
     event, it will then not update the state but rather keep the same state and should log the
-    occurence.
+    occurrence.
 
     The general idea of state transitions:
 
@@ -37,13 +46,9 @@ class BaseState:
     state = None
 
     def __init__(self, context=None):
-        self.__context = context
+        self.context = context or StateContext()
         if self.state is None:
             raise AttributeError("state attribute not defined")
-
-    @property
-    def context(self):
-        return self.__context
 
     def on_event(e: "BaseEvent", state_machine: "VPNStateMachine"):
         raise NotImplementedError
@@ -67,7 +72,9 @@ class Disconnected(BaseState):
         logger.info(f"State {self.state.name} received event {e.event.name}.")
         if e.event == events.Up.event:
             state_machine.start_connection()
-            return Connecting()
+            self.context.connection = state_machine
+            self.context.event = e
+            return Connecting(self.context)
         else:
             # FIX-ME: log
             pass
@@ -90,12 +97,13 @@ class Connecting(BaseState):
 
     def on_event(self, e: "BaseEvent", state_machine: "VPNStateMachine"):
         logger.info(f"State {self.state.name} received event {e.event.name}.")
+        self.context.event = e
         if e.event == events.Connected.event:
             state_machine.add_persistence()
-            return Connected()
+            return Connected(self.context)
         if e.event == events.Down.event:
             state_machine.stop_connection()
-            return Disconnecting(e.context)
+            return Disconnecting(self.context)
         elif e.event in [
             events.Timeout.event,
             events.AuthDenied.event,
@@ -103,7 +111,7 @@ class Connecting(BaseState):
             events.TunnelSetupFail.event,
             events.Disconnected.event
         ]:
-            return Error(e.context)
+            return Error(self.context)
         else:
             # FIX-ME: log
             pass
@@ -129,15 +137,16 @@ class Connected(BaseState):
 
     def on_event(self, e: "BaseEvent", state_machine: "VPNStateMachine"):
         logger.info(f"State {self.state.name} received event {e.event.name}.")
+        self.context.event = e
         if e.event == events.Down.event:
             state_machine.stop_connection()
-            return Disconnecting(e.context)
+            return Disconnecting(self.context)
         elif e.event in [
             events.Timeout.event,
             events.AuthDenied.event,
             events.UnknownError.event
         ]:
-            return Error(e.context)
+            return Error(self.context)
         else:
             # FIX-ME: log
             pass
@@ -160,12 +169,13 @@ class Disconnecting(BaseState):
 
     def on_event(self, e: "BaseEvent", state_machine: "VPNStateMachine"):
         logger.info(f"State {self.state.name} received event {e.event.name}.")
+        self.context.event = e
         if e.event in [
             events.Disconnected.event,
             events.UnknownError.event,
         ]:
             state_machine.remove_persistence()
-            return Disconnected()
+            return Disconnected(self.context)
         else:
             # FIX-ME: log
             pass
@@ -191,4 +201,5 @@ class Error(BaseState):
     def on_event(self, e: "BaseEvent", state_machine: "VPNStateMachine"):
         logger.info(f"State {self.state.name} received event {e.event.name}.")
         state_machine.stop_connection()
-        return Disconnecting()
+        self.context.event = e
+        return Disconnecting(self.context)

@@ -6,12 +6,12 @@ from .state_machine import VPNStateMachine
 
 class VPNConnection(VPNStateMachine):
     """
-    VPNConnection is the base class for which all types of connection need to derive from.
-    It contains most of the logic that is needed for either creating a new backend
-    or protocol.
+    VPNConnection is the base class for which all types of connection need to
+    derive from. It contains most of the logic that is needed for either
+    creating a new backend or protocol.
 
-    Apart from VPNConnection being a base class for vpn connections, it too provides
-    vpnconnections via its factory.
+    Apart from VPNConnection being a base class for vpn connections, it too
+    provides vpnconnections via its factory.
 
     Usage:
 
@@ -42,15 +42,16 @@ class VPNConnection(VPNStateMachine):
 
     If a specific backend supports it, a VPNConnection object is persistent
     accross client-code exits. For instance, if you started a VPNConnection with
-    :meth:`up`, you can get it back like this in another instance of your client code :
+    :meth:`up`, you can get it back like this in another instance of your
+    client code:
 
     .. code-block::
 
         vpnconnection = VPNConnection.get_current_connection()
         vpnconnection.down()
 
-    *Limitations*:Currently you can only handle 1 persistent connection at a time.
-
+    *Limitations*:Currently you can only handle 1 persistent connection
+    at a time.
     """
     _unique_id = None
 
@@ -64,7 +65,8 @@ class VPNConnection(VPNStateMachine):
 
             :param vpnserver: VPNServer type or same signature as VPNServer.
             :type vpnserver: object
-            :param vpncredentials: VPNCredentials type or same signature as VPNCredentials.
+            :param vpncredentials: VPNCredentials type or same signature as
+                VPNCredentials.
             :type vpncredentials: object
             :param settings: Optional.
                 Provide an instance that implements Settings or
@@ -72,8 +74,9 @@ class VPNConnection(VPNStateMachine):
                 signature of Settings.
             :type settings: object
 
-        This will set the interal properties which will be used by each backend/protocol
-        to create its configuration file, so that it's ready to establish a VPN connection.
+        This will set the interal properties which will be used by each
+        backend/protocol to create its configuration file, so that it's ready
+        to establish a VPN connection.
         """
         self._persistence_prefix = "{}_{}_".format(self.backend, self.protocol)
 
@@ -86,8 +89,10 @@ class VPNConnection(VPNStateMachine):
         """
         Establish a vpn connection
 
-        :raises AuthenticationError: The credentials used to authenticate on the VPN are not correct
-        :raises ConnectionTimeoutError: No answer from the VPN server for too long
+        :raises AuthenticationError: The credentials used to authenticate on the
+            VPN are not correct
+        :raises ConnectionTimeoutError: No answer from the VPN server
+            for too long
         :raises MissingBackendDetails: The backend cannot be used.
         :raises ConflictError: When another current connection is found.
         :raises UnexpectedError: When an expected/unhandled error occurs.
@@ -99,7 +104,8 @@ class VPNConnection(VPNStateMachine):
     def down(self) -> None:
         """Down method to stop a vpn connection.
 
-        :raises MissingVPNConnectionError: When there is no connection to disconnect.
+        :raises MissingVPNConnectionError: When there is no connection
+            to disconnect.
         :raises UnexpectedError: When an expected/unhandled error occurs.
         """
         from proton.vpn.connection import events
@@ -133,10 +139,12 @@ class VPNConnection(VPNStateMachine):
                 protocol to connect with, all in smallcaps
             :type protocol: str
             :param backend: Optional.
-                By default, get_vpnconnection() will always return based on NM backend, although
-                there are two execetpions to this, which are listed below:
+                By default, get_vpnconnection() will always return based on NM
+                backend, although there are two execetpions to this,
+                which are listed below:
 
-                - If the priority value of another backend is lower then the priority value of
+                - If the priority value of another backend is lower then the
+                  priority value of
                   NM backend, then former will be returned instead of the latter.
                 - If backend is set to a matching property of an backend of
                   VPNConnection, then that backend is to be returned instead.
@@ -153,9 +161,12 @@ class VPNConnection(VPNStateMachine):
         return backend.factory(protocol)
 
     @classmethod
-    def get_current_connection(self,backend: str = None) -> Optional['VPNConnection']:
-        """ Get the current VPNConnection or None if there no current connection. current VPNConnection
-            is persistent and can be called after client code exit.
+    def get_current_connection(
+        self, backend: str = None
+    ) -> Optional['VPNConnection']:
+        """ Get the current VPNConnection or None if there no current connection.
+            current VPNConnection is persistent and can be called after
+            client code exit.
 
             :return: :class:`VPNConnection`
         """
@@ -167,15 +178,17 @@ class VPNConnection(VPNStateMachine):
     def settings(self) -> Settings:
         """ Current settings of the connection :
             Some settings can be changed on the fly and are RW :
-            netshield level, kill switch enabled/disabled, split tunneling, VPN accelerator, custom DNS.
-            Other settings are RO and cannot be changed once the connection is instanciated :
-            VPN protocol.
+            netshield level, kill switch enabled/disabled, split tunneling,
+            VPN accelerator, custom DNS.
+            Other settings are RO and cannot be changed once the connection
+            is instanciated: VPN protocol.
         """
         return self._settings
 
     @settings.setter
     def settings(self, new_value: Settings):
-        """ Change the current settings of the connection, only valid for the RW settings of the connection.
+        """ Change the current settings of the connection, only valid for the
+        RW settings of the connection.
         """
         # FIX-ME: Should be defined when settings can be set
         self._settings = new_value
@@ -234,8 +247,10 @@ class VPNConnection(VPNStateMachine):
 
         The lower the value, the more priority it has.
 
-        Network manager will always have priority, thus it will always have the value of 100.
-        If NetworkManage packages are installed but are not running, then any other backend
+        Network manager will always have priority, thus it will always have
+        the value of 100.
+        If NetworkManage packages are installed but are not running,
+        then any other backend
         will take precedence.
 
         Usage:
@@ -277,9 +292,9 @@ class VPNConnection(VPNStateMachine):
             if not vpnconnection:
                 print("There is no connection")
 
-        The way to determine if there is connection is through persistence, where
-        the filename is composed of various elemets, where the unique id plays a key
-        part in it (see persist_connection()).
+        The way to determine if there is connection is through persistence,
+        where the filename is composed of various elemets, where the unique id
+        plays a key part in it (see persist_connection()).
 
         The unique ID is also used to find connections in NetworkManager.
         """
@@ -299,8 +314,9 @@ class VPNConnection(VPNStateMachine):
     def add_persistence(self):
         """*For developers*
 
-        If for some reason the component crashes, we need to know which connection we
-        should be handling. Thus the connection unique ID is prefixed with the protocol
+        If for some reason the component crashes, we need to know which
+        connection we should be handling. Thus the connection unique ID is
+        prefixed with the protocol
         and backend and stored to a file.
 
         Usage:
@@ -317,13 +333,15 @@ class VPNConnection(VPNStateMachine):
                 def up(self):
                     self._setup()
 
-                    # `_persist_connection` creates a file with filename in the format of
+                    # `_persist_connection` creates a file with filename in the
+                    # format of:
                     # <BACKEND>_<PROTOCOl>_<UNIQUE_ID>
                     # where:
                     #   - `<BACKEND>` is `backend`
                     #   - `<PROTOCOl>` is the provided protocol to factory
                     #   - `<UNIQUE_ID>` is `self._unique_id`
-                    # so the file would look like this (given that we've selected udp as protocol):
+                    # so the file would look like this (giventhat we've selected
+                    # udp as protocol):
                     # `custom_backend_openvpn_udp_132123-123sdf-12312-fsd`
 
                     self._persist_connection()
@@ -339,7 +357,8 @@ class VPNConnection(VPNStateMachine):
 
                 def _setup(self):
                     # setup connection
-                    # after setup, the connecction uuid is 132123-123sdf-12312-fsd
+                    # after setup, the connecction uuid is:
+                    # 132123-123sdf-12312-fsd
                     self._unique_id = 132123-123sdf-12312-fsd
 
         Note: Some code has been ommitted for readability.
@@ -352,9 +371,9 @@ class VPNConnection(VPNStateMachine):
     def remove_persistence(self):
         """*For developers*
 
-        Works in the opposite way of _persist_connection. It removes the persitence
-        file. This is used in conjunction with down, since if the connection is turned down,
-        we don't want to keep any persistence files.
+        Works in the opposite way of _persist_connection. It removes the
+        persitence file. This is used in conjunction with down, since if the
+        connection is turned down, we don't want to keep any persistence files.
         """
         from proton.vpn.connection.persistence import ConnectionPersistence
         persistence = ConnectionPersistence()

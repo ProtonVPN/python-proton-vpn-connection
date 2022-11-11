@@ -1,10 +1,12 @@
-from typing import List, NamedTuple, Optional
+from typing import List, Optional
 
 
 class VPNServer:
     """
-    A VPN server is needed to be able to get the neccessary data about the server to connect to.
-    Most of the properties are mandatory as they contain crucial information for connection establishment.
+    A VPN server is needed to be able to get the neccessary data about
+    the server to connect to.
+    Most of the properties are mandatory as they contain crucial information for
+ connection establishment.
 
     Usage:
 
@@ -36,8 +38,9 @@ class VPNServer:
 
     Note:
         1. Since `servername` is optional, it has been ommited.
-        2. If you intend to connect via a non-wireguard protocol then `wg_public_key_x25519`
-           can just return `None` as it won't be used, as this is specific to the wireguard protocol.
+        2. If you intend to connect via a non-wireguard protocol then
+        `wg_public_key_x25519` can just return `None` as it won't be used,
+        as this is specific to the wireguard protocol.
 
     """
 
@@ -108,7 +111,8 @@ class VPNPubkeyCredentials:
 
             @property
             def certificate_pem(self):
-                return "-----BEGIN CERTIFICATE-----\\nMIICJjCCAdigAwIBAgIECTD...=\\n-----END CERTIFICATE-----\\n"
+                return "-----BEGIN CERTIFICATE-----
+                \\nMIICJjCCAdigAwIBAgIECTD...=\\n-----END CERTIFICATE-----\\n"
 
             @property
             def wg_privage_key(self):
@@ -116,7 +120,9 @@ class VPNPubkeyCredentials:
 
             @property
             def openvpn_private_key(self):
-                return "-----BEGIN PRIVATE KEY-----\\nMC4CAQAwBQYDK2VwBCIEIKzVt3S+Q...\\n-----END PRIVATE KEY-----\\n"
+                return "-----BEGIN PRIVATE KEY-----
+                \\nMC4CAQAwBQYDK2VwBCIEIKzVt3S+Q...
+                \\n-----END PRIVATE KEY-----\\n"
     """
 
     @property
@@ -187,25 +193,28 @@ class VPNCredentials:
         class MyVPNCredentials:
 
             def userpass_credentials(self):
-                # See how you can create a VPNUserPass object at `VPNUserPassCredentials`
+                # See how you can create a VPNUserPass object
+                # at `VPNUserPassCredentials`
                 return VPNUserPassCredentials
 
             def pubkey_credentials(self):
-                # See how you can create a VPNCertificate object at `VPNPubkeyCredentials`
+                # See how you can create a VPNCertificate object
+                # at`VPNPubkeyCredentials`
                 return VPNPubkeyCredentials
 
     Limitation:
-    You could define only userpass_credentials, though at the cost that you won't be able
-    to connect to wireguard (since it's based on certificates) and/or openvpn and ikev2 based
-    with certificates. To guarantee maximum compatibility, it is recommended to pass both objects
-    for username/password and certificates.
+    You could define only userpass_credentials, though at the cost that you
+    won't be able to connect to wireguard (since it's based on certificates)
+    and/or openvpn and ikev2 based with certificates. To guarantee maximum
+    compatibility, it is recommended to pass both objects for
+    username/password and certificates.
     """
 
     @property
     def pubkey_credentials(self) -> "Optional[VPNPubkeyCredentials]":
         """
-        :return: instance of VPNPubkeyCredentials, which allows to make connections
-            with certificates
+        :return: instance of VPNPubkeyCredentials, which allows to
+            make connections with certificates
         :rtype: VPNPubkeyCredentials
         """
         raise NotImplementedError
@@ -213,8 +222,8 @@ class VPNCredentials:
     @property
     def userpass_credentials(self) -> "Optional[VPNUserPassCredentials]":
         """
-        :return: instance of VPNUserPassCredentials, which allows to make connections
-            with user/password
+        :return: instance of VPNUserPassCredentials,
+            which allows to make connections with user/password
         :rtype: VPNUserPassCredentials
         """
         raise NotImplementedError
@@ -253,7 +262,9 @@ class Features:
             def safe_mode(self):
                 return True
 
-    Note: Not all fields are mandatory to override, only those that are actually needed, ie:
+    Note: Not all fields are mandatory to override, only those that are
+    actually needed, ie:
+
     ::
         from protonvpn.vpnconnection import Settings
 
@@ -314,7 +325,8 @@ class Settings:
     """Optional.
 
     If you would like to pass some specific settings for VPN
-    configuration then you should derive from this class and override its methods.
+    configuration then you should derive from this class and override
+    its methods.
 
     Usage:
 
@@ -336,7 +348,8 @@ class Settings:
             def disable_ipv6(self):
                 return False
 
-    Note: Not all fields are mandatory to override, only those that are actually needed, ie:
+    Note: Not all fields are mandatory to override, only those that are
+    actually needed, ie:
 
     .. code-block::
 

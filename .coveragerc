@@ -6,3 +6,4 @@ omit =
     proton/vpn/connection/metaclass.py
     proton/vpn/connection/interfaces.py
     proton/vpn/connection/utils.py
+    proton/vpn/connection/state_machine.py

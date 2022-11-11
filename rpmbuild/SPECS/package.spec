@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-connection
-%define version 0.1.0
+%define version 0.2.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -45,6 +45,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Fri Nov 4 2022 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.2.0
+- Pass current connection to connection status subscribers
+
 * Fri Nov 4 2022 Josep Llaneras <josep.llaneras@proton.ch> 0.1.0
 - Pass current connection to connection status subscribers
 

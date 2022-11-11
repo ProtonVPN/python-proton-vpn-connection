@@ -32,7 +32,7 @@ def vpn_server():
 
 @pytest.fixture
 def modified_exec_env():
-    from proton.vpn.connection.utils import ExecutionEnvironment
+    from proton.utils.environment import ExecutionEnvironment
     m = ExecutionEnvironment().path_runtime
     ExecutionEnvironment.path_runtime = CWD
     yield ExecutionEnvironment().path_runtime

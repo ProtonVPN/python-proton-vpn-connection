@@ -1,23 +1,10 @@
 from proton.vpn.connection import states
 from proton.vpn.connection import events
 import pytest
+from unittest.mock import Mock
 
 
-class MockStateMachine:
-    def start_connection(self):
-        pass
-
-    def stop_connection(self):
-        pass
-
-    def add_persistence(self):
-        pass
-
-    def remove_persistence(self):
-        pass
-
-
-def test_base_class_with_missing_state():
+def test_raises_exception_when_missing_state():
     class DummyState(states.BaseState):
         pass
 
@@ -25,7 +12,7 @@ def test_base_class_with_missing_state():
         DummyState()
 
 
-def test_base_class_with_expected_event():
+def test_assert_does_not_raise_exception_when_state_is_set():
     custom_state = "test_state"
 
     class DummyState(states.BaseState):
@@ -34,21 +21,13 @@ def test_base_class_with_expected_event():
     assert DummyState().state == custom_state
 
 
-def test_get_context():
+def test_assert_context_can_be_accessed():
     class DummyState(states.BaseState):
         state = "test_event"
 
     context = "test-context"
     s = DummyState(context)
     assert s.context == context
-
-
-def test_on_not_implemented_event():
-    class DummyState(states.BaseState):
-        state = "test_event"
-
-    with pytest.raises(NotImplementedError):
-        DummyState().on_event(MockStateMachine())
 
 
 @pytest.mark.parametrize(
@@ -63,76 +42,39 @@ def test_on_not_implemented_event():
         (states.Connected(), events.AuthDenied(), states.Error),
         (states.Connected(), events.UnknownError(), states.Error),
         (states.Disconnecting(), events.Disconnected(), states.Disconnected),
-        (states.Error(), events.UnknownError(), states.Disconnecting)
+        (states.Error(), events.UnknownError(), states.Error)
     ]
 )
-def test_expected_state(state, event, expected_state):
-    new_state = state.on_event(event, MockStateMachine())
-    assert new_state.state == expected_state.state
-
-
-@pytest.mark.parametrize(
-    "state, event, expected_state",
-    [
-        (states.Disconnected(), events.Connected(), states.Disconnected),
-        (states.Disconnected(), events.Timeout(), states.Disconnected),
-        (states.Disconnected(), events.AuthDenied(), states.Disconnected),
-        (states.Disconnected(), events.UnknownError(), states.Disconnected),
-        (states.Disconnected(), events.Down(), states.Disconnected),
-        (states.Disconnected(), events.Disconnected(), states.Disconnected),
-        (states.Disconnected(), events.TunnelSetupFail(), states.Disconnected),
-        (states.Disconnected(), events.Retry(), states.Disconnected),
-
-        (states.Connecting(), events.Down(), states.Disconnecting),
-        (states.Connecting(), events.Disconnected(), states.Error),
-        (states.Connecting(), events.TunnelSetupFail(), states.Error),
-        (states.Connecting(), events.Retry(), states.Connecting),
-        (states.Connecting(), events.Up(), states.Connecting),
-
-        (states.Connected(), events.Disconnected(), states.Connected),
-        (states.Connected(), events.TunnelSetupFail(), states.Connected),
-        (states.Connected(), events.Retry(), states.Connected),
-        (states.Connected(), events.Up(), states.Connected),
-
-        (states.Disconnecting(), events.Connected(), states.Disconnecting),
-        (states.Disconnecting(), events.Timeout(), states.Disconnecting),
-        (states.Disconnecting(), events.AuthDenied(), states.Disconnecting),
-        (states.Disconnecting(), events.Disconnected(), states.Disconnected),
-        (states.Disconnecting(), events.Down(), states.Disconnecting),
-        (states.Disconnecting(), events.TunnelSetupFail(), states.Disconnecting),
-        (states.Disconnecting(), events.Retry(), states.Disconnecting),
-    ]
-)
-def test_expected_self_event_type(state, event, expected_state):
-    new_state = state.on_event(event, MockStateMachine())
+def test_assert_state_flow(state, event, expected_state):
+    new_state = state.on_event(event, Mock())
     assert new_state.state == expected_state.state
 
 
 @pytest.mark.parametrize(
     "state, event",
     [
-        (states.Disconnected(), None),
-        (states.Disconnected(), True),
-        (states.Disconnected(), "Test"),
-        (states.Disconnected(), []),
-        (states.Disconnected(), {}),
-        (states.Connecting(), None),
-        (states.Connecting(), True),
-        (states.Connecting(), "Test"),
-        (states.Connecting(), []),
-        (states.Connecting(), {}),
-        (states.Connected(), None),
-        (states.Connected(), True),
-        (states.Connected(), "Test"),
-        (states.Connected(), []),
-        (states.Connected(), {}),
-        (states.Disconnecting(), None),
-        (states.Disconnecting(), True),
-        (states.Disconnecting(), "Test"),
-        (states.Disconnecting(), []),
-        (states.Disconnecting(), {}),
+        (states.Disconnected(), events.Connected()),
+        (states.Disconnected(), events.Timeout()),
+        (states.Disconnected(), events.AuthDenied()),
+
+        (states.Disconnected(), events.UnknownError()),
+        (states.Disconnected(), events.Down()),
+        (states.Disconnected(), events.Disconnected()),
+
+        (states.Disconnected(), events.TunnelSetupFail()),
+        (states.Connecting(), events.Up()),
+        (states.Connected(), events.Disconnected()),
+
+        (states.Connected(), events.TunnelSetupFail(),),
+        (states.Connected(), events.Up()),
+        (states.Disconnecting(), events.Connected()),
+
+        (states.Disconnecting(), events.Timeout()),
+        (states.Disconnecting(), events.AuthDenied()),
+        (states.Disconnecting(), events.Down()),
+        (states.Disconnecting(), events.TunnelSetupFail()),
     ]
 )
-def test_unexpected_event_type(state, event):
-    with pytest.raises(AttributeError):
-        state.on_event(event, MockStateMachine())
+def test_expected_self_event_type(state, event):
+    with pytest.raises(Exception):
+        state.on_event(event, Mock())

@@ -26,7 +26,7 @@ def teardown_module(module):
 
 @pytest.fixture
 def modified_exec_env():
-    from proton.vpn.connection.utils import ExecutionEnvironment
+    from proton.utils.environment import ExecutionEnvironment
     m = ExecutionEnvironment().path_runtime
     ExecutionEnvironment.path_runtime = VPNCONFIG_DIR
     yield ExecutionEnvironment().path_runtime

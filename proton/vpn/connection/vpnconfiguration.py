@@ -94,7 +94,7 @@ class VPNConfiguration:
 
     @property
     def __base_path(self):
-        from .utils import ExecutionEnvironment
+        from proton.utils.environment import ExecutionEnvironment
         return ExecutionEnvironment().path_runtime
 
     @staticmethod

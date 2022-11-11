@@ -1,8 +1,10 @@
 import logging
 
-from .publisher import Publisher
+from proton.vpn.connection.publisher import Publisher
+from proton.vpn.connection import states
 
 logger = logging.getLogger(__name__)
+
 
 class VPNStateMachine(Publisher):
     """
@@ -48,14 +50,14 @@ class VPNStateMachine(Publisher):
         self.determine_initial_state()
 
     @property
-    def status(self) -> "BaseState":
+    def status(self) -> states.BaseEvent:
         """
         :return: the connection state
         :rtype: BaseState
         """
         return self.__current_state
 
-    def on_event(self, event: "BaseEvent"):
+    def on_event(self, event: states.BaseEvent):
         """
         Internally updates the state machine
         based on the event.
@@ -68,7 +70,7 @@ class VPNStateMachine(Publisher):
         )
         self._notify_subscribers(self.__current_state)
 
-    def update_connection_state(self, newstate: "BaseState"):
+    def update_connection_state(self, newstate: states.BaseEvent):
         """
         Replaces the `self.__previous_state` with the
         current value of `self.__current_state` and then replaces
@@ -76,6 +78,7 @@ class VPNStateMachine(Publisher):
         """
         self.__previous_state = self.__current_state
         self.__current_state = newstate
+        self.__current_state.init(self)
         logger.info(f"Connection state updated from "
                     f"{self.__previous_state.state.name if self.__previous_state else None} "
                     f"to {self.__current_state.state.name}.")

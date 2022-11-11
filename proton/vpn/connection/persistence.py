@@ -1,5 +1,5 @@
 import os
-from .utils import ExecutionEnvironment
+from proton.utils.environment import ExecutionEnvironment
 
 
 class ConnectionPersistence:

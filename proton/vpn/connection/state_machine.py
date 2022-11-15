@@ -1,7 +1,7 @@
-import logging
-
+from proton.vpn import logging
 from proton.vpn.connection.publisher import Publisher
 from proton.vpn.connection import states
+
 
 logger = logging.getLogger(__name__)
 
@@ -79,9 +79,11 @@ class VPNStateMachine(Publisher):
         self.__previous_state = self.__current_state
         self.__current_state = newstate
         self.__current_state.init(self)
-        logger.info(f"Connection state updated from "
-                    f"{self.__previous_state.state.name if self.__previous_state else None} "
-                    f"to {self.__current_state.state.name}.")
+        logger.info(
+            f"{self.__current_state.state.name}",
+            category="CONN", event="STATE_CHANGED",
+            optional=f"Connection: {self}"
+        )
 
     def determine_initial_state(self):
         raise NotImplementedError

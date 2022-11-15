@@ -1,3 +1,9 @@
+protonvpn-connection (0.2.1) unstable; urgency=medium
+
+  * Add vpn logger package
+
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Mon, 15 Nov 2022 10:00:00 +0100
+ 
 protonvpn-connection (0.2.0) unstable; urgency=medium
 
   * Ensure that the state machine stops at error

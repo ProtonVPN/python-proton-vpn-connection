@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-connection
-%define version 0.2.0
+%define version 0.2.1
 %define release 1
 
 Prefix: %{_prefix}
@@ -19,9 +19,12 @@ BuildRoot: %{_tmppath}/%{unmangled_name}-%{version}-%{release}-buildroot
 
 BuildRequires: python3-jinja2
 BuildRequires: python3-proton-core
+BuildRequires: python3-proton-vpn-logger
 BuildRequires: python3-setuptools
+
 Requires: python3-proton-core
 Requires: python3-jinja2
+Requires: python3-proton-vpn-logger
 
 %{?python_disable_dependency_generator}
 
@@ -45,8 +48,11 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
-* Fri Nov 4 2022 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.2.0
-- Pass current connection to connection status subscribers
+* Mon Nov 15 2022 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.2.1
+- Add vpn logger package
+
+* Fri Nov 11 2022 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.2.0
+- Ensure that the state machine stops at error
 
 * Fri Nov 4 2022 Josep Llaneras <josep.llaneras@proton.ch> 0.1.0
 - Pass current connection to connection status subscribers

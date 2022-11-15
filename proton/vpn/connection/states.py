@@ -1,13 +1,17 @@
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-from proton.vpn.connection.enum import ConnectionStateEnum
+from proton.vpn import logging
 from proton.vpn.connection import events
+from proton.vpn.connection.enum import ConnectionStateEnum
 from proton.vpn.connection.events import BaseEvent
 
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from proton.vpn.connection.state_machine import VPNStateMachine
     from proton.vpn.connection.vpnconnection import VPNConnection
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -54,7 +58,7 @@ class BaseState:
     def __init__(self, context=None):
         self.context = context or StateContext()
         if self.state is None:
-            raise AttributeError("State attribute not defined")
+            raise AttributeError("Undefined attribute \"state\" ")
 
     def on_event(self, e: "BaseEvent", state_machine: "VPNStateMachine"):
         return self
@@ -86,7 +90,13 @@ class Disconnected(BaseState):
             self.context.event = e
             return Connecting(self.context)
         else:
-            raise ValueError("Unexpected event: {}".format(e.name))
+            logger.warning(
+                f"{self.state.name} state received unexpected "
+                f"event: {e.event.name}",
+                category="CONN", event="WARNING"
+            )
+
+        return self
 
 
 class Connecting(BaseState):
@@ -119,7 +129,13 @@ class Connecting(BaseState):
         ]:
             return Error(self.context)
         else:
-            raise ValueError("Unexpected event: {}".format(e.name))
+            logger.warning(
+                f"{self.state.name} state received unexpected "
+                f"event: {e.event.name}",
+                category="CONN", event="WARNING"
+            )
+
+        return self
 
 
 class Connected(BaseState):
@@ -150,7 +166,13 @@ class Connected(BaseState):
         ]:
             return Error(self.context)
         else:
-            raise ValueError("Unexpected event: {}".format(e.name))
+            logger.warning(
+                f"{self.state.name} state received unexpected "
+                f"event: {e.event.name}",
+                category="CONN", event="WARNING"
+            )
+
+        return self
 
 
 class Disconnecting(BaseState):
@@ -175,7 +197,13 @@ class Disconnecting(BaseState):
             state_machine.remove_persistence()
             return Disconnected(self.context)
         else:
-            raise ValueError("Unexpected event: {}".format(e.name))
+            logger.warning(
+                f"{self.state.name} state received unexpected "
+                f"event: {e.event.name}",
+                category="CONN", event="WARNING"
+            )
+
+        return self
 
 
 class Error(BaseState):
@@ -196,3 +224,11 @@ class Error(BaseState):
     def init(self, state_machine):
         state_machine.stop_connection()
         state_machine.remove_persistence()
+
+    def on_event(self, e: BaseEvent, state_machine: "VPNStateMachine"):
+        logger.warning(
+            f"{self.state.name} state received unexpected "
+            f"event: {e.event.name}",
+            category="CONN", event="WARNING"
+        )
+        return self

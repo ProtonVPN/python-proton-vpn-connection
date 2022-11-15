@@ -75,6 +75,12 @@ def test_assert_state_flow(state, event, expected_state):
         (states.Disconnecting(), events.TunnelSetupFail()),
     ]
 )
-def test_expected_self_event_type(state, event):
-    with pytest.raises(Exception):
-        state.on_event(event, Mock())
+def test_expected_self_event_type(state, event, caplog):
+    state.on_event(event, Mock())
+
+    warnings = 0
+    for record in caplog.records:
+        if record.levelname == "WARNING":
+            warnings += 1
+
+    assert warnings == 1

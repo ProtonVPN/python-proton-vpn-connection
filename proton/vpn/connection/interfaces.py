@@ -1,97 +1,33 @@
-from typing import List, Optional
+from typing import List, Optional, Protocol
 
 
-class VPNServer:
+class VPNServer(Protocol):
     """
-    A VPN server is needed to be able to get the neccessary data about
-    the server to connect to.
-    Most of the properties are mandatory as they contain crucial information for
- connection establishment.
+    Contains the necessary data about the server to connect to.
 
-    Usage:
+    Some properties like server_id and server_name are not used to establish
+    the connection, but they are required for bookkeeping.
+    When the connection is retrieved from persistence, then VPN clients
+    can use this information to be able to identify the server that
+    the VPN connection was established to. The server name is there mainly
+    for debugging purposes.
 
-    .. code-block::
-
-        from proton.vpn.connection import VPNServer
-
-        class MyVPNServer(VPNServer):
-
-            @property
-            def server_ip(self):
-                return "187.135.1.53"
-
-            @property
-            def domain(self):
-                return "org.my-secure-domain.com"
-
-            @property
-            def wg_public_key_x25519(self):
-                return "wOnn8kz6l6l3Tbwi7F7rvg/iyFB9yQneYETbp4xMJF0="
-
-            @property
-            def tcp_ports(self):
-                return [443, 5995]
-
-            @property
-            def udp_ports(self):
-                return [80, 443, 5060]
-
-    Note:
-        1. Since `servername` is optional, it has been ommited.
-        2. If you intend to connect via a non-wireguard protocol then
-        `wg_public_key_x25519` can just return `None` as it won't be used,
-        as this is specific to the wireguard protocol.
-
+    Attributes:
+        server_ip: server ip to connect to.
+        domain: domain to be used for x509 verification.
+        wg_public_key_x25519: x25519 public key for wireguard peer verification.
+        tcp_ports: List of TCP ports, if the protocol requires them.
+        udp_ports: List of UDP ports, if the protocol requires them.
+        server_id: ID of the server to connect to.
+        server_name: Name of the server to connect to.
     """
-
-    @property
-    def server_ip(self) -> "str":
-        """
-        :return: server ip to connect to
-        :rtype: str
-        """
-        raise NotImplementedError
-
-    @property
-    def domain(self) -> "str":
-        """
-        :return: domain to be used for x509 verification
-        :rtype: str
-        """
-        raise NotImplementedError
-
-    @property
-    def wg_public_key_x25519(self) -> "str":
-        """
-        :return: x25519 public key for wg peer verification
-        :rtype: str
-        """
-        raise NotImplementedError
-
-    @property
-    def tcp_ports(self) -> "List[int]":
-        """
-        :return: list with tcp ports
-        :rtype: List[int]
-        """
-        raise NotImplementedError
-
-    @property
-    def udp_ports(self) -> "List[int]":
-        """
-        :return: list with udp ports
-        :rtype: List[int]
-        """
-        raise NotImplementedError
-
-    @property
-    def servername(self) -> "str":
-        """Optional.
-
-        :return: human readeable servername
-        :rtype: str
-        """
-        return None
+    server_ip: str
+    domain: str
+    wg_public_key_x25519: str
+    tcp_ports: List[int]
+    udp_ports: List[int]
+    server_id: str
+    server_name: str
 
 
 class VPNPubkeyCredentials:

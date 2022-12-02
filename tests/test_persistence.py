@@ -1,77 +1,96 @@
-from proton.vpn.connection.persistence import ConnectionPersistence
-import pathlib
+import json
 import os
-import shutil
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
 import pytest
 
-PERSISTENCE_DIR_PATH = os.path.join(pathlib.Path(__file__).parent.absolute(), "connection_persistence")
-
-
-def teardown_module(module):
-    shutil.rmtree(PERSISTENCE_DIR_PATH)
-
-
-def monkey_patched_built_path(self, path, use_alt_base_path=False):
-    if not use_alt_base_path:
-        return os.path.join(pathlib.Path(__file__).parent.absolute(), path)
-
-    return os.path.join(use_alt_base_path, path)
+from proton.vpn.connection.persistence import ConnectionPersistence, ConnectionParameters
 
 
 @pytest.fixture
-def monkey_patched_persistence():
-    x = ConnectionPersistence._get_built_path
-    ConnectionPersistence._get_built_path = monkey_patched_built_path
-    yield ConnectionPersistence
-    ConnectionPersistence._get_built_path = x
+def temp_dir() -> str:
+    with TemporaryDirectory(suffix=__name__) as temp_dir:
+        yield f"{temp_dir}"
 
 
-@pytest.fixture(params=["testid1", "testid2"])
-def dummy_persistence_id(request):
-    return request.param
-
-
-def test_get_built_path():
-    cp = ConnectionPersistence()
-    base = cp._get_built_path("connection_persistence")
-    assert cp._get_built_path("connetion_id", base) == "{}/connetion_id".format(base)
-
-
-def test_persistence_is_stored(monkey_patched_persistence, dummy_persistence_id):
-    cp = monkey_patched_persistence()
-    cp.persist(dummy_persistence_id)
-    assert os.path.isfile(
-        os.path.join(
-            PERSISTENCE_DIR_PATH, dummy_persistence_id
+def test_load(temp_dir: str):
+    with open(os.path.join(temp_dir, ConnectionPersistence.FILENAME), "w") as f:
+        f.write(
+            '{"connection_id": "connection_id", "backend": "backend", '
+            '"protocol": "protocol", "server_id": "server_id", '
+            '"server_name": "server_name"}'
         )
+
+    connection_persistence = ConnectionPersistence(persistence_directory=temp_dir)
+    persisted_parameters = connection_persistence.load()
+
+    assert persisted_parameters.connection_id == "connection_id"
+    assert persisted_parameters.backend == "backend"
+    assert persisted_parameters.protocol == "protocol"
+    assert persisted_parameters.server_id == "server_id"
+    assert persisted_parameters.server_name == "server_name"
+
+
+def test_load_returns_none_and_logs_error_when_persistence_file_contains_invalid_json(temp_dir, caplog):
+    with open(os.path.join(temp_dir, ConnectionPersistence.FILENAME), "w") as f:
+        f.write('{"conn')
+
+    connection_persistence = ConnectionPersistence(persistence_directory=temp_dir)
+    persisted_parameters = connection_persistence.load()
+
+    assert not persisted_parameters
+    assert len([r for r in caplog.records if r.levelname == "ERROR"]) == 1
+
+
+def test_load_returns_none_and_logs_error_when_persistence_file_misses_expected_parameters(temp_dir):
+    with open(os.path.join(temp_dir, ConnectionPersistence.FILENAME), "w") as f:
+        f.write('{"foo": "bar"}')
+
+    connection_persistence = ConnectionPersistence(persistence_directory=temp_dir)
+    persisted_parameters = connection_persistence.load()
+
+    assert not persisted_parameters
+
+
+def test_save_(temp_dir: str):
+    connection_parameters = ConnectionParameters(
+        connection_id="connection_id",
+        backend="backend",
+        protocol="protocol",
+        server_id="server_id",
+        server_name="server_name",
     )
+    
+    connection_persistence = ConnectionPersistence(persistence_directory=temp_dir)
+    connection_persistence.save(connection_parameters)
+    
+    with open(os.path.join(temp_dir, ConnectionPersistence.FILENAME)) as f:
+        persistence_file_content = json.load(f)
+
+        assert connection_parameters.connection_id == persistence_file_content["connection_id"]
+        assert connection_parameters.backend == persistence_file_content["backend"]
+        assert connection_parameters.protocol == persistence_file_content["protocol"]
+        assert connection_parameters.server_id == persistence_file_content["server_id"]
+        assert connection_parameters.server_name == persistence_file_content["server_name"]
 
 
-def test_persistence_is_fetched(monkey_patched_persistence, dummy_persistence_id):
-    cp = monkey_patched_persistence()
-    assert cp.get_persisted(dummy_persistence_id)
+def test_remove(temp_dir: str):
+    persistence_file_path = Path(temp_dir) / ConnectionPersistence.FILENAME
+    persistence_file_path.touch()
+    assert persistence_file_path.is_file()
+
+    connection_persistence = ConnectionPersistence(persistence_directory=temp_dir)
+    connection_persistence.remove()
+
+    assert not persistence_file_path.exists()
 
 
-def test_fetch_non_existing_persistence(monkey_patched_persistence):
-    cp = monkey_patched_persistence()
-    assert not cp.get_persisted("no_prefix")
+def test_remove_logs_a_warning_when_persistence_file_was_not_found(
+        temp_dir:str, caplog
+):
+    connection_persistence = ConnectionPersistence(persistence_directory=temp_dir)
+    connection_persistence.remove()
 
-
-def test_peristence_is_removed(monkey_patched_persistence, dummy_persistence_id):
-    cp = monkey_patched_persistence()
-    cp.persist(dummy_persistence_id)
-    assert cp.get_persisted(dummy_persistence_id)
-    cp.remove_persist(dummy_persistence_id)
-    assert not cp.get_persisted(dummy_persistence_id)
-    cp.remove_persist(dummy_persistence_id)
-
-
-def test_persistence_module(monkey_patched_persistence):
-    prefix = "prefix_"
-    unique_id = prefix + "tested"
-    cp = monkey_patched_persistence()
-    assert not cp.get_persisted(prefix)
-    cp.persist(unique_id)
-    assert cp.get_persisted(prefix)
-    cp.remove_persist(unique_id)
-    assert not cp.get_persisted(prefix)
+    assert len(caplog.records) == 1
+    assert len([r for r in caplog.records if r.levelname == "WARNING"]) == 1

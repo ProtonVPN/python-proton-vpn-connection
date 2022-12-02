@@ -1,35 +1,73 @@
+import json
 import os
+from dataclasses import dataclass
+from json import JSONDecodeError
+from typing import Optional
+
 from proton.utils.environment import ExecutionEnvironment
+import proton.vpn.logging as logging
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class ConnectionParameters:
+    """Connection parameters to be persisted to disk."""
+    connection_id: str
+    backend: str
+    protocol: str
+    server_id: str
+    server_name: str
 
 
 class ConnectionPersistence:
+    FILENAME = "connection_persistence.json"
 
-    def __init__(self):
-        self._dir_path = self._get_built_path("connection_persistence")
-        os.makedirs(self._dir_path, exist_ok=True)
+    def __init__(self, persistence_directory: str = None):
+        self._directory = persistence_directory
 
-    def get_persisted(self, prefix):
-        dir_list = os.listdir(self._dir_path)
-        if len(dir_list) == 0:
+    @property
+    def _connection_file_path(self):
+        if not self._directory:
+            self._directory = os.path.join(
+                ExecutionEnvironment().path_cache, "vpn", "connection"
+            )
+            os.makedirs(self._directory, mode=0o700, exist_ok=True)
+
+        return os.path.join(self._directory, self.FILENAME)
+
+    def load(self) -> Optional[ConnectionParameters]:
+        if not os.path.isfile(self._connection_file_path):
             return None
 
-        for filename in dir_list:
-            if filename.startswith(prefix):
-                return filename
+        with open(self._connection_file_path) as f:
+            try:
+                d = json.load(f)
+                return ConnectionParameters(
+                    connection_id=d["connection_id"],
+                    backend=d["backend"],
+                    protocol=d["protocol"],
+                    server_id=d["server_id"],
+                    server_name=d["server_name"],
+                )
+            except (JSONDecodeError, KeyError):
+                logger.exception(
+                    "Unexpected error parsing connection persistence file: "
+                    f"{self._connection_file_path}",
+                    category="CONN", subcategory="PERSISTENCE", event="LOAD"
+                )
+                return None
 
-        return None
+    def save(self, connection_parameters: ConnectionParameters):
+        with open(self._connection_file_path, "w") as f:
+            json.dump(connection_parameters.__dict__, f)
 
-    def persist(self, conn_id):
-        with open(self._get_built_path(conn_id, use_alt_base_path=self._dir_path), "w") as f:
-            f.write(conn_id)
-
-    def remove_persist(self, conn_id):
-        filepath = self._get_built_path(conn_id, use_alt_base_path=self._dir_path)
-        if os.path.isfile(filepath):
-            os.remove(filepath)
-
-    def _get_built_path(self, path, use_alt_base_path=False):
-        if not use_alt_base_path:
-            return os.path.join(ExecutionEnvironment().path_runtime, path)
-
-        return os.path.join(use_alt_base_path, path)
+    def remove(self):
+        if os.path.isfile(self._connection_file_path):
+            os.remove(self._connection_file_path)
+        else:
+            logger.warning(
+                f"Connection persistence not found when trying "
+                f"to remove it: {self._connection_file_path}",
+                category="CONN", subcategory="PERSISTENCE", event="REMOVE"
+            )

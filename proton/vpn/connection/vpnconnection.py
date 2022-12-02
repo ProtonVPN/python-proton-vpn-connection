@@ -1,7 +1,12 @@
 from typing import Optional
-from .interfaces import VPNServer, Settings, VPNCredentials
-from .exceptions import ConflictError, MissingBackendDetails
-from .state_machine import VPNStateMachine
+
+from proton.loader import Loader
+
+from proton.vpn.connection import events
+from proton.vpn.connection.exceptions import ConflictError, MissingBackendDetails
+from proton.vpn.connection.interfaces import VPNServer, Settings, VPNCredentials
+from proton.vpn.connection.persistence import ConnectionPersistence, ConnectionParameters
+from proton.vpn.connection.state_machine import VPNStateMachine
 
 
 class VPNConnection(VPNStateMachine):
@@ -59,31 +64,64 @@ class VPNConnection(VPNStateMachine):
         self,
         vpnserver: VPNServer,
         vpncredentials: VPNCredentials,
-        settings: Settings = None
+        settings: Settings = None,
+        connection_persistence: ConnectionPersistence = None
     ):
         """Initialize a VPNConnection object.
 
             :param vpnserver: VPNServer type or same signature as VPNServer.
-            :type vpnserver: object
             :param vpncredentials: VPNCredentials type or same signature as
                 VPNCredentials.
-            :type vpncredentials: object
             :param settings: Optional.
                 Provide an instance that implements Settings or
                 provide an instance that simply exposes methods to match the
                 signature of Settings.
-            :type settings: object
+            :param connection_persistence: Optional.
+                Provide an instance that implements the ConnectionPersistence
+                interface, to change the way in which the connection parameters
+                are persisted to disk.
 
         This will set the interal properties which will be used by each
         backend/protocol to create its configuration file, so that it's ready
         to establish a VPN connection.
         """
-        self._persistence_prefix = "{}_{}_".format(self.backend, self.protocol)
-
         self._vpnserver = vpnserver
         self._vpncredentials = vpncredentials
         self._settings = settings
+
+        self._connection_persistence = connection_persistence or ConnectionPersistence()
+        self._persisted_parameters = None
         VPNStateMachine.__init__(self)
+
+    @property
+    def server_id(self) -> str:
+        """Returns the VPN server ID of this VPN connection."""
+        # VPNConnection is only partially restored when deserialized from disk:
+        # it's constructed without neither VPNServer, VPNCredentials
+        # nor Settings objects. It only loads the parameters that were
+        # persisted to disk. See VPNConnection._get_connection and
+        # LinuxNetworkManager._get_connection.
+        if self._vpnserver:
+            return self._vpnserver.server_id
+        elif self._persisted_parameters:
+            return self._persisted_parameters.server_id
+        else:
+            return None
+
+    @property
+    def server_name(self) -> str:
+        """Returns the VPN server name of this VPN connection."""
+        # VPNConnection is only partially restored when deserialized from disk:
+        # it's constructed without neither VPNServer, VPNCredentials
+        # nor Settings objects. It only loads the parameters that were
+        # persisted to disk. See VPNConnection._get_connection and
+        # LinuxNetworkManager._get_connection.
+        if self._vpnserver:
+            return self._vpnserver.server_name
+        elif self._persisted_parameters:
+            return self._persisted_parameters.server_name
+        else:
+            return None
 
     def up(self) -> None:
         """
@@ -97,7 +135,6 @@ class VPNConnection(VPNStateMachine):
         :raises ConflictError: When another current connection is found.
         :raises UnexpectedError: When an expected/unhandled error occurs.
         """
-        from proton.vpn.connection import events
         self._ensure_there_are_no_other_current_protonvpn_connections()
         self.on_event(events.Up())
 
@@ -108,7 +145,6 @@ class VPNConnection(VPNStateMachine):
             to disconnect.
         :raises UnexpectedError: When an expected/unhandled error occurs.
         """
-        from proton.vpn.connection import events
         self.on_event(events.Down())
 
     def _ensure_there_are_no_other_current_protonvpn_connections(self):
@@ -150,7 +186,6 @@ class VPNConnection(VPNStateMachine):
                   VPNConnection, then that backend is to be returned instead.
             :type backend: str
         """
-        from proton.loader import Loader
         try:
             backend = Loader.get("backend", class_name=backend)
         except RuntimeError as e:
@@ -170,7 +205,6 @@ class VPNConnection(VPNStateMachine):
 
             :return: :class:`VPNConnection`
         """
-        from proton.loader import Loader
         backend = Loader.get("backend", class_name=backend)
         return backend._get_connection()
 
@@ -282,7 +316,7 @@ class VPNConnection(VPNStateMachine):
         """*For developers*
 
         It is crucial that unique_id is always set and current. The only times
-        where it can be empty is when there is no VPN connection.
+        when it can be empty is when there is no VPN connection.
 
         Suppose the following:
 
@@ -292,93 +326,45 @@ class VPNConnection(VPNStateMachine):
             if not vpnconnection:
                 print("There is no connection")
 
-        The way to determine if there is connection is through persistence,
-        where the filename is composed of various elemets, where the unique id
-        plays a key part in it (see persist_connection()).
-
-        The unique ID is also used to find connections in NetworkManager.
+        The way to determine if there is connection is by checking if
+        a connection was previously persisted (with add_persistence()).
         """
         if self._unique_id and not force:
             return
 
-        from proton.vpn.connection.persistence import ConnectionPersistence
-        persistence = ConnectionPersistence()
-
-        persisted_id = persistence.get_persisted(self._persistence_prefix)
-        if not persisted_id:
+        self._persisted_parameters = self._connection_persistence.load()
+        if self._persisted_parameters:
+            self._unique_id = self._persisted_parameters.connection_id
+        else:
             self._unique_id = None
-            return
-
-        self._unique_id = persisted_id.replace(self._persistence_prefix, "")
 
     def add_persistence(self):
         """*For developers*
 
-        If for some reason the component crashes, we need to know which
-        connection we should be handling. Thus the connection unique ID is
-        prefixed with the protocol
-        and backend and stored to a file.
+        Stores the connection parameters to disk.
 
-        Usage:
-
-        .. code-block::
-
-            from proton.vpn.connection import VPNConnection
-
-            class CustomBackend(VPNConnection):
-                backend = "custom_backend"
-
-                ...
-
-                def up(self):
-                    self._setup()
-
-                    # `_persist_connection` creates a file with filename in the
-                    # format of:
-                    # <BACKEND>_<PROTOCOl>_<UNIQUE_ID>
-                    # where:
-                    #   - `<BACKEND>` is `backend`
-                    #   - `<PROTOCOl>` is the provided protocol to factory
-                    #   - `<UNIQUE_ID>` is `self._unique_id`
-                    # so the file would look like this (giventhat we've selected
-                    # udp as protocol):
-                    # `custom_backend_openvpn_udp_132123-123sdf-12312-fsd`
-
-                    self._persist_connection()
-
-                    self._start_connection()
-
-                def down(self):
-                    self._stop_connection()
-                    self._remove_connection_persistence()
-
-                def _stop_connection(self):
-                    # stopped connection
-
-                def _setup(self):
-                    # setup connection
-                    # after setup, the connecction uuid is:
-                    # 132123-123sdf-12312-fsd
-                    self._unique_id = 132123-123sdf-12312-fsd
-
-        Note: Some code has been ommitted for readability.
+        The connection parameters (e.g. backend, protocol, connection ID,
+        server name) are stored to disk so that they can be loaded again
+        after an unexpected crash.
         """
-        from proton.vpn.connection.persistence import ConnectionPersistence
-        persistence = ConnectionPersistence()
-        conn_id = self._persistence_prefix + self._unique_id
-        persistence.persist(conn_id)
+        params = ConnectionParameters(
+            connection_id=self._unique_id,
+            backend=self.backend,
+            protocol=self.protocol,
+            server_id=self.server_id,
+            server_name=self.server_name
+        )
+        self._connection_persistence.save(params)
+        self._persisted_parameters = params
 
     def remove_persistence(self):
         """*For developers*
 
-        Works in the opposite way of _persist_connection. It removes the
-        persitence file. This is used in conjunction with down, since if the
+        Works in the opposite way of add_persistence. It removes the
+        persistence file. This is used in conjunction with down, since if the
         connection is turned down, we don't want to keep any persistence files.
         """
-        from proton.vpn.connection.persistence import ConnectionPersistence
-        persistence = ConnectionPersistence()
-        conn_id = self._persistence_prefix + self._unique_id
-        persistence.remove_persist(conn_id)
+        self._connection_persistence.remove()
 
     def _get_user_pass(self, apply_feature_flags=False):
         """*For developers*

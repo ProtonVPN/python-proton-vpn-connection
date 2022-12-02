@@ -1,19 +1,14 @@
 import os
-import shutil
+from unittest.mock import Mock
 
 import pytest
 from proton.vpn.connection import VPNConnection, states
+from proton.vpn.connection.persistence import ConnectionPersistence, ConnectionParameters
 
-from .common import (CWD, PERSISTANCE_CWD, MalformedVPNCredentials,
-                     MalformedVPNServer, MockSettings, MockVpnCredentials,
-                     MockVpnServer)
-
-PREFIX = "persistance-prefix_"
-
-
-def teardown_module(module):
-    shutil.rmtree(PERSISTANCE_CWD)
-
+from .common import (
+    MalformedVPNCredentials, MalformedVPNServer, MockSettings,
+    MockVpnCredentials, MockVpnServer
+)
 
 @pytest.fixture
 def settings():
@@ -31,12 +26,8 @@ def vpn_server():
 
 
 @pytest.fixture
-def modified_exec_env():
-    from proton.utils.environment import ExecutionEnvironment
-    m = ExecutionEnvironment().path_runtime
-    ExecutionEnvironment.path_runtime = CWD
-    yield ExecutionEnvironment().path_runtime
-    ExecutionEnvironment.path_runtime = m
+def connection_persistence_mock():
+    return Mock(ConnectionPersistence)
 
 
 # <<<<<<<<<<<<<
@@ -199,7 +190,6 @@ def modified_loader_with_not_valid_backend():
 
 
 class MockVpnConnection(VPNConnection):
-    _persistence_prefix = PREFIX
     backend = "mock-backend2"
     protocol = "mock-protocol2"
 
@@ -217,7 +207,6 @@ class MockVpnConnection(VPNConnection):
 
 
 class MockVpnConnectionMissingGetConnection(VPNConnection):
-    _persistence_prefix = PREFIX
     backend = "mock-backend"
     protocol = "mock-protocol"
 
@@ -242,16 +231,15 @@ def test_not_implemented_get_connection(vpn_server, vpn_credentials, settings):
         vpconn._get_connection()
 
 
-def test_init(vpn_server, vpn_credentials, settings):
-    MockVpnConnection(vpn_server, vpn_credentials, settings)
-
-
 def test_up(vpn_server, vpn_credentials):
     def _get_connection():
         return False
 
-    MockVpnConnection
-    vpnconn = MockVpnConnection(vpn_server, vpn_credentials)
+    vpnconn = MockVpnConnection(
+        vpn_server,
+        vpn_credentials,
+        connection_persistence=connection_persistence_mock
+    )
     vpnconn._get_connection = _get_connection
     vpnconn.register(MockListenerClass())
     vpnconn.up()
@@ -272,13 +260,6 @@ def test_down(vpn_server, vpn_credentials):
     assert vpnconn.status.state == states.Disconnecting().state
 
     MockVpnConnection.determine_initial_state = m
-
-
-def test_ensure_settings_change(vpn_server, vpn_credentials, settings):
-    vpnconn = MockVpnConnection(vpn_server, vpn_credentials, settings)
-    assert vpnconn.settings.split_tunneling_ips == settings.split_tunneling_ips
-    vpnconn.settings = None
-    assert vpnconn.settings is None
 
 
 def test_ensure_there_are_no_other_current_protonvpn_connections(vpn_server, vpn_credentials, settings):
@@ -310,78 +291,75 @@ def test_default_get_validate_value():
     assert MockVpnConnection._get_priority() is None
 
 
-def test_ensure_unique_id_is_set_with_no_persistence(vpn_server, vpn_credentials, modified_exec_env):
-    vpnconn = MockVpnConnection(vpn_server, vpn_credentials)
-    vpnconn._persistence_prefix = "ensure-unique-id"
+def test_ensure_unique_id_is_set_initializes_id_as_none_without_a_persisted_connection(
+        connection_persistence_mock
+):
+    connection_persistence_mock.load.return_value = None
+    vpnconn = MockVpnConnection(
+        vpnserver=None,
+        vpncredentials=None,
+        connection_persistence=connection_persistence_mock
+    )
+
     vpnconn._ensure_unique_id_is_set()
+
+    connection_persistence_mock.load.assert_called_once()
     assert vpnconn._unique_id is None
 
 
-def test_ensure_unique_id_is_set_with_persistence(vpn_server, vpn_credentials, modified_exec_env):
-    _prefix = "unique-id-with-persistence"
-    vpnconn = MockVpnConnection(vpn_server, vpn_credentials)
-
+def test_ensure_unique_id_is_set_loads_connection_id_from_persisted_connection(
+        vpn_server, vpn_credentials, connection_persistence_mock
+):
+    connection_persistence_mock.load.return_value = ConnectionParameters(
+        connection_id="connection_id",
+        backend="backend",
+        protocol="protocol",
+        server_id="server_id",
+        server_name="server_name"
+    )
+    vpnconn = MockVpnConnection(
+        vpn_server,
+        vpn_credentials,
+        connection_persistence=connection_persistence_mock
+    )
     assert vpnconn._unique_id is None
 
-    vpnconn._persistence_prefix = _prefix
-    vpnconn._unique_id = "test-unique-id"
+    vpnconn._ensure_unique_id_is_set()
+
+    connection_persistence_mock.load.assert_called_once()
+    assert vpnconn._unique_id
+
+
+def test_add_persistence(vpn_server, vpn_credentials, connection_persistence_mock):
+    vpnconn = MockVpnConnection(
+        vpn_server,
+        vpn_credentials,
+        connection_persistence=connection_persistence_mock
+    )
+    vpnconn._unique_id = "add-persistence"
+
     vpnconn.add_persistence()
 
-    assert os.path.isfile(
-        os.path.join(
-            PERSISTANCE_CWD, "{}{}".format(
-                vpnconn._persistence_prefix,
-                vpnconn._unique_id
-            )
-        )
+    connection_persistence_mock.save.assert_called_once()
+    persistence_params = connection_persistence_mock.save.call_args.args[0]
+    assert persistence_params.connection_id == "add-persistence"
+    assert persistence_params.backend == vpnconn.backend
+    assert persistence_params.protocol == vpnconn.protocol
+    assert persistence_params.server_id == vpn_server.server_id
+    assert persistence_params.server_name == vpn_server.server_name
+
+
+def test_remove_persistence(vpn_server, vpn_credentials, connection_persistence_mock):
+    vpnconn = MockVpnConnection(
+        vpn_server,
+        vpn_credentials,
+        connection_persistence=connection_persistence_mock
     )
-
-    assert vpnconn._unique_id is not None
-
-    del vpnconn
-    _vpnconn = MockVpnConnection(vpn_server, vpn_credentials)
-    _vpnconn._persistence_prefix = _prefix
-    _vpnconn._ensure_unique_id_is_set()
-
-    assert _vpnconn._unique_id
-
-
-def test_add_persistence(vpn_server, vpn_credentials, modified_exec_env):
-    vpnconn = MockVpnConnection(vpn_server, vpn_credentials)
-    vpnconn._unique_id = "add-persistance"
-    vpnconn.add_persistence()
-    assert os.path.isfile(
-        os.path.join(
-            PERSISTANCE_CWD, "{}{}".format(
-                vpnconn._persistence_prefix,
-                vpnconn._unique_id
-            )
-        )
-    )
-    vpnconn.remove_persistence()
-
-
-def test_remove_persistence(vpn_server, vpn_credentials, modified_exec_env):
-    vpnconn = MockVpnConnection(vpn_server, vpn_credentials)
     vpnconn._unique_id = "remove-persistance"
-    vpnconn.add_persistence()
-    assert os.path.isfile(
-        os.path.join(
-            PERSISTANCE_CWD, "{}{}".format(
-                vpnconn._persistence_prefix,
-                vpnconn._unique_id
-            )
-        )
-    )
+
     vpnconn.remove_persistence()
-    assert not os.path.isfile(
-        os.path.join(
-            PERSISTANCE_CWD, "{}{}".format(
-                vpnconn._persistence_prefix,
-                vpnconn._unique_id
-            )
-        )
-    )
+
+    connection_persistence_mock.remove.assert_called_once()
 
 
 def test_get_user_pass_with_malformed_args():
@@ -477,4 +455,3 @@ def test_get_not_valid_from_factory(modified_loader_multiple_backend):
 
 def test_get_connection_from_optimal_backend(modified_loader_multiple_backend):
     assert VPNConnection.get_current_connection()
-

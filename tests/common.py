@@ -41,8 +41,12 @@ class MockVpnServer(VPNServer):
         return [80, 1194]
 
     @property
-    def servername(self):
+    def server_name(self):
         return "TestServer#10"
+
+    @property
+    def server_id(self):
+        return "OYB-3pMQQA2Z2Qnp5s5nIvTVO2...lRjxhx9DCAUM9uXfM2ZUFjzPXw=="
 
 
 class MockVPNPubkeyCredentials(VPNPubkeyCredentials):

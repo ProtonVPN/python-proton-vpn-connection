@@ -1,37 +1,40 @@
+"""
+This module defines the classes holding the necessary configuration to establish
+a VPN connection.
+"""
+import ipaddress
 import tempfile
 import os
-from .interfaces import Settings
-import jinja2
+
 from jinja2 import Environment, BaseLoader
+from proton.utils.environment import ExecutionEnvironment
+
+from proton.vpn.connection.constants import \
+    CA_CERT, OPENVPN_V2_TEMPLATE, WIREGUARD_TEMPLATE
+from proton.vpn.connection.interfaces import Settings
 
 
 class DefaultSettings(Settings):
-    pass
+    """Default Proton VPN settings."""
 
 
 class VPNConfiguration:
+    """Base VPN configuration."""
     EXTENSION = None
 
     def __init__(self, vpnserver, vpncredentials, settings=None):
         self._configfile = None
-        self.__use_certificate = False
+        self._configfile_enter_level = None
+        self._vpnserver = vpnserver
+        self._vpncredentials = vpncredentials
+        self.settings = settings or DefaultSettings()
+        self.use_certificate = False
         if vpnserver is None or vpncredentials is None:
             raise TypeError("Unexpected type `None`")
 
-        self._vpnserver = vpnserver
-        self._vpncredentials = vpncredentials
-        self._settings = settings
-
-    @property
-    def use_certificate(self):
-        return self.__use_certificate
-
-    @use_certificate.setter
-    def use_certificate(self, new_value):
-        self.__use_certificate = new_value
-
     @classmethod
     def from_factory(cls, protocol):
+        """Returns the configuration class based on the specified protocol."""
         protocols = {
             "openvpn_tcp": OpenVPNTCPConfig,
             "openvpn_udp": OpenVPNUDPConfig,
@@ -39,20 +42,6 @@ class VPNConfiguration:
         }
 
         return protocols[protocol]
-
-    @property
-    def settings(self):
-        if self._settings is None:
-            self._settings = DefaultSettings()
-
-        return self._settings
-
-    @settings.setter
-    def settings(self, new_value):
-        if new_value is None:
-            self._settings = DefaultSettings()
-        else:
-            self._settings = new_value
 
     def __enter__(self):
         # We create the configuration file when we enter,
@@ -84,30 +73,29 @@ class VPNConfiguration:
 
     def __delete_existing_configuration(self):
         for file in self.__base_path:
-            if file.endswith(".{}".format(self.EXTENSION)):
-                os.remove(
-                    os.path.join(self.__base_path, file)
-                )
+            if file.endswith(f".{self.EXTENSION}"):
+                os.remove(os.path.join(self.__base_path, file))
 
-    def generate(self):
+    def generate(self) -> str:
+        """Generates the configuration file content."""
         raise NotImplementedError
 
     @property
     def __base_path(self):
-        from proton.utils.environment import ExecutionEnvironment
         return ExecutionEnvironment().path_runtime
 
     @staticmethod
-    def cidr_to_netmask(cidr):
-        import ipaddress
-        subnet = ipaddress.IPv4Network("0.0.0.0/{0}".format(cidr))
+    def cidr_to_netmask(cidr) -> str:
+        """Returns the subnet netmask from the CIDR."""
+        subnet = ipaddress.IPv4Network(f"0.0.0.0/{cidr}")
         return str(subnet.netmask)
 
     @staticmethod
-    def is_valid_ipv4(ip):
-        import ipaddress
+    def is_valid_ipv4(ip_address) -> bool:
+        """Returns True if the specified ip address is a valid IPv4 address,
+        and False otherwise."""
         try:
-            ipaddress.ip_address(ip)
+            ipaddress.ip_address(ip_address)
         except ValueError:
             return False
 
@@ -115,17 +103,16 @@ class VPNConfiguration:
 
 
 class OVPNConfig(VPNConfiguration):
+    """OpenVPN-specific configuration."""
+    _protocol = None
     EXTENSION = ".ovpn"
 
-    def generate(self):
+    def generate(self) -> str:
         """Method that generates a vpn config file.
 
         Returns:
             string: configuration file
         """
-        from .constants import openvpn_v2_template
-        from .constants import ca_cert
-
         ports = self._vpnserver.tcp_ports if "tcp" == self._protocol else self._vpnserver.udp_ports
 
         j2_values = {
@@ -133,45 +120,45 @@ class OVPNConfig(VPNConfiguration):
             "serverlist": [self._vpnserver.server_ip],
             "openvpn_ports": ports,
             "ipv6_enabled": self.settings.ipv6,
-            "ca_certificate": ca_cert,
+            "ca_certificate": CA_CERT,
             "certificate_based": self.use_certificate,
-            "custom_dns": True if len(self.settings.dns_custom_ips) > 0 else False,
+            "custom_dns": len(self.settings.dns_custom_ips) > 0,
         }
         if self.use_certificate:
 
             j2_values["cert"] = self._vpncredentials.pubkey_credentials.certificate_pem
             j2_values["priv_key"] = self._vpncredentials.pubkey_credentials.openvpn_private_key
 
-        if len(self._settings.dns_custom_ips) > 0:
+        if len(self.settings.dns_custom_ips) > 0:
             dns_ips = []
-            for ip in self._settings.dns_custom_ips:
+            for ip_address in self.settings.dns_custom_ips:
 
                 # FIX-ME: Should custom DNS IPs be tested
                 # if they are in a valid form ?
                 #
                 # if not VPNConfiguration.is_valid_ipv4(ip):
                 #     continue
-                dns_ips.append(ip)
+                dns_ips.append(ip_address)
 
             j2_values["dns_ips"] = dns_ips
 
-        template = Environment(loader=BaseLoader).from_string(openvpn_v2_template)
+        template = Environment(loader=BaseLoader).from_string(OPENVPN_V2_TEMPLATE)
 
-        try:
-            return template.render(j2_values)
-        except jinja2.exceptions.TemplateNotFound:
-            raise
+        return template.render(j2_values)
 
 
 class OpenVPNTCPConfig(OVPNConfig):
+    """Configuration for OpenVPN using TCP."""
     _protocol = "tcp"
 
 
 class OpenVPNUDPConfig(OVPNConfig):
+    """Configuration for OpenVPN using UDP."""
     _protocol = "udp"
 
 
 class WireguardConfig(VPNConfiguration):
+    """Wireguard-specific configuration."""
     _protocol = "wireguard"
     EXTENSION = ".conf"
 
@@ -182,8 +169,6 @@ class WireguardConfig(VPNConfiguration):
         if not self.use_certificate:
             raise RuntimeError("Wireguards expects certificate configuration")
 
-        from .constants import wireguard_template
-
         j2_values = {
             "wg_client_secret_key": self._vpncredentials.pubkey_credentials.wg_private_key,
             "wg_ip": self._vpnserver.server_ip,
@@ -192,11 +177,5 @@ class WireguardConfig(VPNConfiguration):
             "ipv6_enabled": self.settings.ipv6
         }
 
-        template = Environment(loader=BaseLoader).from_string(wireguard_template)
-
-        try:
-            return template.render(j2_values)
-        except jinja2.exceptions.TemplateNotFound:
-            raise
-        except Exception:
-            pass
+        template = Environment(loader=BaseLoader).from_string(WIREGUARD_TEMPLATE)
+        return template.render(j2_values)

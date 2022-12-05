@@ -1,3 +1,9 @@
+"""
+Connection persistence.
+
+Connection parameters are persisted to disk so that they can be loaded after a crash.
+"""
+
 import json
 import os
 from dataclasses import dataclass
@@ -5,7 +11,7 @@ from json import JSONDecodeError
 from typing import Optional
 
 from proton.utils.environment import ExecutionEnvironment
-import proton.vpn.logging as logging
+from proton.vpn import logging
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +27,7 @@ class ConnectionParameters:
 
 
 class ConnectionPersistence:
+    """Saves/loads connection parameters to/from disk."""
     FILENAME = "connection_persistence.json"
 
     def __init__(self, persistence_directory: str = None):
@@ -37,18 +44,20 @@ class ConnectionPersistence:
         return os.path.join(self._directory, self.FILENAME)
 
     def load(self) -> Optional[ConnectionParameters]:
+        """Returns the connection parameters loaded from disk, or None if
+        no connection parameters were persisted yet."""
         if not os.path.isfile(self._connection_file_path):
             return None
 
-        with open(self._connection_file_path) as f:
+        with open(self._connection_file_path, encoding="utf-8") as file:
             try:
-                d = json.load(f)
+                file_content = json.load(file)
                 return ConnectionParameters(
-                    connection_id=d["connection_id"],
-                    backend=d["backend"],
-                    protocol=d["protocol"],
-                    server_id=d["server_id"],
-                    server_name=d["server_name"],
+                    connection_id=file_content["connection_id"],
+                    backend=file_content["backend"],
+                    protocol=file_content["protocol"],
+                    server_id=file_content["server_id"],
+                    server_name=file_content["server_name"],
                 )
             except (JSONDecodeError, KeyError):
                 logger.exception(
@@ -59,10 +68,12 @@ class ConnectionPersistence:
                 return None
 
     def save(self, connection_parameters: ConnectionParameters):
-        with open(self._connection_file_path, "w") as f:
-            json.dump(connection_parameters.__dict__, f)
+        """Saves connection parameters to disk."""
+        with open(self._connection_file_path, "w", encoding="utf-8") as file:
+            json.dump(connection_parameters.__dict__, file)
 
     def remove(self):
+        """Removes the connection persistence file, if it exists."""
         if os.path.isfile(self._connection_file_path):
             os.remove(self._connection_file_path)
         else:

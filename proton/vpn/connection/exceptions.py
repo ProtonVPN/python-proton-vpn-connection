@@ -1,3 +1,8 @@
+"""
+Exceptions raised by the VPN connection module.
+"""
+
+
 class VPNConnectionError(Exception):
     """Base class for VPN specific exceptions"""
     def __init__(self, message, additional_context=None):

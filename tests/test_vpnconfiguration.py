@@ -5,7 +5,8 @@ from proton.vpn.connection.vpnconfiguration import (OpenVPNTCPConfig,
                                                     OpenVPNUDPConfig,
                                                     OVPNConfig,
                                                     VPNConfiguration,
-                                                    WireguardConfig)
+                                                    WireguardConfig,
+                                                    DefaultSettings)
 
 from .common import (CWD, MalformedVPNCredentials, MalformedVPNServer,
                      MockSettings, MockVpnCredentials, MockVpnServer)
@@ -62,7 +63,7 @@ def test_change_certificate():
     assert cfg.use_certificate is True
 
 
-def test_change_settings():
+def test_custom_settings():
     class NewSettings:
         @property
         def dns_custom_ips(self):
@@ -76,27 +77,17 @@ def test_change_settings():
         def ipv6(self):
             return True
 
-    cfg = VPNConfiguration(MockVpnServer(), MockVpnCredentials())
-    assert cfg.settings.ipv6 is False
-    assert cfg.settings.dns_custom_ips == []
-    assert cfg.settings.split_tunneling_ips == []
+    cfg = VPNConfiguration(MockVpnServer(), MockVpnCredentials(), settings=NewSettings())
 
-    cfg.settings = NewSettings()
-
-    assert cfg.settings.ipv6 is not False
-    assert cfg.settings.dns_custom_ips != []
-    assert cfg.settings.split_tunneling_ips != []
+    assert isinstance(cfg.settings, NewSettings)
+    assert cfg.settings.dns_custom_ips == ["99.99.99.99"]
+    assert cfg.settings.split_tunneling_ips == ["102.64.10.16"]
+    assert cfg.settings.ipv6
 
 
-def test_change_settings_to_none():
-    cfg = VPNConfiguration(MockVpnServer(), MockVpnCredentials(), MockSettings())
-    assert cfg.settings.dns_custom_ips != []
-    assert cfg.settings.split_tunneling_ips != []
-
-    cfg.settings = None
-
-    assert cfg.settings.dns_custom_ips == []
-    assert cfg.settings.split_tunneling_ips == []
+def test_default_settings():
+    cfg = VPNConfiguration(MockVpnServer(), MockVpnCredentials(), settings=None)
+    assert isinstance(cfg.settings, DefaultSettings)
 
 
 def test_ensure_configuration_file_is_created(modified_exec_env):

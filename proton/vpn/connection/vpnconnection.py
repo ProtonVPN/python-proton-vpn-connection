@@ -1,3 +1,8 @@
+"""
+VPN connection interface.
+"""
+
+import os
 from typing import Optional
 
 from proton.loader import Loader
@@ -59,6 +64,8 @@ class VPNConnection(VPNStateMachine):
     at a time.
     """
     _unique_id = None
+    backend = None
+    protocol = None
 
     def __init__(
         self,
@@ -102,11 +109,13 @@ class VPNConnection(VPNStateMachine):
         # persisted to disk. See VPNConnection._get_connection and
         # LinuxNetworkManager._get_connection.
         if self._vpnserver:
-            return self._vpnserver.server_id
+            server_id = self._vpnserver.server_id
         elif self._persisted_parameters:
-            return self._persisted_parameters.server_id
+            server_id = self._persisted_parameters.server_id
         else:
-            return None
+            server_id = None
+
+        return server_id
 
     @property
     def server_name(self) -> str:
@@ -117,13 +126,15 @@ class VPNConnection(VPNStateMachine):
         # persisted to disk. See VPNConnection._get_connection and
         # LinuxNetworkManager._get_connection.
         if self._vpnserver:
-            return self._vpnserver.server_name
+            server_name = self._vpnserver.server_name
         elif self._persisted_parameters:
-            return self._persisted_parameters.server_name
+            server_name = self._persisted_parameters.server_name
         else:
-            return None
+            server_name = None
 
-    def up(self) -> None:
+        return server_name
+
+    def up(self) -> None:  # pylint: disable=invalid-name
         """
         Establish a vpn connection
 
@@ -188,16 +199,16 @@ class VPNConnection(VPNStateMachine):
         """
         try:
             backend = Loader.get("backend", class_name=backend)
-        except RuntimeError as e:
+        except RuntimeError as error:
             raise MissingBackendDetails(
-                "Backend \"{}\" could not be found".format(backend)
-            ) from e
+                f'Backend "{backend}" could not be found.'
+            ) from error
 
         return backend.factory(protocol)
 
     @classmethod
     def get_current_connection(
-        self, backend: str = None
+        cls, backend: str = None
     ) -> Optional['VPNConnection']:
         """ Get the current VPNConnection or None if there no current connection.
             current VPNConnection is persistent and can be called after
@@ -206,7 +217,7 @@ class VPNConnection(VPNStateMachine):
             :return: :class:`VPNConnection`
         """
         backend = Loader.get("backend", class_name=backend)
-        return backend._get_connection()
+        return backend._get_connection()  # pylint: disable=protected-access
 
     @property
     def settings(self) -> Settings:
@@ -229,7 +240,6 @@ class VPNConnection(VPNStateMachine):
 
     @property
     def _use_certificate(self):
-        import os
         use_certificate = False
         env_var = os.environ.get("PROTONVPN_USE_CERTIFICATE", False)
         if isinstance(env_var, str):
@@ -349,8 +359,8 @@ class VPNConnection(VPNStateMachine):
         """
         params = ConnectionParameters(
             connection_id=self._unique_id,
-            backend=self.backend,
-            protocol=self.protocol,
+            backend=type(self).backend,
+            protocol=type(self).protocol,
             server_id=self.server_id,
             server_name=self.server_name
         )
@@ -426,8 +436,7 @@ class VPNConnection(VPNStateMachine):
 
         features = self._settings.features
 
-        v = features.netshield
-        list_flags.append(f"f{v}")
+        list_flags.append(f"f{features.netshield}")
 
         if not features.vpn_accelerator:
             list_flags.append("nst")

@@ -1,3 +1,7 @@
+"""
+The different VPN connection states and their transitions is defined here.
+"""
+
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -60,11 +64,13 @@ class BaseState:
         if self.state is None:
             raise AttributeError("Undefined attribute \"state\" ")
 
-    def on_event(self, e: "BaseEvent", state_machine: "VPNStateMachine"):
+    # pylint: disable=unused-argument
+    def on_event(self, event: "BaseEvent", state_machine: "VPNStateMachine"):
+        """Returns the new state based on the received event."""
         return self
 
     def init(self, state_machine: "VPNStateMachine"):
-        pass
+        """Initializes the current state."""
 
 
 class Disconnected(BaseState):
@@ -82,19 +88,19 @@ class Disconnected(BaseState):
     """
     state = ConnectionStateEnum.DISCONNECTED
 
-    def on_event(self, e: BaseEvent, state_machine: "VPNStateMachine"):
+    def on_event(self, event: BaseEvent, state_machine: "VPNStateMachine"):
 
-        if e.event == events.Up.event:
+        if event.event == events.Up.event:
             state_machine.start_connection()
             self.context.connection = state_machine
-            self.context.event = e
+            self.context.event = event
             return Connecting(self.context)
-        else:
-            logger.warning(
-                f"{self.state.name} state received unexpected "
-                f"event: {e.event.name}",
-                category="CONN", event="WARNING"
-            )
+
+        logger.warning(
+            f"{self.state.name} state received unexpected "
+            f"event: {event.event.name}",
+            category="CONN", event="WARNING"
+        )
 
         return self
 
@@ -112,15 +118,17 @@ class Connecting(BaseState):
     """
     state = ConnectionStateEnum.CONNECTING
 
-    def on_event(self, e: BaseEvent, state_machine: "VPNStateMachine"):
-        self.context.event = e
-        if e.event == events.Connected.event:
+    def on_event(self, event: BaseEvent, state_machine: "VPNStateMachine"):
+        self.context.event = event
+        if event.event == events.Connected.event:
             state_machine.add_persistence()
             return Connected(self.context)
-        elif e.event == events.Down.event:
+
+        if event.event == events.Down.event:
             state_machine.stop_connection()
             return Disconnecting(self.context)
-        elif e.event in [
+
+        if event.event in [
             events.Timeout.event,
             events.AuthDenied.event,
             events.UnknownError.event,
@@ -128,12 +136,12 @@ class Connecting(BaseState):
             events.Disconnected.event
         ]:
             return Error(self.context)
-        else:
-            logger.warning(
-                f"{self.state.name} state received unexpected "
-                f"event: {e.event.name}",
-                category="CONN", event="WARNING"
-            )
+
+        logger.warning(
+            f"{self.state.name} state received unexpected "
+            f"event: {event.event.name}",
+            category="CONN", event="WARNING"
+        )
 
         return self
 
@@ -154,23 +162,24 @@ class Connected(BaseState):
     """
     state = ConnectionStateEnum.CONNECTED
 
-    def on_event(self, e: BaseEvent, state_machine: "VPNStateMachine"):
-        self.context.event = e
-        if e.event == events.Down.event:
+    def on_event(self, event: BaseEvent, state_machine: "VPNStateMachine"):
+        self.context.event = event
+        if event.event == events.Down.event:
             state_machine.stop_connection()
             return Disconnecting(self.context)
-        elif e.event in [
+
+        if event.event in [
             events.Timeout.event,
             events.AuthDenied.event,
             events.UnknownError.event
         ]:
             return Error(self.context)
-        else:
-            logger.warning(
-                f"{self.state.name} state received unexpected "
-                f"event: {e.event.name}",
-                category="CONN", event="WARNING"
-            )
+
+        logger.warning(
+            f"{self.state.name} state received unexpected "
+            f"event: {event.event.name}",
+            category="CONN", event="WARNING"
+        )
 
         return self
 
@@ -188,20 +197,20 @@ class Disconnecting(BaseState):
     """
     state = ConnectionStateEnum.DISCONNECTING
 
-    def on_event(self, e: BaseEvent, state_machine: "VPNStateMachine"):
-        self.context.event = e
-        if e.event in [
+    def on_event(self, event: BaseEvent, state_machine: "VPNStateMachine"):
+        self.context.event = event
+        if event.event in [
             events.Disconnected.event,
             events.UnknownError.event,
         ]:
             state_machine.remove_persistence()
             return Disconnected(self.context)
-        else:
-            logger.warning(
-                f"{self.state.name} state received unexpected "
-                f"event: {e.event.name}",
-                category="CONN", event="WARNING"
-            )
+
+        logger.warning(
+            f"{self.state.name} state received unexpected "
+            f"event: {event.event.name}",
+            category="CONN", event="WARNING"
+        )
 
         return self
 
@@ -225,10 +234,10 @@ class Error(BaseState):
         state_machine.stop_connection()
         state_machine.remove_persistence()
 
-    def on_event(self, e: BaseEvent, state_machine: "VPNStateMachine"):
+    def on_event(self, event: BaseEvent, state_machine: "VPNStateMachine"):
         logger.warning(
             f"{self.state.name} state received unexpected "
-            f"event: {e.event.name}",
+            f"event: {event.event.name}",
             category="CONN", event="WARNING"
         )
         return self

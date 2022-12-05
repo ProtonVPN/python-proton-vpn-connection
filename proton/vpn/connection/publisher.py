@@ -1,10 +1,25 @@
-from .enum import ConnectionStateEnum
-from typing import TypeVar
+"""
+Implementation of the Publisher/Subscriber used to signal VPN connection
+state changes.
+"""
+from typing import Protocol, runtime_checkable
 
-Subscriber = TypeVar("T")
+from .enum import ConnectionStateEnum
+
+
+@runtime_checkable
+class Subscriber(Protocol):  # pylint: disable=too-few-public-methods
+    """Subscriber to connection status updates."""
+
+    def status_update(self, status: "BaseState"):  # noqa
+        """This method is called by the publisher whenever a VPN connection status
+        update occurs.
+        :param status: new connection status.
+        """
 
 
 class Publisher:
+    """Publisher of connection status updates."""
 
     def __init__(self):
         self.__subscribers = []
@@ -46,7 +61,7 @@ class Publisher:
         if subscriber in self.__subscribers:
             return
 
-        if not hasattr(subscriber, "status_update"):
+        if not isinstance(subscriber, Subscriber):
             raise AttributeError("Missing `status_update` callback")
 
         self.__subscribers.append(subscriber)

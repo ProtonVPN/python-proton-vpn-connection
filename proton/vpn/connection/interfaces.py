@@ -1,7 +1,10 @@
+"""
+Interfaces required to be able to establish a VPN connection.
+"""
 from typing import List, Optional, Protocol
 
 
-class VPNServer(Protocol):
+class VPNServer(Protocol):  # pylint: disable=too-few-public-methods
     """
     Contains the necessary data about the server to connect to.
 
@@ -30,113 +33,34 @@ class VPNServer(Protocol):
     server_name: str
 
 
-class VPNPubkeyCredentials:
+class VPNPubkeyCredentials(Protocol):  # pylint: disable=too-few-public-methods
     """
     Object that gets certificates and privates keys
     for certificate based connections.
 
     An instance of this class is to be passed to VPNCredentials.
 
-    Usage:
-
-    .. code-block::
-
-        from proton.vpn.connection import VPNPubkeyCredentials
-
-        class MyVPNPubkeyCredentials(VPNPubkeyCredentials):
-
-            @property
-            def certificate_pem(self):
-                return "-----BEGIN CERTIFICATE-----
-                \\nMIICJjCCAdigAwIBAgIECTD...=\\n-----END CERTIFICATE-----\\n"
-
-            @property
-            def wg_privage_key(self):
-                return "wOnn8kz6l6l3Tbwi7F7rvg/iyFB9yQneYETbp4xMJF0="
-
-            @property
-            def openvpn_private_key(self):
-                return "-----BEGIN PRIVATE KEY-----
-                \\nMC4CAQAwBQYDK2VwBCIEIKzVt3S+Q...
-                \\n-----END PRIVATE KEY-----\\n"
+    Attributes:
+        certificate_pem: X509 client certificate in PEM format.
+        wg_private_key: wireguard private key in base64 format.
+        openvpn_private_key: OpenVPN private key in PEM format.
     """
-
-    @property
-    def certificate_pem(self) -> "str":
-        """
-        :return: X509 client certificate in PEM format
-        :rtype: str
-        """
-        raise NotImplementedError
-
-    @property
-    def wg_private_key(self) -> "str":
-        """
-        :return: Wireguard private key in base64 format
-        :rtype: str
-        """
-        raise NotImplementedError
-
-    @property
-    def openvpn_private_key(self) -> "str":
-        """
-        :return: OpenVPN private key in PEM format
-        :rtype: str
-        """
-        raise NotImplementedError
+    certificate_pem: str
+    wg_private_key: str
+    openvpn_private_key: str
 
 
-class VPNUserPassCredentials:
-    """Provides username and password for username/password VPN authentication.
+class VPNUserPassCredentials(Protocol):  # pylint: disable=too-few-public-methods
+    """Provides username and password for username/password VPN authentication."""
+    username: str
+    password: str
 
-    Usage:
 
-    .. code-block::
-
-        from proton.vpn.connection import VPNUserPassCredentials
-
-        class MyVPNUserPassCredentials(VPNUserPassCredentials):
-
-            @property
-            def username(self):
-                return "my-openvpn/ikev2-username"
-
-            @property
-            def password(self):
-                return "my-openvpn/ikev2-password"
-
+class VPNCredentials(Protocol):  # pylint: disable=too-few-public-methods
     """
-
-    @property
-    def username(self) -> "str":
-        raise NotImplementedError
-
-    @property
-    def password(self) -> "str":
-        raise NotImplementedError
-
-
-class VPNCredentials:
-    """
-    For VPN connection to be established, credentials are needed.
-    Depending of how these credentials are used, one method or the other may be
+    Credentials are needed to establish a VPN connection.
+    Depending on how these credentials are used, one method or the other may be
     irrelevant.
-
-    Usage:
-
-    .. code-block::
-
-        class MyVPNCredentials:
-
-            def userpass_credentials(self):
-                # See how you can create a VPNUserPass object
-                # at `VPNUserPassCredentials`
-                return VPNUserPassCredentials
-
-            def pubkey_credentials(self):
-                # See how you can create a VPNCertificate object
-                # at`VPNPubkeyCredentials`
-                return VPNPubkeyCredentials
 
     Limitation:
     You could define only userpass_credentials, though at the cost that you
@@ -145,24 +69,8 @@ class VPNCredentials:
     compatibility, it is recommended to pass both objects for
     username/password and certificates.
     """
-
-    @property
-    def pubkey_credentials(self) -> "Optional[VPNPubkeyCredentials]":
-        """
-        :return: instance of VPNPubkeyCredentials, which allows to
-            make connections with certificates
-        :rtype: VPNPubkeyCredentials
-        """
-        raise NotImplementedError
-
-    @property
-    def userpass_credentials(self) -> "Optional[VPNUserPassCredentials]":
-        """
-        :return: instance of VPNUserPassCredentials,
-            which allows to make connections with user/password
-        :rtype: VPNUserPassCredentials
-        """
-        raise NotImplementedError
+    pubkey_credentials: Optional[VPNPubkeyCredentials]
+    userpass_credentials: Optional[VPNUserPassCredentials]
 
 
 class Features:

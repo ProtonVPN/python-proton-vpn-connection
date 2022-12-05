@@ -1,7 +1,10 @@
+"""VPN connection enums."""
+
 from enum import IntEnum
 
 
 class ConnectionStateEnum(IntEnum):
+    """VPN connection states."""
     DISCONNECTED = 0
     CONNECTING = 1
     CONNECTED = 2
@@ -11,6 +14,7 @@ class ConnectionStateEnum(IntEnum):
 
 
 class StateMachineEventEnum(IntEnum):
+    """VPN connection events."""
     UP = 0
     DOWN = 1
     CONNECTED = 2

@@ -1,4 +1,6 @@
-ca_cert = """
+"""Constants required to establish a VPN connection."""
+
+CA_CERT = """
 -----BEGIN CERTIFICATE-----
 MIIFozCCA4ugAwIBAgIBATANBgkqhkiG9w0BAQ0FADBAMQswCQYDVQQGEwJDSDEV
 MBMGA1UEChMMUHJvdG9uVlBOIEFHMRowGAYDVQQDExFQcm90b25WUE4gUm9vdCBD
@@ -34,7 +36,7 @@ A1gTTlpi7A==
 -----END CERTIFICATE-----
 """
 
-openvpn_v2_template = """
+OPENVPN_V2_TEMPLATE = """
 # ==============================================================================
 # Copyright (c) 2016-2020 Proton Technologies AG (Switzerland)
 # Email: contact@protonvpn.com
@@ -137,7 +139,7 @@ aeb893d9a96d1f15519bb3c4dcb40ee3
 {%- endif %}
 """
 
-wireguard_template = """
+WIREGUARD_TEMPLATE = """
 [Interface]
 PrivateKey = {{ wg_client_secret_key }}
 {%- if ipv6_enabled %}

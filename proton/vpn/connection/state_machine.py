@@ -1,3 +1,6 @@
+"""
+VPN state machine interface.
+"""
 from proton.vpn import logging
 from proton.vpn.connection.publisher import Publisher
 from proton.vpn.connection import states
@@ -45,7 +48,6 @@ class VPNStateMachine(Publisher):
     """
     def __init__(self):
         super().__init__()
-        self.__previous_state = None
         self.__current_state = None
         self.determine_initial_state()
 
@@ -76,7 +78,6 @@ class VPNStateMachine(Publisher):
         current value of `self.__current_state` and then replaces
         the value of the latter with `newstate`.
         """
-        self.__previous_state = self.__current_state
         self.__current_state = newstate
         self.__current_state.init(self)
         logger.info(
@@ -86,16 +87,21 @@ class VPNStateMachine(Publisher):
         )
 
     def determine_initial_state(self):
+        """Determines the initial state of the state machine."""
         raise NotImplementedError
 
     def start_connection(self):
+        """Starts a new VPN connection."""
         raise NotImplementedError
 
     def stop_connection(self):
+        """Stops the current VPN connection."""
         raise NotImplementedError
 
     def add_persistence(self):
+        """Persists the VPN connection parameters."""
         raise NotImplementedError
 
     def remove_persistence(self):
+        """Removes the persisted VPN connection parameters."""
         raise NotImplementedError

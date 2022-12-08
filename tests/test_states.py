@@ -35,14 +35,19 @@ def test_assert_context_can_be_accessed():
     [
         (states.Disconnected(), events.Up(), states.Connecting),
         (states.Connecting(), events.Connected(), states.Connected),
+        (states.Connecting(), events.Down(), states.Disconnecting),
+        (states.Connecting(), events.Disconnected(), states.Disconnected),
         (states.Connecting(), events.Timeout(), states.Error),
         (states.Connecting(), events.AuthDenied(), states.Error),
-        (states.Connecting(), events.UnknownError(), states.Error),
+        (states.Connecting(), events.TunnelSetupFailed(), states.Error),
+        (states.Connecting(), events.UnexpectedError(), states.Error),
         (states.Connected(), events.Down(), states.Disconnecting),
+        (states.Connected(), events.Disconnected(), states.Disconnected),
+        (states.Connected(), events.Timeout(), states.Error),
         (states.Connected(), events.AuthDenied(), states.Error),
-        (states.Connected(), events.UnknownError(), states.Error),
+        (states.Connected(), events.UnexpectedError(), states.Error),
+        (states.Connected(), events.DeviceDisconnected(), states.Error),
         (states.Disconnecting(), events.Disconnected(), states.Disconnected),
-        (states.Error(), events.UnknownError(), states.Error)
     ]
 )
 def test_assert_state_flow(state, event, expected_state):
@@ -51,36 +56,40 @@ def test_assert_state_flow(state, event, expected_state):
 
 
 @pytest.mark.parametrize(
-    "state, event",
+    "state_class, expected_event_types",
     [
-        (states.Disconnected(), events.Connected()),
-        (states.Disconnected(), events.Timeout()),
-        (states.Disconnected(), events.AuthDenied()),
-
-        (states.Disconnected(), events.UnknownError()),
-        (states.Disconnected(), events.Down()),
-        (states.Disconnected(), events.Disconnected()),
-
-        (states.Disconnected(), events.TunnelSetupFail()),
-        (states.Connecting(), events.Up()),
-        (states.Connected(), events.Disconnected()),
-
-        (states.Connected(), events.TunnelSetupFail(),),
-        (states.Connected(), events.Up()),
-        (states.Disconnecting(), events.Connected()),
-
-        (states.Disconnecting(), events.Timeout()),
-        (states.Disconnecting(), events.AuthDenied()),
-        (states.Disconnecting(), events.Down()),
-        (states.Disconnecting(), events.TunnelSetupFail()),
+        (states.Disconnected, {
+            events.Up
+        }),
+        (states.Connecting, {
+            events.Connected, events.Down, events.Disconnected, events.Error
+        }),
+        (states.Connected, {
+            events.Down, events.Disconnected, events.Error
+        }),
+        (states.Disconnecting, {
+            events.Disconnected
+        })
     ]
 )
-def test_expected_self_event_type(state, event, caplog):
-    state.on_event(event, Mock())
+def test_on_event_returns_same_state_on_unexpected_event_types(
+        state_class, expected_event_types, caplog
+):
+    unexpected_events = [
+        event_type for event_type in events.EVENT_TYPES
+        if not issubclass(event_type, tuple(expected_event_types))
+    ]
+    state = state_class()
 
-    warnings = 0
-    for record in caplog.records:
-        if record.levelname == "WARNING":
-            warnings += 1
+    for event_type in unexpected_events:
+        next_state = state.on_event(event_type(), Mock())
 
-    assert warnings == 1
+        assert next_state is state, \
+            f"{state_class.__name__} state was not expected to transition " \
+            f"to {type(next_state).__name__} on event {event_type.__name__}."
+        warnings = [record for record in caplog.records if record.levelname == 'WARNING']
+        assert len(warnings) == 1, "One warning was expected but the " \
+                                   "following where found: " \
+                                   f"{[record.message for record in warnings]}"
+
+        caplog.clear()

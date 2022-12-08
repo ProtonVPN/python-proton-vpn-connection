@@ -79,7 +79,6 @@ class VPNStateMachine(Publisher):
         the value of the latter with `newstate`.
         """
         self.__current_state = newstate
-        self.__current_state.init(self)
         logger.info(
             f"{self.__current_state.state.name}",
             category="CONN", event="STATE_CHANGED",

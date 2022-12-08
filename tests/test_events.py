@@ -38,9 +38,8 @@ def test_get_context():
         (events.Disconnected().event, StateMachineEventEnum.DISCONNECTED),
         (events.Timeout().event, StateMachineEventEnum.TIMEOUT),
         (events.AuthDenied().event, StateMachineEventEnum.AUTH_DENIED),
-        (events.TunnelSetupFail().event, StateMachineEventEnum.TUNNEL_SETUP_FAIL),
         (events.Retry().event, StateMachineEventEnum.RETRY),
-        (events.UnknownError().event, StateMachineEventEnum.UNKNOWN_ERROR),
+        (events.UnexpectedError().event, StateMachineEventEnum.UNEXPECTED_ERROR),
     ]
 )
 def test_individual_events(event_class, expected_event):

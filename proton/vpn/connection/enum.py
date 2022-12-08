@@ -8,9 +8,8 @@ class ConnectionStateEnum(IntEnum):
     DISCONNECTED = 0
     CONNECTING = 1
     CONNECTED = 2
-    TRANSIENT_ERROR = 3
-    DISCONNECTING = 4
-    ERROR = 5
+    DISCONNECTING = 3
+    ERROR = 4
 
 
 class StateMachineEventEnum(IntEnum):
@@ -21,6 +20,7 @@ class StateMachineEventEnum(IntEnum):
     DISCONNECTED = 3
     TIMEOUT = 4
     AUTH_DENIED = 5
-    TUNNEL_SETUP_FAIL = 6
+    TUNNEL_SETUP_FAILED = 6
     RETRY = 7
-    UNKNOWN_ERROR = 8
+    UNEXPECTED_ERROR = 8
+    DEVICE_DISCONNECTED = 9

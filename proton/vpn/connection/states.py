@@ -1,14 +1,14 @@
 """
 The different VPN connection states and their transitions is defined here.
 """
-
+from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from proton.vpn import logging
 from proton.vpn.connection import events
 from proton.vpn.connection.enum import ConnectionStateEnum
-from proton.vpn.connection.events import BaseEvent
+from proton.vpn.connection.events import BaseEvent, Error
 
 if TYPE_CHECKING:
     from proton.vpn.connection.state_machine import VPNStateMachine
@@ -20,9 +20,15 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class StateContext:
-    """Relevant state context data."""
-    event: BaseEvent = None  # event that led to the current state
-    connection: "VPNConnection" = None  # current VPN connection
+    """
+    Relevant state context data.
+
+    Attributes:
+        event: Event that led to the current state.
+        connection: current VPN connection.
+    """
+    event: BaseEvent = None
+    connection: "VPNConnection" = None
 
 
 class BaseState:
@@ -49,7 +55,7 @@ class BaseState:
     Certain states will have to call methods from the state machine
     (see `Disconnected`, `Connected`). Both of these states call
     `state_machine.start_connection()` and `state_machine.stop_connection()`.
-    It should be noted that these methods should be run in a async way so that
+    It should be noted that these methods should be run in an async way so that
     it does not block the execution of the next line.
 
     States also have `context` (which are fetched from events). These can help
@@ -65,179 +71,121 @@ class BaseState:
             raise AttributeError("Undefined attribute \"state\" ")
 
     # pylint: disable=unused-argument
-    def on_event(self, event: "BaseEvent", state_machine: "VPNStateMachine"):
+    def on_event(self, event: "BaseEvent", state_machine: "VPNStateMachine") -> BaseState:
         """Returns the new state based on the received event."""
-        return self
+        self.context.event = event
 
-    def init(self, state_machine: "VPNStateMachine"):
-        """Initializes the current state."""
+        new_state = self._on_event(event, state_machine)
+
+        if new_state is self:
+            logger.warning(
+                f"{type(self.state).__name__} state received unexpected "
+                f"event: {type(event).__name__}",
+                category="CONN", event="WARNING"
+            )
+
+        return new_state
+
+    def _on_event(
+            self, event: "BaseEvent", state_machine: "VPNStateMachine"
+    ):
+        """To be implemented in the subclasses."""
+        raise NotImplementedError(
+            f"{type(self).__name__} does not implement the _on_event method.")
 
 
 class Disconnected(BaseState):
-    r"""
-    Disconnected is a final/initial state. It only acts on `Up` events,
-    all other events are ignored.
-
-    Path:
-        |--------------|
-        | Disconnected |-> Connecting -> Connected
-        |--------------|             |--------------|
-        Connected -> Disconnected -> | Disconnected |
-            \                        |--------------|
-             \-----------> Error
+    """
+    Disconnected is the initial state of a connection. It's also its final
+    state, except if the connection could not be established due to an error.
     """
     state = ConnectionStateEnum.DISCONNECTED
 
-    def on_event(self, event: BaseEvent, state_machine: "VPNStateMachine"):
-
-        if event.event == events.Up.event:
+    def _on_event(self, event: BaseEvent, state_machine: "VPNStateMachine"):
+        if isinstance(event, events.Up):
             state_machine.start_connection()
             self.context.connection = state_machine
-            self.context.event = event
             return Connecting(self.context)
-
-        logger.warning(
-            f"{self.state.name} state received unexpected "
-            f"event: {event.event.name}",
-            category="CONN", event="WARNING"
-        )
 
         return self
 
 
 class Connecting(BaseState):
-    r"""
-    Connecting is a transitioning state. Any other event then `Connected` either
-    ends in `Error` state or is ignored.
-
-    Path:
-        |------------|
-        | Connecting | -> Connected -> Disconnected
-        |------------|
-                \--------> Error
+    """
+    Connecting is the transitional state between Disconnected and Connected.
     """
     state = ConnectionStateEnum.CONNECTING
 
-    def on_event(self, event: BaseEvent, state_machine: "VPNStateMachine"):
-        self.context.event = event
-        if event.event == events.Connected.event:
+    def _on_event(self, event: BaseEvent, state_machine: "VPNStateMachine"):
+        if isinstance(event, events.Connected):
             state_machine.add_persistence()
             return Connected(self.context)
 
-        if event.event == events.Down.event:
+        if isinstance(event, events.Down):
             state_machine.stop_connection()
             return Disconnecting(self.context)
 
-        if event.event in [
-            events.Timeout.event,
-            events.AuthDenied.event,
-            events.UnknownError.event,
-            events.TunnelSetupFail.event,
-            events.Disconnected.event
-        ]:
-            return Error(self.context)
+        if isinstance(event, events.Disconnected):
+            # Another process disconnected the VPN, otherwise the Disconnected
+            # event would've been received by the Disconnecting state.
+            state_machine.stop_connection()
+            state_machine.remove_persistence()
+            return Disconnected(self.context)
 
-        logger.warning(
-            f"{self.state.name} state received unexpected "
-            f"event: {event.event.name}",
-            category="CONN", event="WARNING"
-        )
+        if isinstance(event, events.Error):
+            state_machine.stop_connection()
+            state_machine.remove_persistence()
+            return Error(self.context)
 
         return self
 
 
 class Connected(BaseState):
-    r"""
-    Connected is a final/initial state (simillar to `Disconnected`).
-    Any other event then `Down` or `Timeout` either
-    ends in `Error` state or is ignored.
-
-    Path:
-                                      |-----------|
-        Disconnected -> Connecting -> | Connected |
-        |-----------|                 |-----------|
-        | Connected | -> Disconnecting -> Disconnected
-        |-----------|
-            \-----------> Error
+    """
+    Connected is the state reached once the VPN connection has been successfully
+    established.
     """
     state = ConnectionStateEnum.CONNECTED
 
-    def on_event(self, event: BaseEvent, state_machine: "VPNStateMachine"):
-        self.context.event = event
-        if event.event == events.Down.event:
+    def _on_event(self, event: BaseEvent, state_machine: "VPNStateMachine"):
+        if isinstance(event, events.Down):
             state_machine.stop_connection()
             return Disconnecting(self.context)
 
-        if event.event in [
-            events.Timeout.event,
-            events.AuthDenied.event,
-            events.UnknownError.event
-        ]:
-            return Error(self.context)
+        if isinstance(event, events.Disconnected):
+            # Another process disconnected the VPN, otherwise the Disconnected
+            # event would've been received by the Disconnecting state.
+            state_machine.stop_connection()
+            state_machine.remove_persistence()
+            return Disconnected(self.context)
 
-        logger.warning(
-            f"{self.state.name} state received unexpected "
-            f"event: {event.event.name}",
-            category="CONN", event="WARNING"
-        )
+        if isinstance(event, events.Error):
+            state_machine.stop_connection()
+            state_machine.remove_persistence()
+            return Error(self.context)
 
         return self
 
 
 class Disconnecting(BaseState):
-    r"""
-    Disconnecting is a transitioning state. Any other event then `Disconnected`
-    or `UnknownError` either end in `Error` state or are ignored.
-
-    Path:
-                    |---------------|
-        Connected ->| Disconnecting |-> Disconnected
-           \        |---------------|
-            \----------> Error
+    """
+    Disconnecting is the transitional state between Connected and Disconnected.
     """
     state = ConnectionStateEnum.DISCONNECTING
 
-    def on_event(self, event: BaseEvent, state_machine: "VPNStateMachine"):
-        self.context.event = event
-        if event.event in [
-            events.Disconnected.event,
-            events.UnknownError.event,
-        ]:
+    def _on_event(self, event: BaseEvent, state_machine: "VPNStateMachine"):
+        if isinstance(event, events.Disconnected):
             state_machine.remove_persistence()
             return Disconnected(self.context)
-
-        logger.warning(
-            f"{self.state.name} state received unexpected "
-            f"event: {event.event.name}",
-            category="CONN", event="WARNING"
-        )
 
         return self
 
 
 class Error(BaseState):
-    r"""
-    Error is a transitioning state. Any error that occurs during either
-    establishing a connection or when already connected will always
-    go through `Error` state, then to disconnecting (to ensure a smooth
-    process) then disconnected. Thus all events that will land here will
-    lead to `Disconnecting` state.
-
-    Path:
-    Connecting ---> |-------|
-                    | Error |
-    Connected ----> |-------|
+    """
+    Error is the final state after a connection error.
     """
     state = ConnectionStateEnum.ERROR
 
-    def init(self, state_machine):
-        state_machine.stop_connection()
-        state_machine.remove_persistence()
-
-    def on_event(self, event: BaseEvent, state_machine: "VPNStateMachine"):
-        logger.warning(
-            f"{self.state.name} state received unexpected "
-            f"event: {event.event.name}",
-            category="CONN", event="WARNING"
-        )
+    def _on_event(self, event: BaseEvent, state_machine: "VPNStateMachine"):
         return self

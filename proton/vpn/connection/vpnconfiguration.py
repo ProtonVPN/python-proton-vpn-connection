@@ -36,8 +36,8 @@ class VPNConfiguration:
     def from_factory(cls, protocol):
         """Returns the configuration class based on the specified protocol."""
         protocols = {
-            "openvpn_tcp": OpenVPNTCPConfig,
-            "openvpn_udp": OpenVPNUDPConfig,
+            "openvpn-tcp": OpenVPNTCPConfig,
+            "openvpn-udp": OpenVPNUDPConfig,
             "wireguard": WireguardConfig,
         }
 

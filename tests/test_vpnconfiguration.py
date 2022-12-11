@@ -237,8 +237,8 @@ def test_wireguard_without_settings(modified_exec_env):
 
 @pytest.mark.parametrize(
     "protocol, expected_class", [
-        ("openvpn_tcp", OpenVPNTCPConfig),
-        ("openvpn_udp", OpenVPNUDPConfig),
+        ("openvpn-tcp", OpenVPNTCPConfig),
+        ("openvpn-udp", OpenVPNUDPConfig),
         ("wireguard", WireguardConfig),
     ]
 )

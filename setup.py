@@ -12,7 +12,7 @@ setup(
     packages=find_namespace_packages(include=['proton.vpn.connection']),
     install_requires=["jinja2", "proton-core", "proton-vpn-logger"],
     extras_require={
-        "development": ["pytest", "pytest-coverage", "flake8", "pylint"]
+        "development": ["pytest", "pytest-coverage", "flake8", "pylint", "sphinx-rtd-theme"]
     },
     include_package_data=True,
     python_requires=">=3.8",

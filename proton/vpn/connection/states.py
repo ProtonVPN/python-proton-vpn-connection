@@ -8,11 +8,13 @@ from typing import TYPE_CHECKING
 from proton.vpn import logging
 from proton.vpn.connection import events
 from proton.vpn.connection.enum import ConnectionStateEnum
-from proton.vpn.connection.events import BaseEvent, Error
 
 if TYPE_CHECKING:
     from proton.vpn.connection.state_machine import VPNStateMachine
     from proton.vpn.connection.vpnconnection import VPNConnection
+
+
+# pylint: disable=too-few-public-methods
 
 
 logger = logging.getLogger(__name__)
@@ -27,7 +29,7 @@ class StateContext:
         event: Event that led to the current state.
         connection: current VPN connection.
     """
-    event: BaseEvent = None
+    event: events.BaseEvent = None
     connection: "VPNConnection" = None
 
 
@@ -71,7 +73,7 @@ class BaseState:
             raise AttributeError("Undefined attribute \"state\" ")
 
     # pylint: disable=unused-argument
-    def on_event(self, event: "BaseEvent", state_machine: "VPNStateMachine") -> BaseState:
+    def on_event(self, event: events.BaseEvent, state_machine: "VPNStateMachine") -> BaseState:
         """Returns the new state based on the received event."""
         self.context.event = event
 
@@ -87,7 +89,7 @@ class BaseState:
         return new_state
 
     def _on_event(
-            self, event: "BaseEvent", state_machine: "VPNStateMachine"
+            self, event: events.BaseEvent, state_machine: "VPNStateMachine"
     ):
         """To be implemented in the subclasses."""
         raise NotImplementedError(
@@ -101,7 +103,7 @@ class Disconnected(BaseState):
     """
     state = ConnectionStateEnum.DISCONNECTED
 
-    def _on_event(self, event: BaseEvent, state_machine: "VPNStateMachine"):
+    def _on_event(self, event: events.BaseEvent, state_machine: "VPNStateMachine"):
         if isinstance(event, events.Up):
             state_machine.start_connection()
             self.context.connection = state_machine
@@ -116,7 +118,7 @@ class Connecting(BaseState):
     """
     state = ConnectionStateEnum.CONNECTING
 
-    def _on_event(self, event: BaseEvent, state_machine: "VPNStateMachine"):
+    def _on_event(self, event: events.BaseEvent, state_machine: "VPNStateMachine"):
         if isinstance(event, events.Connected):
             state_machine.add_persistence()
             return Connected(self.context)
@@ -147,7 +149,7 @@ class Connected(BaseState):
     """
     state = ConnectionStateEnum.CONNECTED
 
-    def _on_event(self, event: BaseEvent, state_machine: "VPNStateMachine"):
+    def _on_event(self, event: events.BaseEvent, state_machine: "VPNStateMachine"):
         if isinstance(event, events.Down):
             state_machine.stop_connection()
             return Disconnecting(self.context)
@@ -173,7 +175,7 @@ class Disconnecting(BaseState):
     """
     state = ConnectionStateEnum.DISCONNECTING
 
-    def _on_event(self, event: BaseEvent, state_machine: "VPNStateMachine"):
+    def _on_event(self, event: events.BaseEvent, state_machine: "VPNStateMachine"):
         if isinstance(event, events.Disconnected):
             state_machine.remove_persistence()
             return Disconnected(self.context)
@@ -187,5 +189,5 @@ class Error(BaseState):
     """
     state = ConnectionStateEnum.ERROR
 
-    def _on_event(self, event: BaseEvent, state_machine: "VPNStateMachine"):
+    def _on_event(self, event: events.BaseEvent, state_machine: "VPNStateMachine"):
         return self

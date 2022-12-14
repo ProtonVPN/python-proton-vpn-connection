@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-connection
-%define version 0.3.0
+%define version 0.4.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -48,6 +48,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Wed Dec 14 2022 Josep Llaneras <josep.llaneras@proton.ch> 0.4.0
+- Add device disconnected event
+
 * Mon Dec 05 2022 Josep Llaneras <josep.llaneras@proton.ch> 0.3.0
 - Persist VPN connection server to disk
 

@@ -81,7 +81,7 @@ class BaseState:
 
         if new_state is self:
             logger.warning(
-                f"{type(self.state).__name__} state received unexpected "
+                f"{self.state.name} state received unexpected "
                 f"event: {type(event).__name__}",
                 category="CONN", event="WARNING"
             )

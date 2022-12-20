@@ -59,7 +59,7 @@ def test_assert_state_flow(state, event, expected_state):
     "state_class, expected_event_types",
     [
         (states.Disconnected, {
-            events.Up
+            events.Up, events.TunnelSetupFailed
         }),
         (states.Connecting, {
             events.Connected, events.Down, events.Disconnected, events.Error

@@ -72,10 +72,10 @@ class BaseState:
         if self.state is None:
             raise AttributeError("Undefined attribute \"state\" ")
 
-    # pylint: disable=unused-argument
     def on_event(self, event: events.BaseEvent, state_machine: "VPNStateMachine") -> BaseState:
         """Returns the new state based on the received event."""
         self.context.event = event
+        self.context.connection = state_machine
 
         new_state = self._on_event(event, state_machine)
 
@@ -95,6 +95,9 @@ class BaseState:
         raise NotImplementedError(
             f"{type(self).__name__} does not implement the _on_event method.")
 
+    def init(self, state_machine: "VPNStateMachine"):
+        """Initialization tasks to be run just after a state change."""
+
 
 class Disconnected(BaseState):
     """
@@ -105,11 +108,12 @@ class Disconnected(BaseState):
 
     def _on_event(self, event: events.BaseEvent, state_machine: "VPNStateMachine"):
         if isinstance(event, events.Up):
-            state_machine.start_connection()
-            self.context.connection = state_machine
             return Connecting(self.context)
 
         return self
+
+    def init(self, state_machine: "VPNStateMachine"):
+        state_machine.remove_persistence()
 
 
 class Connecting(BaseState):
@@ -120,26 +124,23 @@ class Connecting(BaseState):
 
     def _on_event(self, event: events.BaseEvent, state_machine: "VPNStateMachine"):
         if isinstance(event, events.Connected):
-            state_machine.add_persistence()
             return Connected(self.context)
 
         if isinstance(event, events.Down):
-            state_machine.stop_connection()
             return Disconnecting(self.context)
 
         if isinstance(event, events.Disconnected):
             # Another process disconnected the VPN, otherwise the Disconnected
             # event would've been received by the Disconnecting state.
-            state_machine.stop_connection()
-            state_machine.remove_persistence()
             return Disconnected(self.context)
 
         if isinstance(event, events.Error):
-            state_machine.stop_connection()
-            state_machine.remove_persistence()
             return Error(self.context)
 
         return self
+
+    def init(self, state_machine: "VPNStateMachine"):
+        state_machine.start_connection()
 
 
 class Connected(BaseState):
@@ -151,22 +152,20 @@ class Connected(BaseState):
 
     def _on_event(self, event: events.BaseEvent, state_machine: "VPNStateMachine"):
         if isinstance(event, events.Down):
-            state_machine.stop_connection()
             return Disconnecting(self.context)
 
         if isinstance(event, events.Disconnected):
             # Another process disconnected the VPN, otherwise the Disconnected
             # event would've been received by the Disconnecting state.
-            state_machine.stop_connection()
-            state_machine.remove_persistence()
             return Disconnected(self.context)
 
         if isinstance(event, events.Error):
-            state_machine.stop_connection()
-            state_machine.remove_persistence()
             return Error(self.context)
 
         return self
+
+    def init(self, state_machine: "VPNStateMachine"):
+        state_machine.add_persistence()
 
 
 class Disconnecting(BaseState):
@@ -177,10 +176,12 @@ class Disconnecting(BaseState):
 
     def _on_event(self, event: events.BaseEvent, state_machine: "VPNStateMachine"):
         if isinstance(event, events.Disconnected):
-            state_machine.remove_persistence()
             return Disconnected(self.context)
 
         return self
+
+    def init(self, state_machine: "VPNStateMachine"):
+        state_machine.stop_connection()
 
 
 class Error(BaseState):

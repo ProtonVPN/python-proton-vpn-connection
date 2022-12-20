@@ -67,10 +67,12 @@ class VPNStateMachine(Publisher):
         A copy of the previous state is always stored internally
         in `self.__previous_state`
         """
-        self.update_connection_state(
-            self.__current_state.on_event(event, self)
-        )
-        self._notify_subscribers(self.__current_state)
+        new_state = self.__current_state.on_event(event, self)
+        if new_state is not self.__current_state:
+            self.update_connection_state(
+                self.__current_state.on_event(event, self)
+            )
+            self._notify_subscribers(self.__current_state)
 
     def update_connection_state(self, newstate: states.BaseState):
         """
@@ -79,6 +81,7 @@ class VPNStateMachine(Publisher):
         the value of the latter with `newstate`.
         """
         self.__current_state = newstate
+        self.__current_state.init(self)
         logger.info(
             f"{self.__current_state.state.name}",
             category="CONN", event="STATE_CHANGED",

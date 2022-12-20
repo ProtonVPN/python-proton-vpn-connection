@@ -231,7 +231,7 @@ def test_not_implemented_get_connection(vpn_server, vpn_credentials, settings):
         vpconn._get_connection()
 
 
-def test_up(vpn_server, vpn_credentials):
+def test_up(vpn_server, vpn_credentials, connection_persistence_mock):
     def _get_connection():
         return False
 
@@ -359,7 +359,7 @@ def test_remove_persistence(vpn_server, vpn_credentials, connection_persistence_
 
     vpnconn.remove_persistence()
 
-    connection_persistence_mock.remove.assert_called_once()
+    connection_persistence_mock.remove.assert_called()
 
 
 def test_get_user_pass_with_malformed_args():

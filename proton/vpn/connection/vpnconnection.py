@@ -2,6 +2,7 @@
 VPN connection interface.
 """
 
+from __future__ import annotations
 import os
 from typing import Optional
 
@@ -249,7 +250,8 @@ class VPNConnection(VPNStateMachine):
 
         return use_certificate
 
-    def _get_connection(self) -> 'VPNConnection':
+    @classmethod
+    def _get_connection(cls) -> Optional[VPNConnection]:
         """*For developers*
         Each backend has to provide a classmethod of getting a connection.
 

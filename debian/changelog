@@ -1,3 +1,9 @@
+protonvpn-connection (0.4.2) unstable; urgency=medium
+
+  * Release connection resources on errors
+
+ -- Josep Llaneras <josep.llaneras@proton.ch> Fri, 30 Dec 2022 11:26:59 +0100
+
 protonvpn-connection (0.4.1) unstable; urgency=medium
 
   * Fix log message

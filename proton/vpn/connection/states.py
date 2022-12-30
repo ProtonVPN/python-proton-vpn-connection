@@ -192,3 +192,7 @@ class Error(BaseState):
 
     def _on_event(self, event: events.BaseEvent, state_machine: "VPNStateMachine"):
         return self
+
+    def init(self, state_machine: "VPNStateMachine"):
+        # Make sure connection resources are properly released.
+        state_machine.stop_connection()

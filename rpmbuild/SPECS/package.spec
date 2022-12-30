@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-connection
-%define version 0.4.1
+%define version 0.4.2
 %define release 1
 
 Prefix: %{_prefix}
@@ -48,6 +48,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Fri Dec 30 2022 Josep Llaneras <josep.llaneras@proton.ch> 0.4.2
+- Release connection resources on errors
+
 * Tue Dec 20 2022 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.4.1
 - Fix log message
 - Refactor state machine so that it runs actions just after each state change

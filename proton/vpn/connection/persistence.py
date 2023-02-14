@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from json import JSONDecodeError
 from typing import Optional
 
-from proton.utils.environment import ExecutionEnvironment
+from proton.utils.environment import VPNExecutionEnvironment
 from proton.vpn import logging
 
 logger = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ class ConnectionPersistence:
     def _connection_file_path(self):
         if not self._directory:
             self._directory = os.path.join(
-                ExecutionEnvironment().path_cache, "vpn", "connection"
+                VPNExecutionEnvironment().path_cache, "connection"
             )
             os.makedirs(self._directory, mode=0o700, exist_ok=True)
 

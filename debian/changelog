@@ -1,3 +1,9 @@
+protonvpn-connection (0.5.0) unstable; urgency=medium
+
+  * Use standardized path for connection persistence
+
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> Tue, 14 Feb 2023 12:00:00 +0100
+
 protonvpn-connection (0.4.2) unstable; urgency=medium
 
   * Release connection resources on errors

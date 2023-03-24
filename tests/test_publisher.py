@@ -1,52 +1,65 @@
+from unittest.mock import Mock
+
 from proton.vpn.connection.publisher import Publisher
 import pytest
-val = "test-val"
 
 
-class ExpectedClass:
-    def status_update(self, status):
-        assert status == val
+@pytest.fixture
+def subscriber():
+    return Mock()
 
 
-class MalformedClass:
-    def _callback(self, status):
-        pass
+def test_register_registers_subscriber_if_it_was_not_registered_yet(subscriber):
+    publisher = Publisher()
+    publisher.register(subscriber)
+    assert publisher.is_subscriber_registered(subscriber)
 
 
-def test_register_and_notify_expected_object():
-    p = Publisher()
-    p.register(ExpectedClass())
-    p._notify_subscribers(val)
+def test_register_does_nothing_if_the_subscriber_was_already_registered():
+    subscriber = Mock()
+    publisher = Publisher(subscribers=[subscriber])
+    publisher.register(subscriber)
+    assert publisher.number_of_subscribers == 1
 
 
-def test_register_and_notify_malformed_object():
-    p = Publisher()
-    with pytest.raises(AttributeError):
-        p.register(MalformedClass())
+def test_register_raises_value_error_if_subscriber_is_not_callable():
+    publisher = Publisher()
+    with pytest.raises(ValueError):
+        publisher.register(None)
 
 
-def test_register_and_remove_existing_object():
-    p = Publisher()
-    obj = ExpectedClass()
-    p.register(obj)
-    p.unregister(obj)
+def test_unregister_unregisters_subscriber_if_it_was_already_registered(subscriber):
+    publisher = Publisher(subscribers=[subscriber])
+    publisher.unregister(subscriber)
+    assert not publisher.is_subscriber_registered(subscriber)
 
 
-def test_register_twice_same_object():
-    p = Publisher()
-    obj = ExpectedClass()
-    p.register(obj)
-    p.register(obj)
-    p._notify_subscribers(val)
+def test_unregister_does_nothing_if_subscriber_was_never_registered():
+    publisher = Publisher()
+    publisher.unregister(Mock())
+    assert publisher.number_of_subscribers == 0
 
 
-def test_remove_non_registered_object():
-    p = Publisher()
-    obj = ExpectedClass()
-    p.unregister(obj)
+def test_notify_notifies_all_registered_subscribers():
+    subscribers = [Mock(), Mock()]
+    publisher = Publisher(subscribers=subscribers)
+    publisher.notify("arg1", arg2="arg2")
+    for subscriber in subscribers:
+        subscriber.assert_called_with("arg1", arg2="arg2")
 
 
-def test_register_none_object():
-    p = Publisher()
-    with pytest.raises(TypeError):
-        p.register(None)
+def test_notify_catches_and_logs_exceptions_when_notifying_subscribers(caplog):
+    subscribers = [Mock(side_effect=RuntimeError("Bad stuff")), Mock()]
+    publisher = Publisher(subscribers=subscribers)
+
+    publisher.notify("foo")
+
+    # Assert that, even though the first subscriber raised a RuntimeError,
+    # the second one was also notified.
+    for subscriber in subscribers:
+        subscriber.assert_called_with("foo")
+
+    # Assert that the error was logged.
+    errors = [record for record in caplog.records if record.levelname == "ERROR"]
+    assert errors
+    assert errors[0].msg.startswith("An error occurred notifying subscriber")

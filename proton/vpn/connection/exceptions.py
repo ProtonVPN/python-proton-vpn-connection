@@ -39,14 +39,9 @@ class MissingProtocolDetails(VPNConnectionError):
     """
 
 
-class ConflictError(VPNConnectionError):
+class ConcurrentConnectionsError(VPNConnectionError):
     """
-    When attempting an up(), if for some reason another current connection is found,
-    this exception thrown. Since no two simultaneous connections are allowed, the user of this
-    componenet will have to first stop the current connection and then connect with a new one.
-
-    Ideally this should be handled automatically by the state machine, but if for some reason
-    a cleanup is not possible, then it should get detected on up().
+    Multiple concurrent connections were found, even though only one is allowed at a time.
     """
 
 

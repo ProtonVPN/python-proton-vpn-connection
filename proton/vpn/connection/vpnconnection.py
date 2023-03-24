@@ -3,107 +3,163 @@ VPN connection interface.
 """
 
 from __future__ import annotations
+
 import os
-from typing import Optional
+from abc import ABC, abstractmethod
+from typing import Optional, Callable
 
 from proton.loader import Loader
 
-from proton.vpn.connection import events
-from proton.vpn.connection.exceptions import ConflictError, MissingBackendDetails
+from proton.vpn.connection.events import Event
 from proton.vpn.connection.interfaces import VPNServer, Settings, VPNCredentials
 from proton.vpn.connection.persistence import ConnectionPersistence, ConnectionParameters
-from proton.vpn.connection.state_machine import VPNStateMachine
+from proton.vpn.connection.publisher import Publisher
+from proton.vpn.connection import states
 from proton.vpn.killswitch.interface import KillSwitch
 
 
-class VPNConnection(VPNStateMachine):
+# pylint: disable=too-many-instance-attributes
+class VPNConnection(ABC):
     """
-    VPNConnection is the base class for which all types of connection need to
-    derive from. It contains most of the logic that is needed for either
-    creating a new backend or protocol.
+    Defines the interface to create a new VPN connection.
 
-    Apart from VPNConnection being a base class for vpn connections, it too
-    provides vpnconnections via its factory.
-
-    Usage:
-
-    .. code-block::
-
-        from proton.vpn.connection import VPNConnection
-
-        vpnconnection_type = VPNConnection.get_from_factory()
-        vpnconnection=vpnconnection_type(vpnserver, vpncredentials)
-
-        # Before establishing you should also decide if you would like to
-        # subscribe to the connection status updates with:
-        # see more inte register()
-        # vpnconnection.register("killswitch")
-
-        vpnconnection.up()
-
-        # to shutdown vpn connection
-        vpnconnection.down()
-
-    Or you could directly use a protocol from a specific backend:
-
-    .. code-block::
-
-        vpnconnection_type = VPNConnection.get_from_factory("wireguard")
-        vpnconnection=vpnconnection_type(vpnserver, vpncredentials)
-        vpnconnection.up()
-
-    If a specific backend supports it, a VPNConnection object is persistent
-    accross client-code exits. For instance, if you started a VPNConnection with
-    :meth:`up`, you can get it back like this in another instance of your
-    client code:
-
-    .. code-block::
-
-        vpnconnection = VPNConnection.get_current_connection()
-        vpnconnection.down()
-
-    *Limitations*:Currently you can only handle 1 persistent connection
-    at a time.
+    It's the base class for any VPN connection implementation.
     """
-    _unique_id = None
+
+    # Class attrs to be set by subclasses.
     backend = None
     protocol = None
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self,
-        vpnserver: VPNServer,
-        vpncredentials: VPNCredentials,
+        server: VPNServer,
+        credentials: VPNCredentials,
         settings: Settings = None,
+        persisted_parameters: ConnectionParameters = None,
         connection_persistence: ConnectionPersistence = None,
+        publisher: Publisher = None,
         killswitch: KillSwitch = None
-    ):  # pylint: disable=too-many-arguments
+
+    ):
         """Initialize a VPNConnection object.
 
-            :param vpnserver: VPNServer type or same signature as VPNServer.
-            :param vpncredentials: VPNCredentials type or same signature as
-                VPNCredentials.
-            :param settings: Optional.
-                Provide an instance that implements Settings or
-                provide an instance that simply exposes methods to match the
-                signature of Settings.
-            :param connection_persistence: Optional.
-                Provide an instance that implements the ConnectionPersistence
-                interface, to change the way in which the connection parameters
-                are persisted to disk.
-
-        This will set the interal properties which will be used by each
-        backend/protocol to create its configuration file, so that it's ready
-        to establish a VPN connection.
+        :param server: VPN server to connect to.
+        :param credentials: credentials used to authenticate to the VPN server.
+        :param settings: Settings to be used when establishing the VPN connection.
+            This parameter is optional. When it's not specified the default settings
+            will be used instead.
+        :param connection_persistence: Connection persistence implementation.
+            This parameter is optional. When not specified, the default connection
+            persistence implementation will be used instead.
+        :param publisher: Publisher implementation. This parameter is optional. Pass it
+            only if you know what you are doing.
         """
-        self._vpnserver = vpnserver
-        self._vpncredentials = vpncredentials
+        self._vpnserver = server
+        self._vpncredentials = credentials
         self._settings = settings
+        self._persisted_parameters = persisted_parameters
 
         self._killswitch = killswitch or KillSwitch.get()()
 
         self._connection_persistence = connection_persistence or ConnectionPersistence()
-        self._persisted_parameters = None
-        VPNStateMachine.__init__(self)
+        self._publisher = publisher or Publisher()
+
+        if self._persisted_parameters:
+            self._unique_id = self._persisted_parameters.connection_id
+            self.initial_state = self._initialize_persisted_connection(
+                self._persisted_parameters
+            )
+        else:
+            self._unique_id = None
+            self.initial_state = states.Disconnected(states.StateContext(connection=self))
+
+    @abstractmethod
+    def _initialize_persisted_connection(
+            self, persisted_parameters: ConnectionParameters
+    ) -> states.State:
+        """
+        Initializes the state of this instance of VPN connection according
+        to previously persisted connection parameters and returns its current state.
+        Needs to be provided by the VPN connection implementation.
+        """
+
+    @abstractmethod
+    def start(self):
+        """
+        Starts the VPN connection.
+
+        Important: this method is expected to be implemented in an asynchronous manner.
+        It should never block while the connection is being established.
+        """
+
+    @abstractmethod
+    def stop(self):
+        """Stops the VPN connection.
+
+        Important: this method is expected to be implemented in an asynchronous manner.
+        It should never block while the connection is being shut down.
+        """
+
+    def register(self, subscriber: Callable[[Event], None]):
+        """
+        Registers a subscriber to be notified whenever a new connection event happens.
+
+        The subscriber will be called passing the connection event as argument.
+        """
+        self._publisher.register(subscriber)
+
+    def unregister(self, subscriber: Callable[[Event], None]):
+        """Unregisters a previously registered connection events subscriber."""
+        self._publisher.unregister(subscriber)
+
+    def _notify_subscribers(self, event: Event):
+        """Notifies all subscribers of a connection event.
+
+        Subscribers are called passing the connection event as argument.
+
+        This is a utility method that VPN connection implementations can use to notify
+        subscribers when a new connection event happens.
+
+        :param event: the event to be notified to subscribers.
+        """
+        self._publisher.notify(event=event)
+
+    @staticmethod
+    def create(server: VPNServer, credentials: VPNCredentials, settings: Settings = None,
+               protocol: str = None, backend: str = None):
+        """
+        Creates a new VPN connection object. Note the VPN connection won't be initiated. For that
+        to happen, see the `start` method.
+
+        :param server: VPN server to connect to.
+        :param credentials: Credentials used to authenticate to the VPN server.
+        :param settings: VPN settings used to create the connection.
+        :param protocol: protocol to connect with. If None, the default protocol will be used.
+        :param backend: Name of the class implementing the VPNConnection interface.
+            If None, the default implementation will be used.
+        """
+        backend = Loader.get("backend", class_name=backend)
+        protocol = protocol.lower() if protocol else None
+        protocol_class = backend.factory(protocol)
+        return protocol_class(server, credentials, settings)
+
+    @classmethod
+    def get_current_connection(
+            cls, connection_persistence: ConnectionPersistence = None
+    ) -> Optional[VPNConnection]:
+        """
+        :return: the current VPN connection or None if there isn't one.
+        """
+        connection_persistence = connection_persistence or ConnectionPersistence()
+        persisted_parameters = connection_persistence.load()
+        if not persisted_parameters:
+            return None
+
+        backend = Loader.get("backend", persisted_parameters.backend)
+        current_connection = backend.get_persisted_connection(persisted_parameters)
+
+        return current_connection
 
     @property
     def server_id(self) -> str:
@@ -111,8 +167,7 @@ class VPNConnection(VPNStateMachine):
         # VPNConnection is only partially restored when deserialized from disk:
         # it's constructed without neither VPNServer, VPNCredentials
         # nor Settings objects. It only loads the parameters that were
-        # persisted to disk. See VPNConnection._get_connection and
-        # LinuxNetworkManager._get_connection.
+        # persisted to disk.
         if self._vpnserver:
             server_id = self._vpnserver.server_id
         elif self._persisted_parameters:
@@ -128,8 +183,7 @@ class VPNConnection(VPNStateMachine):
         # VPNConnection is only partially restored when deserialized from disk:
         # it's constructed without neither VPNServer, VPNCredentials
         # nor Settings objects. It only loads the parameters that were
-        # persisted to disk. See VPNConnection._get_connection and
-        # LinuxNetworkManager._get_connection.
+        # persisted to disk.
         if self._vpnserver:
             server_name = self._vpnserver.server_name
         elif self._persisted_parameters:
@@ -138,91 +192,6 @@ class VPNConnection(VPNStateMachine):
             server_name = None
 
         return server_name
-
-    def up(self) -> None:  # pylint: disable=invalid-name
-        """
-        Establish a vpn connection
-
-        :raises AuthenticationError: The credentials used to authenticate on the
-            VPN are not correct
-        :raises ConnectionTimeoutError: No answer from the VPN server
-            for too long
-        :raises MissingBackendDetails: The backend cannot be used.
-        :raises ConflictError: When another current connection is found.
-        :raises UnexpectedError: When an expected/unhandled error occurs.
-        """
-        self._ensure_there_are_no_other_current_protonvpn_connections()
-        self.on_event(events.Up())
-
-    def down(self) -> None:
-        """Down method to stop a vpn connection.
-
-        :raises MissingVPNConnectionError: When there is no connection
-            to disconnect.
-        :raises UnexpectedError: When an expected/unhandled error occurs.
-        """
-        self.on_event(events.Down())
-
-    def _ensure_there_are_no_other_current_protonvpn_connections(self):
-        """
-        Ensures that there are no other current protonvpn connection.
-        Check *Limitations* in class description.
-
-        Should be the first line in overriden ``up()`` methods.
-
-        :raises ConflictError: When there another current connection.
-
-        It was decided for this check to be strict, for the simple reason that
-        stricter is better the looser. This though can be subject to change in
-        the future. Thus `ConflictError` will always be thrown if there is a
-        connection created by this library.
-        """
-        if self._get_connection():
-            raise ConflictError(
-                "Another current connection was found. "
-                "Stop existing connections to start a new one"
-            )
-
-    @classmethod
-    def get_from_factory(cls, protocol: str = None, backend: str = None):
-        """Get a vpn connection from factory.
-
-            :param protocol: Optional.
-                protocol to connect with, all in smallcaps
-            :type protocol: str
-            :param backend: Optional.
-                By default, get_vpnconnection() will always return based on NM
-                backend, although there are two execetpions to this,
-                which are listed below:
-
-                - If the priority value of another backend is lower then the
-                  priority value of
-                  NM backend, then former will be returned instead of the latter.
-                - If backend is set to a matching property of an backend of
-                  VPNConnection, then that backend is to be returned instead.
-            :type backend: str
-        """
-        try:
-            backend = Loader.get("backend", class_name=backend)
-        except RuntimeError as error:
-            raise MissingBackendDetails(
-                f'Backend "{backend}" could not be found.'
-            ) from error
-
-        return backend.factory(protocol)
-
-    @classmethod
-    def get_current_connection(
-        cls, backend: str = None
-    ) -> Optional['VPNConnection']:
-        """ Get the current VPNConnection or None if there no current connection.
-            current VPNConnection is persistent and can be called after
-            client code exit.
-
-            :return: :class:`VPNConnection`
-        """
-        backend = Loader.get("backend", class_name=backend)
-        return backend._get_connection()  # pylint: disable=protected-access
 
     @property
     def settings(self) -> Settings:
@@ -246,7 +215,7 @@ class VPNConnection(VPNStateMachine):
     @property
     def _use_certificate(self):
         use_certificate = False
-        env_var = os.environ.get("PROTONVPN_USE_CERTIFICATE", False)
+        env_var = os.environ.get("PROTON_VPN_USE_CERTIFICATE", False)
         if isinstance(env_var, str):
             env_filtered = env_var.strip("").replace(" ", "").lower()
             if env_filtered == "true" or "true" in env_filtered:
@@ -255,108 +224,42 @@ class VPNConnection(VPNStateMachine):
         return use_certificate
 
     @classmethod
-    def _get_connection(cls) -> Optional[VPNConnection]:
-        """*For developers*
-        Each backend has to provide a classmethod of getting a connection.
-
-            :return: either vpn connection if exists or none
-            :rtype: VPNConnection | None
-
-        Usage:
-
-        .. code-block::
-
-            from proton.vpn.connection import VPNConnection
-
-            class CustomBackend(VPNConnection):
-                backend = "custom_backend"
-
-                @classmethod
-                def _get_connection(cls):
-                    classes = [OpenVPNTCP, OpenVPNUDP, Wireguard, Strongswan]
-
-                    for _class in classes:
-                        vpnconnection = _class(None, None)
-                        if vpnconnection._get_protonvpn_connection():
-                            return vpnconnection
-
-        Note: Some code has been ommitted for readability.
-        """
-        raise NotImplementedError
-
-    @classmethod
+    @abstractmethod
     def _get_priority(cls) -> int:
-        """*For developers*
+        """
+        Priority of the VPN connection implementation.
 
-        Priority value determines which backend takes precedence.
+        To be implemented by subclasses.
 
-        If no specific backend has been defined then each connection
-        backend class to calculate it's priority value. This priority value is
-        then used by the factory to select the optimal backend for
-        establishing a connection.
+        When no backend is specified when creating a VPN connection instance
+        with `VPNConnection.create`, the VPN connection implementation is
+        chosen based on the priority value returned by this method.
 
         The lower the value, the more priority it has.
 
-        Network manager will always have priority, thus it will always have
-        the value of 100.
-        If NetworkManage packages are installed but are not running,
-        then any other backend
-        will take precedence.
-
-        Usage:
-
-        .. code-block::
-
-            from proton.vpn.connection import VPNConnection
-
-            class CustomBackend(VPNConnection):
-                backend = "custom_backend"
-
-                ...
-
-                @classmethod
-                def _get_priority(cls):
-                    # Either return a hard-coded value (which is discoureaged),
-                    # or calculate it based on some system settings
-                    return 150
-
-        Note: Some code has been ommitted for readability.
+        Ideally, the returned priority value should not be hardcoded but
+        calculated based on the environment. For example, a VPN connection
+        implementation using NetworkManager could return a high priority
+        when the NetworkManager service is running or a low priority when it's
+        not.
         """
-        return None
 
     @classmethod
-    def _validate(cls):
-        return False
-
-    def _ensure_unique_id_is_set(self, force=False) -> None:
-        """*For developers*
-
-        It is crucial that unique_id is always set and current. The only times
-        when it can be empty is when there is no VPN connection.
-
-        Suppose the following:
-
-        .. code-block::
-
-            vpnconnection = VPNConnection.get_current_connection()
-            if not vpnconnection:
-                print("There is no connection")
-
-        The way to determine if there is connection is by checking if
-        a connection was previously persisted (with add_persistence()).
+    @abstractmethod
+    def _validate(cls) -> bool:
         """
-        if self._unique_id and not force:
-            return
+        Determines whether the VPN connection implementation is valid or not.
+        To be implemented by subclasses.
 
-        self._persisted_parameters = self._connection_persistence.load()
-        if self._persisted_parameters:
-            self._unique_id = self._persisted_parameters.connection_id
-        else:
-            self._unique_id = None
+        If this method returns `False` then the VPN connection implementation
+        will be skipped when creating a VPN connection instance with
+        `VPNConnection.create`.
+
+        :return: `True` if the implementation is valid or `False` otherwise.
+        """
 
     def add_persistence(self):
-        """*For developers*
-
+        """
         Stores the connection parameters to disk.
 
         The connection parameters (e.g. backend, protocol, connection ID,
@@ -374,8 +277,7 @@ class VPNConnection(VPNStateMachine):
         self._persisted_parameters = params
 
     def remove_persistence(self):
-        """*For developers*
-
+        """
         Works in the opposite way of add_persistence. It removes the
         persistence file. This is used in conjunction with down, since if the
         connection is turned down, we don't want to keep any persistence files.
@@ -383,16 +285,27 @@ class VPNConnection(VPNStateMachine):
         self._connection_persistence.remove()
 
     def enable_ipv6_leak_protection(self):
+        """
+        Prevents IPv6 leaks.
+
+        This method should be called before establishing IPv4 VPN connections,
+        so that no traffic leaks through the IPv6 interface while connected
+        to the VPN.
+        """
         self._killswitch.enable_ipv6_leak_protection()
 
     def disable_ipv6_leak_protection(self):
+        """
+        Stops preventing IPv6 leaks.
+
+        This method should be called after the user willingly ends a VPN connection.
+        """
         self._killswitch.disable_ipv6_leak_protection()
 
     def _get_user_pass(self, apply_feature_flags=False):
         """*For developers*
 
-            :param apply_feature_flags: if feature flags are to be suffixed to username
-            :type apply_feature_flags: bool
+        :param apply_feature_flags: if feature flags are to be suffixed to username
 
         In case of non-certificate based authentication, username and password need
         to be provided for authentication. In such cases, the username can be optionally
@@ -427,8 +340,7 @@ class VPNConnection(VPNStateMachine):
         return username, user_data.password
 
     def _get_feature_flags(self) -> Optional[list]:
-        """*For developers*
-
+        """
         Creates a list of feature flags that are fetched from `self._settings`.
         These feature flags are used to suffix them to a username, to trigger special
         behaviour on server-side.
@@ -438,8 +350,7 @@ class VPNConnection(VPNStateMachine):
         return list_flags
 
     def _transform_features_to_flags(self, list_flags: Optional[list]) -> Optional[list]:
-        """*For developers*
-
+        """
         Transform the flags into features to be suffixed to username.
         """
         if self._settings is None:

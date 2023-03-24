@@ -2,110 +2,51 @@
 Implementation of the Publisher/Subscriber used to signal VPN connection
 state changes.
 """
-from typing import Protocol, runtime_checkable
+from typing import Callable, List, Optional
 
-from .enum import ConnectionStateEnum
+from proton.vpn import logging
 
-
-@runtime_checkable
-class Subscriber(Protocol):  # pylint: disable=too-few-public-methods
-    """Subscriber to connection status updates."""
-
-    def status_update(self, status: "BaseState"):  # noqa
-        """This method is called by the publisher whenever a VPN connection status
-        update occurs.
-        :param status: new connection status.
-        """
+logger = logging.getLogger(__name__)
 
 
 class Publisher:
-    """Publisher of connection status updates."""
+    """Simple generic implementation of the publish-subscribe pattern."""
 
-    def __init__(self):
-        self.__subscribers = []
+    def __init__(self, subscribers: Optional[List[Callable]] = None):
+        self._subscribers = subscribers or []
 
-    def register(self, subscriber: Subscriber):
+    def register(self, subscriber: Callable):
         """
-        Register a subscriber to receive connection status updates.
+        Registers a subscriber to be notified of new updates.
 
-            :param subscriber: object/class instance that wants to receive
-                connection status updates
+        The subscribers are not expected to block, as they will be notified
+        sequentially, one after the other in the order in which they were
+        registered.
 
-        Usage:
-
-        .. code-block::
-
-            class StatusUpdateReceiver:
-
-                def status_update(self, status):
-                    print(status)
-                    # or do something else with the received status
-
-            status_update_receives = StatusUpdateReceiver()
-
-            from proton.vpn.connection import VPNConnection
-
-            vpnconnection = VPNConnection.get_from_factory()
-            vpnconnection(vpnserver, vpncredentials)
-            vpnconnection.register(status_update_receives)
-
-        Each subscriber should have a `status_update()`
-        method to receive updates.
-
-        :raises TypeError: if subscriber is not of valid type
-        :raises AttributeError: if subscriber hasn't implemented required callback
+        :param subscriber: callback that will be called with the expected
+            args/kwargs whenever there is an update.
+        :raises ValueError: if the subscriber is not callable.
         """
-        if subscriber is None:
-            raise TypeError("Subscriber can not be None")
+        if not callable(subscriber):
+            raise ValueError(f"Subscriber to register is not callable: {subscriber}")
 
-        if subscriber in self.__subscribers:
-            return
+        if subscriber not in self._subscribers:
+            self._subscribers.append(subscriber)
 
-        if not isinstance(subscriber, Subscriber):
-            raise AttributeError("Missing `status_update` callback")
-
-        self.__subscribers.append(subscriber)
-
-    def unregister(self, subscriber: Subscriber):
+    def unregister(self, subscriber: Callable):
         """
-        Unregister subscriber to stop receiving connection status updates.
+        Unregisters a subscriber.
 
-            :param subscriber: the subscriber object
-            :type subscriber: obj
-
-        Usage:
-
-        .. code-block::
-
-            class StatusUpdateReceiver:
-
-                def status_update(self, status):
-                    print(status)
-                    # or do something else with the received status
-
-            status_update_receives = StatusUpdateReceiver()
-
-            from proton.vpn.connection import VPNConnection
-
-            vpnconnection = VPNConnection.get_from_factory()
-            vpnconnection(vpnserver, vpncredentials)
-            vpnconnection.register(status_update_receives)
-
-            # lower in the code I then decide that I no longer wish to
-            # receive connection status updates, so I decide to
-            # unregister myself as a subscriber:
-            vpnconnection.unregister(status_update_receives)
-
+        :param subscriber: the subscriber to be unregistered.
         """
-        try:
-            self.__subscribers.remove(subscriber)
-        except ValueError:
-            pass
+        if subscriber in self._subscribers:
+            self._subscribers.remove(subscriber)
 
-    def _notify_subscribers(self, connection_status: ConnectionStateEnum):
-        """*For developers*
+    def notify(self, *args, **kwargs):
+        """
+        Notifies the subscribers about a new update.
 
-        Notifies the subscribers about connection state changes.
+        All subscribers will be called
 
         Each backend and/or protocol have to call this method whenever the connection
         state changes, so that each subscriber can receive states changes whenever they occur.
@@ -114,5 +55,17 @@ class Publisher:
             :type connection_status: ConnectionStateEnum
 
         """
-        for subscriber in self.__subscribers:
-            subscriber.status_update(connection_status)
+        for subscriber in self._subscribers:
+            try:
+                subscriber(*args, **kwargs)
+            except Exception:  # pylint: disable=broad-except
+                logger.exception(f"An error occurred notifying subscriber {subscriber}.")
+
+    def is_subscriber_registered(self, subscriber: Callable) -> bool:
+        """Returns whether a subscriber is registered or not."""
+        return subscriber in self._subscribers
+
+    @property
+    def number_of_subscribers(self) -> int:
+        """Number of currently registered subscribers."""
+        return len(self._subscribers)

@@ -114,6 +114,7 @@ class Disconnected(BaseState):
 
     def init(self, state_machine: "VPNStateMachine"):
         state_machine.remove_persistence()
+        state_machine.disable_ipv6_leak_protection()
 
 
 class Connecting(BaseState):
@@ -140,6 +141,7 @@ class Connecting(BaseState):
         return self
 
     def init(self, state_machine: "VPNStateMachine"):
+        state_machine.enable_ipv6_leak_protection()
         state_machine.start_connection()
 
 

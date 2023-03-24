@@ -13,6 +13,7 @@ from proton.vpn.connection.exceptions import ConflictError, MissingBackendDetail
 from proton.vpn.connection.interfaces import VPNServer, Settings, VPNCredentials
 from proton.vpn.connection.persistence import ConnectionPersistence, ConnectionParameters
 from proton.vpn.connection.state_machine import VPNStateMachine
+from proton.vpn.killswitch.interface import KillSwitch
 
 
 class VPNConnection(VPNStateMachine):
@@ -73,8 +74,9 @@ class VPNConnection(VPNStateMachine):
         vpnserver: VPNServer,
         vpncredentials: VPNCredentials,
         settings: Settings = None,
-        connection_persistence: ConnectionPersistence = None
-    ):
+        connection_persistence: ConnectionPersistence = None,
+        killswitch: KillSwitch = None
+    ):  # pylint: disable=too-many-arguments
         """Initialize a VPNConnection object.
 
             :param vpnserver: VPNServer type or same signature as VPNServer.
@@ -96,6 +98,8 @@ class VPNConnection(VPNStateMachine):
         self._vpnserver = vpnserver
         self._vpncredentials = vpncredentials
         self._settings = settings
+
+        self._killswitch = killswitch or KillSwitch.get()()
 
         self._connection_persistence = connection_persistence or ConnectionPersistence()
         self._persisted_parameters = None
@@ -377,6 +381,12 @@ class VPNConnection(VPNStateMachine):
         connection is turned down, we don't want to keep any persistence files.
         """
         self._connection_persistence.remove()
+
+    def enable_ipv6_leak_protection(self):
+        self._killswitch.enable_ipv6_leak_protection()
+
+    def disable_ipv6_leak_protection(self):
+        self._killswitch.disable_ipv6_leak_protection()
 
     def _get_user_pass(self, apply_feature_flags=False):
         """*For developers*

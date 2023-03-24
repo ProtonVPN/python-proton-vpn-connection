@@ -1,5 +1,5 @@
 import os
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 from proton.vpn.connection import VPNConnection, states
@@ -226,7 +226,9 @@ class MockListenerClass:
 
 
 def test_not_implemented_get_connection(vpn_server, vpn_credentials, settings):
-    vpconn = MockVpnConnectionMissingGetConnection(vpn_server, vpn_credentials)
+    vpconn = MockVpnConnectionMissingGetConnection(
+        vpn_server, vpn_credentials, killswitch=Mock()
+    )
     with pytest.raises(NotImplementedError):
         vpconn._get_connection()
 
@@ -238,7 +240,8 @@ def test_up(vpn_server, vpn_credentials, connection_persistence_mock):
     vpnconn = MockVpnConnection(
         vpn_server,
         vpn_credentials,
-        connection_persistence=connection_persistence_mock
+        connection_persistence=connection_persistence_mock,
+        killswitch=Mock()
     )
     vpnconn._get_connection = _get_connection
     vpnconn.register(MockListenerClass())
@@ -253,7 +256,9 @@ def test_down(vpn_server, vpn_credentials):
     m = MockVpnConnection.determine_initial_state
     MockVpnConnection.determine_initial_state = determine_initial_state
 
-    vpnconn = MockVpnConnection(vpn_server, vpn_credentials)
+    vpnconn = MockVpnConnection(
+        vpn_server, vpn_credentials, killswitch=Mock()
+    )
     vpnconn.register(MockListenerClass())
 
     vpnconn.down()
@@ -264,21 +269,23 @@ def test_down(vpn_server, vpn_credentials):
 
 def test_ensure_there_are_no_other_current_protonvpn_connections(vpn_server, vpn_credentials, settings):
     from proton.vpn.connection.exceptions import ConflictError
-    vpnconn = MockVpnConnection(vpn_server, vpn_credentials, settings)
+    vpnconn = MockVpnConnection(
+        vpn_server, vpn_credentials, settings, killswitch=Mock()
+    )
     with pytest.raises(ConflictError):
         vpnconn._ensure_there_are_no_other_current_protonvpn_connections()
 
 
 @pytest.mark.parametrize("env_var_value", ["False", "no", "test", "bool", "0", "tr!ue"])
 def test_not_use_certificate(vpn_server, vpn_credentials, env_var_value):
-    vpnconn = MockVpnConnection(vpn_server, vpn_credentials)
+    vpnconn = MockVpnConnection(vpn_server, vpn_credentials, killswitch=Mock())
     os.environ["PROTONVPN_USE_CERTIFICATE"] = env_var_value
     assert vpnconn._use_certificate is False
 
 
 @pytest.mark.parametrize("env_var_value", ["True", "true", "tr ue", "tru e", "TRue", "TRUe!"])
 def test_use_certificate(vpn_server, vpn_credentials, env_var_value):
-    vpnconn = MockVpnConnection(vpn_server, vpn_credentials)
+    vpnconn = MockVpnConnection(vpn_server, vpn_credentials, killswitch=Mock())
     os.environ["PROTONVPN_USE_CERTIFICATE"] = env_var_value
     assert vpnconn._use_certificate is True
 
@@ -298,7 +305,8 @@ def test_ensure_unique_id_is_set_initializes_id_as_none_without_a_persisted_conn
     vpnconn = MockVpnConnection(
         vpnserver=None,
         vpncredentials=None,
-        connection_persistence=connection_persistence_mock
+        connection_persistence=connection_persistence_mock,
+        killswitch=Mock()
     )
 
     vpnconn._ensure_unique_id_is_set()
@@ -320,7 +328,8 @@ def test_ensure_unique_id_is_set_loads_connection_id_from_persisted_connection(
     vpnconn = MockVpnConnection(
         vpn_server,
         vpn_credentials,
-        connection_persistence=connection_persistence_mock
+        connection_persistence=connection_persistence_mock,
+        killswitch=Mock()
     )
     assert vpnconn._unique_id is None
 
@@ -334,7 +343,8 @@ def test_add_persistence(vpn_server, vpn_credentials, connection_persistence_moc
     vpnconn = MockVpnConnection(
         vpn_server,
         vpn_credentials,
-        connection_persistence=connection_persistence_mock
+        connection_persistence=connection_persistence_mock,
+        killswitch=Mock()
     )
     vpnconn._unique_id = "add-persistence"
 
@@ -353,7 +363,8 @@ def test_remove_persistence(vpn_server, vpn_credentials, connection_persistence_
     vpnconn = MockVpnConnection(
         vpn_server,
         vpn_credentials,
-        connection_persistence=connection_persistence_mock
+        connection_persistence=connection_persistence_mock,
+        killswitch=Mock()
     )
     vpnconn._unique_id = "remove-persistance"
 
@@ -363,20 +374,26 @@ def test_remove_persistence(vpn_server, vpn_credentials, connection_persistence_
 
 
 def test_get_user_pass_with_malformed_args():
-    vpnconn = MockVpnConnection(MalformedVPNServer(), MalformedVPNCredentials())
+    vpnconn = MockVpnConnection(
+        MalformedVPNServer(), MalformedVPNCredentials(), killswitch=Mock()
+    )
     with pytest.raises(AttributeError):
         vpnconn._get_user_pass()
 
 
 def test_get_user_pass(vpn_server, vpn_credentials):
-    vpnconn = MockVpnConnection(vpn_server, vpn_credentials)
+    vpnconn = MockVpnConnection(
+        vpn_server, vpn_credentials, killswitch=Mock()
+    )
     u, p = vpn_credentials.userpass_credentials.username, vpn_credentials.userpass_credentials.password
     user, password = vpnconn._get_user_pass()
     assert u == user and p == password
 
 
 def test_get_user_with_default_feature_flags(vpn_server, vpn_credentials):
-    vpnconn = MockVpnConnection(vpn_server, vpn_credentials)
+    vpnconn = MockVpnConnection(
+        vpn_server, vpn_credentials, killswitch=Mock()
+    )
     u = vpn_credentials.userpass_credentials.username
     user, _ = vpnconn._get_user_pass(True)
     _u = "+".join([u] + vpnconn._get_feature_flags())
@@ -422,7 +439,10 @@ def test_get_user_with_features(vpn_server, vpn_credentials, ns, accel, pf, rn, 
     m = MockSettings.features
     MockSettings.features = MockFeatures()
 
-    vpnconn = MockVpnConnection(vpn_server, vpn_credentials, MockSettings())
+    vpnconn = MockVpnConnection(
+        vpn_server, vpn_credentials,
+        MockSettings(), killswitch=Mock()
+    )
     u = vpn_credentials.userpass_credentials.username
     user, _ = vpnconn._get_user_pass(True)
     _u = "+".join([u] + vpnconn._get_feature_flags())

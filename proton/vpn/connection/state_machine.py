@@ -107,3 +107,11 @@ class VPNStateMachine(Publisher):
     def remove_persistence(self):
         """Removes the persisted VPN connection parameters."""
         raise NotImplementedError
+
+    def enable_ipv6_leak_protection(self):
+        """Enables IPv6 kill switch to prevent leaks."""
+        raise NotImplementedError
+
+    def disable_ipv6_leak_protection(self):
+        """Disables IPv6 kill switch to prevent leaks."""
+        raise NotImplementedError

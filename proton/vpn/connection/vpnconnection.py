@@ -7,6 +7,7 @@ from __future__ import annotations
 import os
 from abc import ABC, abstractmethod
 from typing import Optional, Callable
+from concurrent.futures import Future
 
 from proton.loader import Loader
 
@@ -284,7 +285,7 @@ class VPNConnection(ABC):
         """
         self._connection_persistence.remove()
 
-    def enable_ipv6_leak_protection(self):
+    def enable_ipv6_leak_protection(self) -> Future:
         """
         Prevents IPv6 leaks.
 
@@ -294,7 +295,7 @@ class VPNConnection(ABC):
         """
         self._killswitch.enable_ipv6_leak_protection()
 
-    def disable_ipv6_leak_protection(self):
+    def disable_ipv6_leak_protection(self) -> Future:
         """
         Stops preventing IPv6 leaks.
 

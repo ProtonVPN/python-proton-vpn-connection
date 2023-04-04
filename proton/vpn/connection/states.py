@@ -6,6 +6,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional
+from concurrent.futures import Future
 
 from proton.vpn import logging
 from proton.vpn.connection import events
@@ -140,9 +141,13 @@ class Disconnected(State):
             # IMPORTANT: in this case, the kill switch is **not** disabled.
             return events.Up(EventContext(connection=self.context.reconnection))
 
+        def _on_ipv6_leak_protection_disabled(_future: Future):
+            _future.result()
+
         # When the state machine is in disconnected state, a VPN connection
         # may have not been created yet.
-        self.context.connection.disable_ipv6_leak_protection()
+        future = self.context.connection.disable_ipv6_leak_protection()
+        future.add_done_callback(_on_ipv6_leak_protection_disabled)
         self.context.connection.remove_persistence()
         return None
 
@@ -183,8 +188,12 @@ class Connecting(State):
         return self
 
     def run_tasks(self):
-        self.context.connection.enable_ipv6_leak_protection()
-        self.context.connection.start()
+        def _on_ipv6_leak_protection_enabled(_future: Future):
+            _future.result()
+            self.context.connection.start()
+
+        future = self.context.connection.enable_ipv6_leak_protection()
+        future.add_done_callback(_on_ipv6_leak_protection_enabled)
 
 
 class Connected(State):

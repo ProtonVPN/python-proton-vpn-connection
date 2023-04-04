@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-connection
-%define version 0.6.1
+%define version 0.6.2
 %define release 1
 
 Prefix: %{_prefix}
@@ -50,6 +50,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Tue Apr 04 2023 Josep Llaneras <josep.llaneras@proton.ch> 0.6.2
+- Fully implement IPv6 leak protection
+
 * Mon Apr 03 2023 Josep Llaneras <josep.llaneras@proton.ch> 0.6.1
 - Implement global VPN connection state machine
 

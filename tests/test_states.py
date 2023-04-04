@@ -1,5 +1,6 @@
 from typing import Type
 from unittest.mock import Mock, call
+from concurrent.futures import Future
 
 import pytest
 
@@ -184,8 +185,12 @@ def test_disconnected_run_tasks_when_reconnection_is_not_requested():
      - Remove persisted connection parameters.
     """
     connection = Mock()
-    disconnected = states.Disconnected(states.StateContext(connection=connection))
 
+    future = Future()
+    future.set_result(None)
+    connection.disable_ipv6_leak_protection.return_value = future
+
+    disconnected = states.Disconnected(states.StateContext(connection=connection))
     generated_event = disconnected.run_tasks()
 
     connection_calls = connection.method_calls
@@ -231,6 +236,11 @@ def test_connecting_run_tasks():
     It's very important that IPv6 leak protection is enabled before starting the connection.
     """
     connection = Mock()
+
+    future = Future()
+    future.set_result(None)
+    connection.enable_ipv6_leak_protection.return_value = future
+
     connecting = states.Connecting(states.StateContext(connection=connection))
 
     connecting.run_tasks()

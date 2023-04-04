@@ -1,3 +1,9 @@
+protonvpn-connection (0.6.2) unstable; urgency=medium
+
+  * Fully implement IPv6 leak protection
+
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Tue, 04 Apr 2023 15:37:49 +0200
+
 protonvpn-connection (0.6.1) unstable; urgency=medium
 
   * Implement global VPN connection state machine

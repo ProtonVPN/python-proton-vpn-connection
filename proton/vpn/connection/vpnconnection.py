@@ -5,8 +5,9 @@ VPN connection interface.
 from __future__ import annotations
 
 import os
+import sys
 from abc import ABC, abstractmethod
-from typing import Optional, Callable
+from typing import Optional, Callable, List
 from concurrent.futures import Future
 
 from proton.loader import Loader
@@ -340,23 +341,24 @@ class VPNConnection(ABC):
 
         return username, user_data.password
 
-    def _get_feature_flags(self) -> Optional[list]:
+    def _get_feature_flags(self) -> List[str]:
         """
         Creates a list of feature flags that are fetched from `self._settings`.
-        These feature flags are used to suffix them to a username, to trigger special
-        behaviour on server-side.
+        These feature flags are used to suffix them to a username, to trigger server-side
+        specific behaviour.
         """
         list_flags = []
-        self._transform_features_to_flags(list_flags)
-        return list_flags
 
-    def _transform_features_to_flags(self, list_flags: Optional[list]) -> Optional[list]:
-        """
-        Transform the flags into features to be suffixed to username.
-        """
+        if sys.platform.startswith("linux"):
+            list_flags.append("pl")
+        elif sys.platform.startswith("win32") or sys.platform.startswith("cygwin"):
+            list_flags.append("pw")
+        elif sys.platform.startswith("darwin"):
+            list_flags.append("pm")
+
         if self._settings is None:
             list_flags.append("nsm")
-            return
+            return list_flags
 
         features = self._settings.features
 
@@ -372,3 +374,5 @@ class VPNConnection(ABC):
             list_flags.append("sm")
         else:
             list_flags.append("nsm")
+
+        return list_flags

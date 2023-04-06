@@ -1,3 +1,9 @@
+protonvpn-connection (0.6.3) unstable; urgency=medium
+
+  * Add platform suffix to username
+
+ --  Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Thu, 06 Apr 2023 15:37:49 +0200
+
 protonvpn-connection (0.6.2) unstable; urgency=medium
 
   * Fully implement IPv6 leak protection
@@ -14,38 +20,38 @@ protonvpn-connection (0.6.0) unstable; urgency=medium
 
   * Add IPv6 leak protection
 
- -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> Fri, 24 Mar 2023 12:00:00 +0100
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Fri, 24 Mar 2023 12:00:00 +0100
 
 protonvpn-connection (0.5.0) unstable; urgency=medium
 
   * Use standardized path for connection persistence
 
- -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> Tue, 14 Feb 2023 12:00:00 +0100
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Tue, 14 Feb 2023 12:00:00 +0100
 
 protonvpn-connection (0.4.2) unstable; urgency=medium
 
   * Release connection resources on errors
 
- -- Josep Llaneras <josep.llaneras@proton.ch> Fri, 30 Dec 2022 11:26:59 +0100
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Fri, 30 Dec 2022 11:26:59 +0100
 
 protonvpn-connection (0.4.1) unstable; urgency=medium
 
   * Fix log message
   * Refactor state machine so that it runs actions just after each state change
 
- -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> Tue, 20 Dec 2022 10:00:00 +0100
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Tue, 20 Dec 2022 10:00:00 +0100
 
 protonvpn-connection (0.4.0) unstable; urgency=medium
 
   * Add device disconnected event
 
- -- Josep Llaneras <josep.llaneras@proton.ch> Wed, 14 Dec 2022 10:57:29 +0100
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Wed, 14 Dec 2022 10:57:29 +0100
 
 protonvpn-connection (0.3.0) unstable; urgency=medium
 
   * Persist VPN connection server to disk
 
- -- Josep Llaneras <josep.llaneras@proton.ch> Mon, 05 Dec 2022 17:49:00 +0100
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Mon, 05 Dec 2022 17:49:00 +0100
 
 protonvpn-connection (0.2.1) unstable; urgency=medium
 

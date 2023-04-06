@@ -293,7 +293,7 @@ class VPNConnection(ABC):
         so that no traffic leaks through the IPv6 interface while connected
         to the VPN.
         """
-        self._killswitch.enable_ipv6_leak_protection()
+        return self._killswitch.enable_ipv6_leak_protection()
 
     def disable_ipv6_leak_protection(self) -> Future:
         """
@@ -301,7 +301,7 @@ class VPNConnection(ABC):
 
         This method should be called after the user willingly ends a VPN connection.
         """
-        self._killswitch.disable_ipv6_leak_protection()
+        return self._killswitch.disable_ipv6_leak_protection()
 
     def _get_user_pass(self, apply_feature_flags=False):
         """*For developers*

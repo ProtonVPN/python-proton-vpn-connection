@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-connection
-%define version 0.6.3
+%define version 0.6.4
 %define release 1
 
 Prefix: %{_prefix}
@@ -28,6 +28,8 @@ Requires: python3-proton-core
 Requires: python3-proton-vpn-logger
 Requires: python3-proton-vpn-killswitch
 
+Conflicts: python3-proton-vpn-api-core <= 0.10.2
+
 %{?python_disable_dependency_generator}
 
 %description
@@ -50,7 +52,10 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
-* Thu Apr 06 2023 Josep Llaneras <josep.llaneras@proton.ch> 0.6.3
+* Fri May 26 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.6.4
+- Specify exit IP on OVPN connections
+
+* Thu Apr 06 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.6.3
 - Add platform suffix to username
 
 * Tue Apr 04 2023 Josep Llaneras <josep.llaneras@proton.ch> 0.6.2

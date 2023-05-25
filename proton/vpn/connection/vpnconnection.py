@@ -374,8 +374,13 @@ class VPNConnection(ABC):
         elif sys.platform.startswith("darwin"):
             list_flags.append("pm")
 
+        # This is used to ensure that the provided IP matches the one
+        # from the exit IP.
+        label = self._vpnserver.label
+        if label:
+            list_flags.append(f"b:{label}")
+
         if self._settings is None:
-            list_flags.append("nsm")
             return list_flags
 
         features = self._settings.features

@@ -49,6 +49,7 @@ class VPNServer(Protocol):  # pylint: disable=too-few-public-methods
     udp_ports: List[int]
     server_id: str
     server_name: str
+    label: str = None
 
 
 class VPNPubkeyCredentials(Protocol):  # pylint: disable=too-few-public-methods

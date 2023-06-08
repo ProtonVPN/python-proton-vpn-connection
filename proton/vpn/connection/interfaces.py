@@ -121,10 +121,6 @@ class Features:
             def random_nat(self):
                 return True
 
-            @property
-            def safe_mode(self):
-                return True
-
     Note: Not all fields are mandatory to override, only those that are
     actually needed, ie:
 
@@ -175,14 +171,6 @@ class Features:
         """
         return None
 
-    @property
-    def safe_mode(self):
-        """
-        :return: safe mode state value
-        :rtype: bool
-        """
-        return None
-
 
 class Settings:
     """Optional.
@@ -208,7 +196,7 @@ class Settings:
                 return ["182.24.1.3", "89.1.32.1"]
 
             @property
-            def disable_ipv6(self):
+            def ipv6(self):
                 return False
 
     Note: Not all fields are mandatory to override, only those that are

@@ -393,9 +393,5 @@ class VPNConnection(ABC):
             list_flags.append("pmp")
         if not features.random_nat:
             list_flags.append("nr")
-        if features.safe_mode:
-            list_flags.append("sm")
-        else:
-            list_flags.append("nsm")
 
         return list_flags

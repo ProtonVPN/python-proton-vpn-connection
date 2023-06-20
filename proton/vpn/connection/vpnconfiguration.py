@@ -137,13 +137,12 @@ class OVPNConfig(VPNConfiguration):
             "openvpn_protocol": self._protocol,
             "serverlist": [self._vpnserver.server_ip],
             "openvpn_ports": ports,
-            "ipv6_enabled": self.settings.ipv6,
             "ca_certificate": CA_CERT,
             "certificate_based": self.use_certificate,
             "custom_dns": len(self.settings.dns_custom_ips) > 0,
         }
-        if self.use_certificate:
 
+        if self.use_certificate:
             j2_values["cert"] = self._vpncredentials.pubkey_credentials.certificate_pem
             j2_values["priv_key"] = self._vpncredentials.pubkey_credentials.openvpn_private_key
 
@@ -192,7 +191,6 @@ class WireguardConfig(VPNConfiguration):
             "wg_ip": self._vpnserver.server_ip,
             "wg_port": self._vpnserver.udp_ports[0],
             "wg_server_pk": self._vpnserver.wg_public_key_x25519,
-            "ipv6_enabled": self.settings.ipv6
         }
 
         template = Environment(loader=BaseLoader).from_string(WIREGUARD_TEMPLATE)

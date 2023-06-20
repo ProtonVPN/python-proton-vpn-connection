@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-connection
-%define version 0.7.0
+%define version 0.8.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -28,7 +28,7 @@ Requires: python3-proton-core
 Requires: python3-proton-vpn-logger
 Requires: python3-proton-vpn-killswitch
 
-Conflicts: python3-proton-vpn-api-core <= 0.10.2
+Conflicts: python3-proton-vpn-api-core < 0.14.0
 
 %{?python_disable_dependency_generator}
 
@@ -52,6 +52,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Tue Jun 20 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.8.0
+- Remove IPv6 and split tunneling options
+
 * Thu Jun 08 2023 Josep Llaneras <josep.llaneras@proton.ch> 0.7.0
 - Remove the deprecated Safe Mode feature flag
 

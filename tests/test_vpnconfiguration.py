@@ -87,20 +87,11 @@ def test_custom_settings():
         def dns_custom_ips(self):
             return ["99.99.99.99"]
 
-        @property
-        def split_tunneling_ips(self):
-            return ["102.64.10.16"]
-
-        @property
-        def ipv6(self):
-            return True
 
     cfg = VPNConfiguration(MockVpnServer(), MockVpnCredentials(), settings=NewSettings())
 
     assert isinstance(cfg.settings, NewSettings)
     assert cfg.settings.dns_custom_ips == ["99.99.99.99"]
-    assert cfg.settings.split_tunneling_ips == ["102.64.10.16"]
-    assert cfg.settings.ipv6
 
 
 def test_default_settings():
@@ -172,8 +163,6 @@ def test_ovpnconfig_with_settings(protocol, modified_exec_env):
     ovpn_cfg._protocol = protocol
     output = ovpn_cfg.generate()
     assert ovpn_cfg._vpnserver.server_ip in output
-    assert 'pull-filter ignore "ifconfig-ipv6"' not in output  # MockSettings().ipv6 is True
-    assert 'pull-filter ignore "route-ipv6"' not in output  # MockSettings().ipv6 is True
 
 
 @pytest.mark.parametrize("protocol", ["udp", "tcp"])
@@ -181,9 +170,6 @@ def test_ovpnconfig_with_missing_settings_applies_expected_defaults(protocol, mo
     ovpn_cfg = OVPNConfig(MockVpnServer(), MockVpnCredentials())
     ovpn_cfg._protocol = protocol
     generated_cfg = ovpn_cfg.generate()
-    # By default, IPv6 should be disabled
-    assert 'pull-filter ignore "ifconfig-ipv6"' in generated_cfg
-    assert 'pull-filter ignore "route-ipv6"' in generated_cfg
 
 
 @pytest.mark.parametrize("protocol", ["udp", "tcp"])
@@ -227,7 +213,6 @@ def test_wireguard_config_content_generation(modified_exec_env):
     assert credentials.pubkey_credentials.wg_private_key in generated_cfg
     assert server.wg_public_key_x25519 in generated_cfg
     assert server.server_ip in generated_cfg
-    assert "AllowedIPs = 0.0.0.0/0, ::/0" in generated_cfg  # MockSettings().ipv6 is True
 
 
 def test_wireguard_with_malformed_credentials(modified_exec_env):

@@ -105,11 +105,3 @@ class MockSettings(Settings):
     @property
     def dns_custom_ips(self):
         return ["1.1.1.1", "10.10.10.10"]
-
-    @property
-    def split_tunneling_ips(self):
-        return ["192.168.1.102", "192.168.5.99", "192.168.1.12"]
-
-    @property
-    def ipv6(self):
-        return True

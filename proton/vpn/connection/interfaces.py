@@ -191,14 +191,6 @@ class Settings:
             def dns_custom_ips(self):
                 return ["192.12.2.1", "175.12.3.5"]
 
-            @property
-            def split_tunneling_ips(self):
-                return ["182.24.1.3", "89.1.32.1"]
-
-            @property
-            def ipv6(self):
-                return False
-
     Note: Not all fields are mandatory to override, only those that are
     actually needed, ie:
 
@@ -223,24 +215,6 @@ class Settings:
         :rtype: List[str]
         """
         return []
-
-    @property
-    def split_tunneling_ips(self) -> "List[str]":
-        """Optional.
-
-        :return: a list with IPs to exclude from VPN tunnel
-        :rtype: List[str]
-        """
-        return []
-
-    @property
-    def ipv6(self) -> "bool":
-        """Optional.
-
-        :return: True if IPv6 should be enabled and False otherwise.
-        :rtype: bool
-        """
-        return False
 
     @property
     def features(self) -> "Features":

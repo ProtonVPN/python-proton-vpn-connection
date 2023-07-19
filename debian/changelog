@@ -1,8 +1,14 @@
+protonvpn-connection (0.9.0) unstable; urgency=medium
+
+  * Rename interface flag from random_nat to moderate_nat to conform API specs
+
+ --  Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Wed, 19 Jul 2023 11:00:00 +0100
+
 protonvpn-connection (0.8.0) unstable; urgency=medium
 
   * Remove IPv6 and split tunneling options
 
- --  Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Tue, 20 June 2023 17:00:00 +0100
+ --  Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Tue, 20 Jun 2023 17:00:00 +0100
 
 protonvpn-connection (0.7.0) unstable; urgency=medium
 

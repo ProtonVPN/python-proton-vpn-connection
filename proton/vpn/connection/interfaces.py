@@ -118,7 +118,7 @@ class Features:
                 return False
 
             @property
-            def random_nat(self):
+            def moderate_nat(self):
                 return True
 
     Note: Not all fields are mandatory to override, only those that are
@@ -164,9 +164,9 @@ class Features:
         return None
 
     @property
-    def random_nat(self):
+    def moderate_nat(self):
         """
-        :return: random nat state value
+        :return: moderate nat state value
         :rtype: bool
         """
         return None

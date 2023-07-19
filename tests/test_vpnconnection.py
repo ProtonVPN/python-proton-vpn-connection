@@ -294,7 +294,7 @@ def test_get_user_with_features(vpn_server, vpn_credentials, ns, accel, pf, rn, 
             return pf
 
         @property
-        def random_nat(self):
+        def moderate_nat(self):
             return rn
 
         @property

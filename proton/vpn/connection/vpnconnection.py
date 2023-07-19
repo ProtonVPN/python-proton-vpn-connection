@@ -391,7 +391,7 @@ class VPNConnection(ABC):
             list_flags.append("nst")
         if features.port_forwarding:
             list_flags.append("pmp")
-        if not features.random_nat:
+        if features.moderate_nat:
             list_flags.append("nr")
 
         return list_flags

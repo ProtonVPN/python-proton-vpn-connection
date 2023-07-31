@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-connection
-%define version 0.9.0
+%define version 0.10.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -52,6 +52,10 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Mon Jul 31 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.10.0
+- Fix: Fix issue with NM plugin not accepting params for newer openvpn version
+- See: https://gitlab.gnome.org/GNOME/NetworkManager-openvpn/-/issues/112
+
 * Wed Jul 19 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.9.0
 - Rename interface flag from random_nat to moderate_nat to conform API specs
 

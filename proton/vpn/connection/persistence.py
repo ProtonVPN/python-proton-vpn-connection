@@ -42,6 +42,7 @@ class ConnectionParameters:
     protocol: str
     server_id: str
     server_name: str
+    killswitch: int
 
 
 class ConnectionPersistence:
@@ -76,6 +77,7 @@ class ConnectionPersistence:
                     protocol=file_content["protocol"],
                     server_id=file_content["server_id"],
                     server_name=file_content["server_name"],
+                    killswitch=int(file_content.get("killswitch", 0))
                 )
             except (JSONDecodeError, KeyError):
                 logger.exception(

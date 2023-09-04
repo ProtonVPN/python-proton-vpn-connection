@@ -31,12 +31,11 @@ from proton.vpn.connection import events
 from proton.vpn.connection.enum import ConnectionStateEnum
 from proton.vpn.connection.events import EventContext
 from proton.vpn.connection.exceptions import ConcurrentConnectionsError
+from proton.vpn.killswitch.interface import KillSwitchState
+
 
 if TYPE_CHECKING:
     from proton.vpn.connection.vpnconnection import VPNConnection
-
-
-# pylint: disable=too-few-public-methods
 
 
 logger = logging.getLogger(__name__)
@@ -88,7 +87,7 @@ class State(ABC):
 
     States also have `context` (which are fetched from events). These can help
     in discovering potential issues on why certain states might an unexpected
-    behaviour. It is worth mentioning though that the contexts will always
+    behavior. It is worth mentioning though that the contexts will always
     be backend specific.
     """
     type = None
@@ -135,6 +134,12 @@ class State(ABC):
     def run_tasks(self) -> Optional[events.Event]:
         """Tasks to be run when this state instance becomes the current VPN state."""
 
+    @property
+    def is_killswitch_enabled(self) -> bool:
+        """Returns if kill switch is enabled or not."""
+        return self.context.connection.killswitch is not None \
+            and self.context.connection.killswitch == KillSwitchState.ON.value
+
 
 class Disconnected(State):
     """
@@ -149,11 +154,17 @@ class Disconnected(State):
 
         return self
 
-    def run_tasks(self):
+    def run_tasks(self):  # pylint: disable=inconsistent-return-statements
+        def _on_killswitch_disabled(_future: Future):
+            _future.result()
+
         if not self.context.connection:
             return None
 
         if self.context.reconnection:
+            if not self.is_killswitch_enabled:
+                future = self.context.connection.disable_killswitch()
+                future.add_done_callback(_on_killswitch_disabled)
             # When a reconnection is expected, an Up event is returned to start a new connection.
             # straight away.
             # IMPORTANT: in this case, the kill switch is **not** disabled.
@@ -166,6 +177,10 @@ class Disconnected(State):
         # may have not been created yet.
         future = self.context.connection.disable_ipv6_leak_protection()
         future.add_done_callback(_on_ipv6_leak_protection_disabled)
+
+        future = self.context.connection.disable_killswitch()
+        future.add_done_callback(_on_killswitch_disabled)
+
         self.context.connection.remove_persistence()
         return None
 
@@ -175,6 +190,7 @@ class Connecting(State):
     Connecting is the state reached when a VPN connection is requested.
     """
     type = ConnectionStateEnum.CONNECTING
+    _counter = 0
 
     def _on_event(self, event: events.Event):
         if isinstance(event, events.Connected):
@@ -208,10 +224,30 @@ class Connecting(State):
     def run_tasks(self):
         def _on_ipv6_leak_protection_enabled(_future: Future):
             _future.result()
-            self.context.connection.start()
+            self._counter += 1
+
+            if self._counter == 2 or not self.is_killswitch_enabled:
+                self.context.connection.start()
+                self._counter = 0
+
+        def _on_killswitch_enabled(_future: Future):
+            _future.result()
+            self._counter += 1
+
+            if self._counter == 2:
+                self.context.connection.start()
+                self._counter = 0
 
         future = self.context.connection.enable_ipv6_leak_protection()
         future.add_done_callback(_on_ipv6_leak_protection_enabled)
+
+        if not self.is_killswitch_enabled:  # pylint: disable=using-constant-test
+            return
+
+        ks_future = self.context.connection.enable_killswitch(
+            self.context.connection
+        )
+        ks_future.add_done_callback(_on_killswitch_enabled)
 
 
 class Connected(State):
@@ -248,6 +284,14 @@ class Connected(State):
         return self
 
     def run_tasks(self):
+
+        def _on_killswitch_enabled(_future: Future):
+            _future.result()
+
+        if self.is_killswitch_enabled:  # pylint: disable=using-constant-test
+            future = self.context.connection.enable_killswitch()
+            future.add_done_callback(_on_killswitch_enabled)
+
         self.context.connection.add_persistence()
 
 

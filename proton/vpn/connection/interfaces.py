@@ -95,60 +95,18 @@ class VPNCredentials(Protocol):  # pylint: disable=too-few-public-methods
 class Features:
     """
     This class is used to define which features are supported.
-    Even though there are multiple features that can be passed, they're not
-    mandatory. In fact you could override one of the features that you would
-    like to pass.
-
-    Usage:
-    ::
-        from protonvpn.vpnconnection import Features
-
-        class VPNFeatures(Settings):
-
-            @property
-            def netshield(self):
-                return 0
-
-            @property
-            def vpn_accelerator(self):
-                return True
-
-            @property
-            def port_forwarding(self):
-                return False
-
-            @property
-            def moderate_nat(self):
-                return True
-
-    Note: Not all fields are mandatory to override, only those that are
-    actually needed, ie:
-
-    ::
-        from protonvpn.vpnconnection import Settings
-
-        class VPNSettings(Settings):
-
-            @property
-            def netshield(self):
-                return 0
-
-    Passing only this is perfectly fine.
     """
 
     @property
-    def netshield(self):
+    def netshield(self) -> int:
         """
-        It will always return int since _transform_features_to_flags()
-        uses those values directly
-
         :return: netshield state value
         :rtype: int
         """
         return None
 
     @property
-    def vpn_accelerator(self):
+    def vpn_accelerator(self) -> bool:
         """
         :return: vpn accelerator state value
         :rtype: bool
@@ -156,7 +114,7 @@ class Features:
         return None
 
     @property
-    def port_forwarding(self):
+    def port_forwarding(self) -> bool:
         """
         :return: port forwarding state value
         :rtype: bool
@@ -164,7 +122,7 @@ class Features:
         return None
 
     @property
-    def moderate_nat(self):
+    def moderate_nat(self) -> bool:
         """
         :return: moderate nat state value
         :rtype: bool
@@ -208,7 +166,16 @@ class Settings:
     """
 
     @property
-    def dns_custom_ips(self) -> "List[str]":
+    def killswitch(self) -> int:
+        """Required.
+
+        :return: state of the kill switch configuration.
+        :rtype: int
+        """
+        return 0
+
+    @property
+    def dns_custom_ips(self) -> List[str]:
         """Optional.
 
         :return: a list with alternative IPs for DNS queries
@@ -217,7 +184,7 @@ class Settings:
         return []
 
     @property
-    def features(self) -> "Features":
+    def features(self) -> Features:
         """Optional.
 
         :return: object with features

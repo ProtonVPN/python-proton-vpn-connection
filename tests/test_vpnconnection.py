@@ -24,6 +24,8 @@ import pytest
 from proton.vpn.connection import VPNConnection, states
 from proton.vpn.connection.persistence import ConnectionPersistence, ConnectionParameters
 from proton.vpn.connection.states import StateContext
+from proton.vpn.connection.interfaces import Settings
+from proton.vpn.killswitch.interface import KillSwitchState
 
 from .common import (
     MalformedVPNCredentials, MalformedVPNServer, MockSettings,
@@ -49,6 +51,11 @@ def vpn_server():
 @pytest.fixture
 def connection_persistence_mock():
     return Mock(ConnectionPersistence)
+
+
+@pytest.fixture
+def settings_mock():
+    return Mock(Settings)
 
 
 class DummyVPNConnection(VPNConnection):
@@ -128,7 +135,8 @@ def test_vpn_connection_initialized_from_persisted_connection(
         backend=DummyVPNConnection.backend,
         protocol=DummyVPNConnection.protocol,
         server_id="server-id",
-        server_name="server-name"
+        server_name="server-name",
+        killswitch=KillSwitchState.ON.value
     )
 
     vpnconn = DummyVPNConnection(
@@ -142,10 +150,11 @@ def test_vpn_connection_initialized_from_persisted_connection(
     assert vpnconn.initial_state is vpnconn.initialize_persisted_connection_mock.return_value
 
 
-def test_add_persistence(vpn_server, vpn_credentials, connection_persistence_mock):
+def test_add_persistence(vpn_server, vpn_credentials, connection_persistence_mock, settings_mock):
     vpnconn = DummyVPNConnection(
         vpn_server,
         vpn_credentials,
+        settings=settings_mock,
         connection_persistence=connection_persistence_mock,
     )
     vpnconn._unique_id = "add-persistence"
@@ -159,6 +168,7 @@ def test_add_persistence(vpn_server, vpn_credentials, connection_persistence_moc
     assert persistence_params.protocol == vpnconn.protocol
     assert persistence_params.server_id == vpn_server.server_id
     assert persistence_params.server_name == vpn_server.server_name
+    assert persistence_params.killswitch == vpnconn.killswitch
 
 
 def test_remove_persistence(vpn_server, vpn_credentials, connection_persistence_mock):
@@ -209,7 +219,8 @@ def test_get_current_connection_returns_connection_initialized_with_persisted_pa
         backend="backend",
         protocol="protocol",
         server_id="server-id",
-        server_name="server-name"
+        server_name="server-name",
+        killswitch=KillSwitchState.ON.value
     )
     connection_persistence_mock.load.return_value = persisted_parameters
 

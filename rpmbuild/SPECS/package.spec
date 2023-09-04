@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-connection
-%define version 0.10.0
+%define version 0.11.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -28,7 +28,8 @@ Requires: python3-proton-core
 Requires: python3-proton-vpn-logger
 Requires: python3-proton-vpn-killswitch
 
-Conflicts: python3-proton-vpn-api-core < 0.18.0
+Conflicts: python3-proton-vpn-api-core < 0.19.0
+Conflicts: python3-proton-vpn-network-manager < 0.3.0
 
 %{?python_disable_dependency_generator}
 
@@ -52,6 +53,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Mon Sep 04 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.11.0
+- Implement kill switch
+
 * Mon Jul 31 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.10.0
 - Fix: Fix issue with NM plugin not accepting params for newer openvpn version
 - See: https://gitlab.gnome.org/GNOME/NetworkManager-openvpn/-/issues/112

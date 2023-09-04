@@ -138,7 +138,7 @@ class VPNConnector:
         self._publisher.register(subscriber)
 
     def unregister(self, subscriber: Callable[[states.State], None]):
-        """Unregisters an existing subscriber from connection state updates."""
+        """Unregister an existing subscriber from connection state updates."""
         self._publisher.unregister(subscriber)
 
     def _on_connection_event(self, event: events.Event):

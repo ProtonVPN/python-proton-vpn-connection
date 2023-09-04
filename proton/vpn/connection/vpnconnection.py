@@ -130,7 +130,7 @@ class VPNConnection(ABC):
         self._publisher.register(subscriber)
 
     def unregister(self, subscriber: Callable[[Event], None]):
-        """Unregisters a previously registered connection events subscriber."""
+        """Unregister a previously registered connection events subscriber."""
         self._publisher.unregister(subscriber)
 
     def _notify_subscribers(self, event: Event):
@@ -214,13 +214,35 @@ class VPNConnection(ABC):
         return server_name
 
     @property
+    def server_ip(self) -> str:
+        """Returns the VPN server IP of this VPN connection."""
+        server_ip = None
+        if self._vpnserver:
+            server_ip = self._vpnserver.server_ip
+
+        return server_ip
+
+    @property
+    def killswitch(self) -> int:
+        """Returns stored kill switch setting.
+
+        If internal settings object is not set, then we try to fetch it from
+        persisted parameters. If there they're not found then we default to
+        disabled.
+        """
+        if self._settings:
+            return self._settings.killswitch
+
+        return self._persisted_parameters.killswitch
+
+    @property
     def settings(self) -> Settings:
         """ Current settings of the connection :
             Some settings can be changed on the fly and are RW :
             netshield level, kill switch enabled/disabled, split tunneling,
             VPN accelerator, custom DNS.
             Other settings are RO and cannot be changed once the connection
-            is instanciated: VPN protocol.
+            is instantiated: VPN protocol.
         """
         return self._settings
 
@@ -291,7 +313,8 @@ class VPNConnection(ABC):
             backend=type(self).backend,
             protocol=type(self).protocol,
             server_id=self.server_id,
-            server_name=self.server_name
+            server_name=self.server_name,
+            killswitch=self.killswitch
         )
         self._connection_persistence.save(params)
         self._persisted_parameters = params
@@ -303,6 +326,24 @@ class VPNConnection(ABC):
         connection is turned down, we don't want to keep any persistence files.
         """
         self._connection_persistence.remove()
+
+    def enable_killswitch(self, vpn_server: VPNServer = None) -> Future:
+        """
+        Prevents accidental leaks.
+
+        This method should be called before establishing IPv4 VPN connections,
+        so that no traffic leaks through the IPv6 interface while connected
+        to the VPN.
+        """
+        return self._killswitch.enable(vpn_server)
+
+    def disable_killswitch(self) -> Future:
+        """
+        Stops kill switch.
+
+        This method should be called after the user willingly ends a VPN connection.
+        """
+        return self._killswitch.disable()
 
     def enable_ipv6_leak_protection(self) -> Future:
         """
@@ -363,7 +404,7 @@ class VPNConnection(ABC):
         """
         Creates a list of feature flags that are fetched from `self._settings`.
         These feature flags are used to suffix them to a username, to trigger server-side
-        specific behaviour.
+        specific behavior.
         """
         list_flags = []
 

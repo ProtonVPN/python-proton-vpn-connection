@@ -20,6 +20,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
+import inspect
 from typing import Callable, List, Optional
 
 from proton.vpn import logging
@@ -60,7 +61,7 @@ class Publisher:
         if subscriber in self._subscribers:
             self._subscribers.remove(subscriber)
 
-    def notify(self, *args, **kwargs):
+    async def notify(self, *args, **kwargs):
         """
         Notifies the subscribers about a new update.
 
@@ -75,7 +76,10 @@ class Publisher:
         """
         for subscriber in self._subscribers:
             try:
-                subscriber(*args, **kwargs)
+                if inspect.iscoroutinefunction(subscriber):
+                    await subscriber(*args, **kwargs)
+                else:
+                    subscriber(*args, **kwargs)
             except Exception:  # pylint: disable=broad-except
                 logger.exception(f"An error occurred notifying subscriber {subscriber}.")
 

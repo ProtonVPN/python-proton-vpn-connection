@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-connection
-%define version 0.11.0
+%define version 0.11.1
 %define release 1
 
 Prefix: %{_prefix}
@@ -53,6 +53,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Wed Dec 13 2023 Josep Llaneras <josep.llaneras@proton.ch> 0.11.1
+- Make connection interface async
+
 * Mon Sep 04 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.11.0
 - Implement kill switch
 

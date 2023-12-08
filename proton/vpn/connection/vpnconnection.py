@@ -22,11 +22,11 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 
 from __future__ import annotations
 
+import asyncio
 import os
 import sys
 from abc import ABC, abstractmethod
 from typing import Optional, Callable, List
-from concurrent.futures import Future
 
 from proton.loader import Loader
 
@@ -105,21 +105,17 @@ class VPNConnection(ABC):
         """
 
     @abstractmethod
-    def start(self):
+    async def start(self):
         """
         Starts the VPN connection.
 
-        Important: this method is expected to be implemented in an asynchronous manner.
-        It should never block while the connection is being established.
+        This method returns as soon as the connection has been started, but
+        it doesn't wait for the connection to be fully established.
         """
 
     @abstractmethod
-    def stop(self):
-        """Stops the VPN connection.
-
-        Important: this method is expected to be implemented in an asynchronous manner.
-        It should never block while the connection is being shut down.
-        """
+    async def stop(self):
+        """Stops the VPN connection."""
 
     def register(self, subscriber: Callable[[Event], None]):
         """
@@ -133,7 +129,7 @@ class VPNConnection(ABC):
         """Unregister a previously registered connection events subscriber."""
         self._publisher.unregister(subscriber)
 
-    def _notify_subscribers(self, event: Event):
+    async def _notify_subscribers(self, event: Event):
         """Notifies all subscribers of a connection event.
 
         Subscribers are called passing the connection event as argument.
@@ -143,7 +139,7 @@ class VPNConnection(ABC):
 
         :param event: the event to be notified to subscribers.
         """
-        self._publisher.notify(event=event)
+        await self._publisher.notify(event=event)
 
     @staticmethod
     def create(server: VPNServer, credentials: VPNCredentials, settings: Settings = None,
@@ -165,14 +161,15 @@ class VPNConnection(ABC):
         return protocol_class(server, credentials, settings)
 
     @classmethod
-    def get_current_connection(
+    async def get_current_connection(
             cls, connection_persistence: ConnectionPersistence = None
     ) -> Optional[VPNConnection]:
         """
         :return: the current VPN connection or None if there isn't one.
         """
         connection_persistence = connection_persistence or ConnectionPersistence()
-        persisted_parameters = connection_persistence.load()
+        loop = asyncio.get_running_loop()
+        persisted_parameters = await loop.run_in_executor(None, connection_persistence.load)
         if not persisted_parameters:
             return None
 
@@ -300,7 +297,7 @@ class VPNConnection(ABC):
         :return: `True` if the implementation is valid or `False` otherwise.
         """
 
-    def add_persistence(self):
+    async def add_persistence(self):
         """
         Stores the connection parameters to disk.
 
@@ -316,18 +313,20 @@ class VPNConnection(ABC):
             server_name=self.server_name,
             killswitch=self.killswitch
         )
-        self._connection_persistence.save(params)
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self._connection_persistence.save, params)
         self._persisted_parameters = params
 
-    def remove_persistence(self):
+    async def remove_persistence(self):
         """
         Works in the opposite way of add_persistence. It removes the
         persistence file. This is used in conjunction with down, since if the
         connection is turned down, we don't want to keep any persistence files.
         """
-        self._connection_persistence.remove()
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self._connection_persistence.remove)
 
-    def enable_killswitch(self, vpn_server: VPNServer = None) -> Future:
+    async def enable_killswitch(self, vpn_server: VPNServer = None):
         """
         Prevents accidental leaks.
 
@@ -335,17 +334,21 @@ class VPNConnection(ABC):
         so that no traffic leaks through the IPv6 interface while connected
         to the VPN.
         """
-        return self._killswitch.enable(vpn_server)
+        future = self._killswitch.enable(vpn_server)
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, future.result)
 
-    def disable_killswitch(self) -> Future:
+    async def disable_killswitch(self):
         """
         Stops kill switch.
 
         This method should be called after the user willingly ends a VPN connection.
         """
-        return self._killswitch.disable()
+        future = self._killswitch.disable()
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, future.result)
 
-    def enable_ipv6_leak_protection(self) -> Future:
+    async def enable_ipv6_leak_protection(self):
         """
         Prevents IPv6 leaks.
 
@@ -353,15 +356,19 @@ class VPNConnection(ABC):
         so that no traffic leaks through the IPv6 interface while connected
         to the VPN.
         """
-        return self._killswitch.enable_ipv6_leak_protection()
+        future = self._killswitch.enable_ipv6_leak_protection()
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, future.result)
 
-    def disable_ipv6_leak_protection(self) -> Future:
+    async def disable_ipv6_leak_protection(self):
         """
         Stops preventing IPv6 leaks.
 
         This method should be called after the user willingly ends a VPN connection.
         """
-        return self._killswitch.disable_ipv6_leak_protection()
+        future = self._killswitch.disable_ipv6_leak_protection()
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, future.result)
 
     def _get_user_pass(self, apply_feature_flags=False):
         """*For developers*

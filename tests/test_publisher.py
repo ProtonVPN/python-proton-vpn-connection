@@ -16,7 +16,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
-from unittest.mock import Mock
+from unittest.mock import Mock, AsyncMock
 
 from proton.vpn.connection.publisher import Publisher
 import pytest
@@ -58,19 +58,21 @@ def test_unregister_does_nothing_if_subscriber_was_never_registered():
     assert publisher.number_of_subscribers == 0
 
 
-def test_notify_notifies_all_registered_subscribers():
-    subscribers = [Mock(), Mock()]
+@pytest.mark.asyncio
+async def test_notify_notifies_all_registered_subscribers():
+    subscribers = [Mock(), AsyncMock()]
     publisher = Publisher(subscribers=subscribers)
-    publisher.notify("arg1", arg2="arg2")
+    await publisher.notify("arg1", arg2="arg2")
     for subscriber in subscribers:
         subscriber.assert_called_with("arg1", arg2="arg2")
 
 
-def test_notify_catches_and_logs_exceptions_when_notifying_subscribers(caplog):
+@pytest.mark.asyncio
+async def test_notify_catches_and_logs_exceptions_when_notifying_subscribers(caplog):
     subscribers = [Mock(side_effect=RuntimeError("Bad stuff")), Mock()]
     publisher = Publisher(subscribers=subscribers)
 
-    publisher.notify("foo")
+    await publisher.notify("foo")
 
     # Assert that, even though the first subscriber raised a RuntimeError,
     # the second one was also notified.

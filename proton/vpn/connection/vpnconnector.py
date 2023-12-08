@@ -21,8 +21,6 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import annotations
 
-import threading
-from threading import Lock
 from typing import Optional, Callable
 
 from proton.vpn import logging
@@ -48,7 +46,7 @@ class VPNConnector:
     _instance: VPNConnector = None
 
     @classmethod
-    def get_instance(cls):
+    async def get_instance(cls):
         """
         Gets a singleton instance.
 
@@ -59,30 +57,32 @@ class VPNConnector:
         if cls._instance:
             return cls._instance
 
-        initial_state = cls._determine_initial_state()
-        cls._instance = VPNConnector(initial_state)
+        cls._instance = VPNConnector()
+        initial_state = await cls._determine_initial_state()
+        await cls._instance.initialize_state(initial_state)
         return cls._instance
 
     @classmethod
-    def _determine_initial_state(cls):
+    async def _determine_initial_state(cls):
         """Determines the initial state of the state machine."""
-        current_connection = VPNConnection.get_current_connection()
+        current_connection = await VPNConnection.get_current_connection()
 
         if current_connection:
             return current_connection.initial_state
 
         return states.Disconnected(StateContext())
 
-    def __init__(self, initial_state: states.State):
-        self._current_state = None
+    def __init__(self, state: states.State = None):
+        self._current_state = state
         self._publisher = Publisher()
-        self._lock = Lock()
 
-        connection = initial_state.context.connection
+    async def initialize_state(self, state: states.State):
+        """Initializes the state machine with the specified state."""
+        connection = state.context.connection
         if connection:
             connection.register(self._on_connection_event)
 
-        self._update_state(initial_state)
+        await self._update_state(state)
 
     @property
     def current_state(self) -> states.State:
@@ -112,7 +112,7 @@ class VPNConnector:
         return not isinstance(self._current_state, (states.Disconnected, states.Error))
 
     # pylint: disable=too-many-arguments
-    def connect(
+    async def connect(
             self, server: VPNServer, credentials: VPNCredentials, settings: Settings,
             protocol: str = None, backend: str = None
     ):
@@ -123,13 +123,13 @@ class VPNConnector:
 
         connection.register(self._on_connection_event)
 
-        self._on_connection_event(
+        await self._on_connection_event(
             events.Up(events.EventContext(connection=connection))
         )
 
-    def disconnect(self):
+    async def disconnect(self):
         """Disconnects the current VPN connection, if any."""
-        self._on_connection_event(
+        await self._on_connection_event(
             events.Down(events.EventContext(connection=self.current_connection))
         )
 
@@ -141,45 +141,23 @@ class VPNConnector:
         """Unregister an existing subscriber from connection state updates."""
         self._publisher.unregister(subscriber)
 
-    def _on_connection_event(self, event: events.Event):
+    async def _on_connection_event(self, event: events.Event):
         """
         Callback called when a connection event happens.
         """
-        new_event = self._process_connection_event(event)
+        triggered_events = 0
+        while event:
+            triggered_events += 1
+            if triggered_events > 99:
+                raise RuntimeError("Maximum number of chained connection events was reached.")
 
-        if new_event:
-            self._on_connection_event(new_event)
-
-    def _process_connection_event(self, event: events.Event) -> Optional[events.Event]:
-        """
-        Processes new connection events, updating the current VPN state and running the
-        tasks associated with the new VPN state. It may also return a new event, if
-        it was generated when running the tasks associated with the new VPN state.
-
-        A lock is used to make this method thread-safe. Therefore, even if multiple threads
-        run it concurrently, the current event will be fully processed before starting
-        processing the next one. Currently, this method may be called from multiple threads:
-         - the app's (main) thread, when the user requests to start/stop a connection,
-         - and the thread starting/stopping the VPN connection, since connection
-           implementations often use separate threads for asynchronous operations.
-
-        :param event: the event to be processed.
-        :returns: an optional new event, if it was generated while processing the current event.
-        """
-        thread_id = threading.get_ident()
-        logger.debug(f"Thread {thread_id} sent event {event}")
-        with self._lock:
-            logger.debug(f"Thread {thread_id} is requesting to process event {event}")
             new_state = self.current_state.on_event(event)
-            if new_state is self.current_state:
-                # If the event didn't trigger a state change then there's nothing to do.
-                return None
+            event = await self._update_state(new_state)
 
-            new_event = self._update_state(new_state)
-            logger.debug(f"Thread {thread_id} finished processing event {event}")
-            return new_event
+    async def _update_state(self, new_state) -> Optional[events.Event]:
+        if new_state is self.current_state:
+            return None
 
-    def _update_state(self, new_state) -> Optional[states.Event]:
         old_state = self._current_state
         self._current_state = new_state
         logger.info(
@@ -192,7 +170,7 @@ class VPNConnector:
             # Unregister from connection event updates once the connection ended.
             self._current_state.context.connection.unregister(self._on_connection_event)
 
-        new_event = self._current_state.run_tasks()
-        self._publisher.notify(new_state)
+        await self._publisher.notify(new_state)
+        new_event = await self._current_state.run_tasks()
 
         return new_event

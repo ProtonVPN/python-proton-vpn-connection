@@ -150,7 +150,8 @@ def test_vpn_connection_initialized_from_persisted_connection(
     assert vpnconn.initial_state is vpnconn.initialize_persisted_connection_mock.return_value
 
 
-def test_add_persistence(vpn_server, vpn_credentials, connection_persistence_mock, settings_mock):
+@pytest.mark.asyncio
+async def test_add_persistence(vpn_server, vpn_credentials, connection_persistence_mock, settings_mock):
     vpnconn = DummyVPNConnection(
         vpn_server,
         vpn_credentials,
@@ -159,7 +160,7 @@ def test_add_persistence(vpn_server, vpn_credentials, connection_persistence_moc
     )
     vpnconn._unique_id = "add-persistence"
 
-    vpnconn.add_persistence()
+    await vpnconn.add_persistence()
 
     connection_persistence_mock.save.assert_called_once()
     persistence_params = connection_persistence_mock.save.call_args.args[0]
@@ -171,7 +172,8 @@ def test_add_persistence(vpn_server, vpn_credentials, connection_persistence_moc
     assert persistence_params.killswitch == vpnconn.killswitch
 
 
-def test_remove_persistence(vpn_server, vpn_credentials, connection_persistence_mock):
+@pytest.mark.asyncio
+async def test_remove_persistence(vpn_server, vpn_credentials, connection_persistence_mock):
     vpnconn = DummyVPNConnection(
         vpn_server,
         vpn_credentials,
@@ -179,7 +181,7 @@ def test_remove_persistence(vpn_server, vpn_credentials, connection_persistence_
     )
     vpnconn._unique_id = "remove-persistence"
 
-    vpnconn.remove_persistence()
+    await vpnconn.remove_persistence()
 
     connection_persistence_mock.remove.assert_called()
 
@@ -210,8 +212,9 @@ def test_unregister_subscriber_delegates_to_publisher():
     publisher_mock.unregister.assert_called_with(subscriber)
 
 
+@pytest.mark.asyncio
 @patch("proton.vpn.connection.vpnconnection.Loader")
-def test_get_current_connection_returns_connection_initialized_with_persisted_parameters(
+async def test_get_current_connection_returns_connection_initialized_with_persisted_parameters(
         Loader, connection_persistence_mock
 ):
     persisted_parameters = ConnectionParameters(
@@ -224,7 +227,7 @@ def test_get_current_connection_returns_connection_initialized_with_persisted_pa
     )
     connection_persistence_mock.load.return_value = persisted_parameters
 
-    current_connection = VPNConnection.get_current_connection(connection_persistence_mock)
+    current_connection = await VPNConnection.get_current_connection(connection_persistence_mock)
 
     connection_persistence_mock.load.assert_called_once()
     Loader.get.assert_called_with("backend", persisted_parameters.backend)
@@ -232,11 +235,12 @@ def test_get_current_connection_returns_connection_initialized_with_persisted_pa
     assert current_connection is Loader.get.return_value.get_persisted_connection.return_value
 
 
-def test_get_current_connection_returns_none_if_persisted_parameters_were_not_found(
+@pytest.mark.asyncio
+async def test_get_current_connection_returns_none_if_persisted_parameters_were_not_found(
         connection_persistence_mock
 ):
     connection_persistence_mock.load.return_value = None
-    current_connection = VPNConnection.get_current_connection(connection_persistence_mock)
+    current_connection = await VPNConnection.get_current_connection(connection_persistence_mock)
 
     assert not current_connection
 

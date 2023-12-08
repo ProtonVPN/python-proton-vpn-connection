@@ -17,8 +17,7 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from typing import Type
-from unittest.mock import Mock, call, PropertyMock
-from concurrent.futures import Future
+from unittest.mock import Mock, call, AsyncMock
 
 import pytest
 
@@ -197,20 +196,20 @@ def test_reconnection_is_triggered_when_up_event_is_received_while_a_connection_
     assert disconnecting.context.reconnection is up.context.connection
 
 
-def test_disconnected_run_tasks_when_reconnection_is_not_requested():
+@pytest.mark.asyncio
+async def test_disconnected_run_tasks_when_reconnection_is_not_requested():
     """
     The disconnected state should run the following tasks when reconnection is **not** requested:
      - Disable IPv6 leak protection.
      - Remove persisted connection parameters.
     """
     connection = Mock()
-
-    future = Future()
-    future.set_result(None)
-    connection.disable_ipv6_leak_protection.return_value = future
+    connection.disable_ipv6_leak_protection = AsyncMock(return_value=None)
+    connection.disable_killswitch = AsyncMock(return_value=None)
+    connection.remove_persistence = AsyncMock(return_value=None)
 
     disconnected = states.Disconnected(states.StateContext(connection=connection))
-    generated_event = disconnected.run_tasks()
+    generated_event = await disconnected.run_tasks()
 
     connection_calls = connection.method_calls
     assert len(connection_calls) == 3
@@ -220,49 +219,36 @@ def test_disconnected_run_tasks_when_reconnection_is_not_requested():
     assert generated_event is None
 
 
-@pytest.mark.parametrize("is_killswitch_enabled", [KillSwitchState.ON.value, KillSwitchState.OFF.value])
-def test_disconnected_run_tasks_when_reconnection_is_requested_and_should_return_up_event(is_killswitch_enabled):
+@pytest.mark.asyncio
+async def test_disconnected_run_tasks_when_reconnection_is_requested_and_should_return_up_event():
     """
     When reconnection **is** requested while on the disconnected state then:
      - No connection tasks should be performed. It's very important that
        IPv6 leak protection or the kill switch are **not** disabled.
      - An Up event should be returned with the new connection to be started.
     """
-    future_killswitch = Future()
-    future_killswitch.set_result(None)
-
     connection = Mock()
     reconnection = Mock()
-
-    is_killswitch_enabled_property_mock = PropertyMock(return_value=is_killswitch_enabled)
-    type(connection).killswitch = is_killswitch_enabled_property_mock
-    connection.enable_killswitch.return_value = future_killswitch
-
     disconnected = states.Disconnected(states.StateContext(connection=connection, reconnection=reconnection))
 
-    generated_event = disconnected.run_tasks()
+    generated_event = await disconnected.run_tasks()
 
-    connection_calls = connection.method_calls
-    if is_killswitch_enabled == KillSwitchState.ON.value:
-        assert len(connection_calls) == 0
-        assert not connection.disable_killswitch.called
-    else:
-        assert len(connection_calls) == 1
-        connection.disable_killswitch.assert_called_once()
-
+    assert len(connection.method_calls) == 0
     assert isinstance(generated_event, events.Up)
     assert generated_event.context.connection is reconnection
 
 
-def test_disconnected_run_tasks_does_nothing_if_there_is_no_connection():
+@pytest.mark.asyncio
+async def test_disconnected_run_tasks_does_nothing_if_there_is_no_connection():
     """When there is no current connection, the disconnected state doesn't have any tasks to run."""
     disconnected = states.Disconnected(states.StateContext(connection=None))
-    event = disconnected.run_tasks()
+    event = await disconnected.run_tasks()
     assert event is None
 
 
+@pytest.mark.asyncio
 @pytest.mark.parametrize("killswitch_state", [KillSwitchState.ON.value, KillSwitchState.OFF.value])
-def test_connecting_run_tasks(killswitch_state):
+async def test_connecting_run_tasks(killswitch_state):
     """
     The connecting state tasks are the following ones, in the specified order:
 
@@ -275,19 +261,14 @@ def test_connecting_run_tasks(killswitch_state):
     """
     connection = Mock()
 
-    future_ipv6 = Future()
-    future_ipv6.set_result(None)
-
-    future_killswitch = Future()
-    future_killswitch.set_result(None)
-
-    connection.enable_ipv6_leak_protection.return_value = future_ipv6
-    connection.enable_killswitch.return_value = future_killswitch
+    connection.enable_ipv6_leak_protection = AsyncMock(return_value=None)
+    connection.enable_killswitch = AsyncMock(return_value=None)
+    connection.start = AsyncMock(return_value=None)
     type(connection).killswitch = killswitch_state
 
     connecting = states.Connecting(states.StateContext(connection=connection))
 
-    connecting.run_tasks()
+    await connecting.run_tasks()
 
     connection_calls = connection.method_calls
     if killswitch_state == KillSwitchState.ON.value:
@@ -301,20 +282,19 @@ def test_connecting_run_tasks(killswitch_state):
         assert connection_calls[1] == call.start
 
 
+@pytest.mark.asyncio
 @pytest.mark.parametrize("killswitch_state", [KillSwitchState.ON.value, KillSwitchState.OFF.value])
-def test_connected_run_tasks_add_persistence(killswitch_state):
+async def test_connected_run_tasks_add_persistence(killswitch_state):
     """The tasks to be run while on the connected state is to persist the connection parameters and 
     enable kill switch if it's set to be enabled."""
     connection = Mock()
     connected = states.Connected(states.StateContext(connection=connection))
 
-    future_killswitch = Future()
-    future_killswitch.set_result(None)
-
-    connection.enable_killswitch.return_value = future_killswitch
+    connection.enable_killswitch = AsyncMock(return_value=None)
+    connection.add_persistence = AsyncMock(return_value=None)
     type(connection).killswitch = killswitch_state
 
-    connected.run_tasks()
+    await connected.run_tasks()
 
     connection_calls = connection.method_calls
 
@@ -327,27 +307,31 @@ def test_connected_run_tasks_add_persistence(killswitch_state):
         assert connection_calls[0] == call.add_persistence
 
 
-def test_disconnecting_run_tasks_stops_connection():
+@pytest.mark.asyncio
+async def test_disconnecting_run_tasks_stops_connection():
     """The only task be run while on the disconnecting state is to stop the connection."""
     connection = Mock()
+    connection.stop = AsyncMock(return_value=None)
     disconnecting = states.Disconnecting(states.StateContext(connection=connection))
 
-    disconnecting.run_tasks()
+    await disconnecting.run_tasks()
 
     connection_calls = connection.method_calls
     assert len(connection_calls) == 1
     connection_calls[0].method = connection.stop
 
 
-def test_error_run_tasks_stops_connection():
+@pytest.mark.asyncio
+async def test_error_run_tasks_stops_connection():
     """
     The only task to be run while on the error state is to stop the connection.
     The reason for doing so is to release any resources the connection is holding onto.
     """
     connection = Mock()
+    connection.stop = AsyncMock(return_value=None)
     connecting = states.Error(states.StateContext(connection=connection))
 
-    connecting.run_tasks()
+    await connecting.run_tasks()
 
     connection_calls = connection.method_calls
     assert len(connection_calls) == 1

@@ -21,10 +21,10 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import annotations
 
+import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional
-from concurrent.futures import Future
 
 from proton.vpn import logging
 from proton.vpn.connection import events
@@ -131,7 +131,7 @@ class State(ABC):
     ) -> State:
         """Given an event, it returns the new state."""
 
-    def run_tasks(self) -> Optional[events.Event]:
+    async def run_tasks(self) -> Optional[events.Event]:
         """Tasks to be run when this state instance becomes the current VPN state."""
 
     @property
@@ -154,34 +154,24 @@ class Disconnected(State):
 
         return self
 
-    def run_tasks(self):  # pylint: disable=inconsistent-return-statements
-        def _on_killswitch_disabled(_future: Future):
-            _future.result()
-
+    async def run_tasks(self):
+        # When the state machine is in disconnected state, a VPN connection
+        # may have not been created yet.
         if not self.context.connection:
             return None
 
         if self.context.reconnection:
-            if not self.is_killswitch_enabled:
-                future = self.context.connection.disable_killswitch()
-                future.add_done_callback(_on_killswitch_disabled)
             # When a reconnection is expected, an Up event is returned to start a new connection.
             # straight away.
             # IMPORTANT: in this case, the kill switch is **not** disabled.
             return events.Up(EventContext(connection=self.context.reconnection))
 
-        def _on_ipv6_leak_protection_disabled(_future: Future):
-            _future.result()
+        await asyncio.gather(
+            self.context.connection.disable_ipv6_leak_protection(),
+            self.context.connection.disable_killswitch(),
+            self.context.connection.remove_persistence()
+        )
 
-        # When the state machine is in disconnected state, a VPN connection
-        # may have not been created yet.
-        future = self.context.connection.disable_ipv6_leak_protection()
-        future.add_done_callback(_on_ipv6_leak_protection_disabled)
-
-        future = self.context.connection.disable_killswitch()
-        future.add_done_callback(_on_killswitch_disabled)
-
-        self.context.connection.remove_persistence()
         return None
 
 
@@ -221,33 +211,15 @@ class Connecting(State):
 
         return self
 
-    def run_tasks(self):
-        def _on_ipv6_leak_protection_enabled(_future: Future):
-            _future.result()
-            self._counter += 1
+    async def run_tasks(self):
+        await self.context.connection.enable_ipv6_leak_protection()
+        if self.is_killswitch_enabled:
+            await self.context.connection.enable_killswitch(
+                # FIXME: this should be a vpn server  # pylint: disable=fixme
+                self.context.connection
+            )
 
-            if self._counter == 2 or not self.is_killswitch_enabled:
-                self.context.connection.start()
-                self._counter = 0
-
-        def _on_killswitch_enabled(_future: Future):
-            _future.result()
-            self._counter += 1
-
-            if self._counter == 2:
-                self.context.connection.start()
-                self._counter = 0
-
-        future = self.context.connection.enable_ipv6_leak_protection()
-        future.add_done_callback(_on_ipv6_leak_protection_enabled)
-
-        if not self.is_killswitch_enabled:  # pylint: disable=using-constant-test
-            return
-
-        ks_future = self.context.connection.enable_killswitch(
-            self.context.connection
-        )
-        ks_future.add_done_callback(_on_killswitch_enabled)
+        await self.context.connection.start()
 
 
 class Connected(State):
@@ -283,16 +255,13 @@ class Connected(State):
 
         return self
 
-    def run_tasks(self):
+    async def run_tasks(self):
+        if self.is_killswitch_enabled:
+            # This is specific to the routing table KS implementation and should be removed.
+            # At this point we switch from the routed KS to the full-on KS.
+            await self.context.connection.enable_killswitch()
 
-        def _on_killswitch_enabled(_future: Future):
-            _future.result()
-
-        if self.is_killswitch_enabled:  # pylint: disable=using-constant-test
-            future = self.context.connection.enable_killswitch()
-            future.add_done_callback(_on_killswitch_enabled)
-
-        self.context.connection.add_persistence()
+        await self.context.connection.add_persistence()
 
 
 class Disconnecting(State):
@@ -319,8 +288,8 @@ class Disconnecting(State):
 
         return self
 
-    def run_tasks(self):
-        self.context.connection.stop()
+    async def run_tasks(self):
+        await self.context.connection.stop()
 
 
 class Error(State):
@@ -338,6 +307,6 @@ class Error(State):
 
         return self
 
-    def run_tasks(self):
+    async def run_tasks(self):
         # Make sure connection resources are properly released.
-        self.context.connection.stop()
+        await self.context.connection.stop()

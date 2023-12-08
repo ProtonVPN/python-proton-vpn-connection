@@ -4,7 +4,7 @@ from setuptools import setup, find_namespace_packages
 
 setup(
     name="proton-vpn-connection",
-    version="0.11.0",
+    version="0.11.1",
     description="Proton Technologies VPN connector for linux",
     author="Proton Technologies",
     author_email="contact@protonmail.com",
@@ -12,7 +12,7 @@ setup(
     packages=find_namespace_packages(include=['proton.vpn.connection']),
     install_requires=["jinja2", "proton-core", "proton-vpn-logger", "proton-vpn-killswitch"],
     extras_require={
-        "development": ["pytest", "pytest-coverage", "flake8", "pylint", "sphinx-rtd-theme"]
+        "development": ["pytest", "pytest-coverage", "pytest-asyncio", "flake8", "pylint", "sphinx-rtd-theme"]
     },
     include_package_data=True,
     python_requires=">=3.8",

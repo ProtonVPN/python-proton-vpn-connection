@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-connection
-%define version 0.11.1
+%define version 0.11.2
 %define release 1
 
 Prefix: %{_prefix}
@@ -53,6 +53,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Tue Jan 09 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.11.2
+- Fix connection cancellation
+
 * Wed Dec 13 2023 Josep Llaneras <josep.llaneras@proton.ch> 0.11.1
 - Make connection interface async
 

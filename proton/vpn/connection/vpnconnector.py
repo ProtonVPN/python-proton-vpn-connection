@@ -21,6 +21,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import annotations
 
+import asyncio
 from typing import Optional, Callable
 
 from proton.vpn import logging
@@ -75,6 +76,7 @@ class VPNConnector:
     def __init__(self, state: states.State = None):
         self._current_state = state
         self._publisher = Publisher()
+        self._lock = asyncio.Lock()
 
     async def initialize_state(self, state: states.State):
         """Initializes the state machine with the specified state."""
@@ -145,14 +147,17 @@ class VPNConnector:
         """
         Callback called when a connection event happens.
         """
-        triggered_events = 0
-        while event:
-            triggered_events += 1
-            if triggered_events > 99:
-                raise RuntimeError("Maximum number of chained connection events was reached.")
+        # The following lock guaranties that each new event is processed only
+        # when the previous event was fully processed.
+        async with self._lock:
+            triggered_events = 0
+            while event:
+                triggered_events += 1
+                if triggered_events > 99:
+                    raise RuntimeError("Maximum number of chained connection events was reached.")
 
-            new_state = self.current_state.on_event(event)
-            event = await self._update_state(new_state)
+                new_state = self.current_state.on_event(event)
+                event = await self._update_state(new_state)
 
     async def _update_state(self, new_state) -> Optional[events.Event]:
         if new_state is self.current_state:
@@ -170,7 +175,8 @@ class VPNConnector:
             # Unregister from connection event updates once the connection ended.
             self._current_state.context.connection.unregister(self._on_connection_event)
 
+        state_tasks = asyncio.create_task(self._current_state.run_tasks())
         await self._publisher.notify(new_state)
-        new_event = await self._current_state.run_tasks()
+        new_event = await state_tasks
 
         return new_event

@@ -271,7 +271,17 @@ class Disconnecting(State):
     type = ConnectionStateEnum.DISCONNECTING
 
     def _on_event(self, event: events.Event):
-        if isinstance(event, events.Disconnected):
+        if isinstance(event, (events.Disconnected, events.Error)):
+            # Note that error events signal disconnection from the VPN due to
+            # unexpected reasons. In this case, since the goal of the
+            # disconnecting state is to reach the disconnected state,
+            # both disconnected and error events lead to the desired state.
+            if isinstance(event, events.Error):
+                logger.warning(
+                    "Error event while disconnecting: %s (%s)",
+                    type(event).__name__,
+                    event.context.error
+                )
             return Disconnected(
                 StateContext(
                     event=event,
@@ -308,5 +318,11 @@ class Error(State):
         return self
 
     async def run_tasks(self):
+        logger.warning(
+            "Reached connection error state: %s (%s)",
+            type(self.context.event).__name__,
+            self.context.event.context.error
+        )
+
         # Make sure connection resources are properly released.
         await self.context.connection.stop()

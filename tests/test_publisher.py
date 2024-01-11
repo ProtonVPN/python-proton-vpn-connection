@@ -62,7 +62,7 @@ def test_unregister_does_nothing_if_subscriber_was_never_registered():
 async def test_notify_notifies_all_registered_subscribers():
     subscribers = [Mock(), AsyncMock()]
     publisher = Publisher(subscribers=subscribers)
-    await publisher.notify("arg1", arg2="arg2")
+    publisher.notify("arg1", arg2="arg2")
     for subscriber in subscribers:
         subscriber.assert_called_with("arg1", arg2="arg2")
 
@@ -72,7 +72,7 @@ async def test_notify_catches_and_logs_exceptions_when_notifying_subscribers(cap
     subscribers = [Mock(side_effect=RuntimeError("Bad stuff")), Mock()]
     publisher = Publisher(subscribers=subscribers)
 
-    await publisher.notify("foo")
+    publisher.notify("foo")
 
     # Assert that, even though the first subscriber raised a RuntimeError,
     # the second one was also notified.

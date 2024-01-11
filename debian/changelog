@@ -1,3 +1,9 @@
+protonvpn-connection (0.11.3) unstable; urgency=medium
+
+  * Fix deadlock when notifying connection subscribers [VPNLINUX-705]
+
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Thu, 11 Jan 2024 16:43:57 +0100
+
 protonvpn-connection (0.11.2) unstable; urgency=medium
 
   * Fix connection cancellation

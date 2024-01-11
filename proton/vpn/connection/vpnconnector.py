@@ -176,7 +176,7 @@ class VPNConnector:
             self._current_state.context.connection.unregister(self._on_connection_event)
 
         state_tasks = asyncio.create_task(self._current_state.run_tasks())
-        await self._publisher.notify(new_state)
+        self._publisher.notify(new_state)
         new_event = await state_tasks
 
         return new_event

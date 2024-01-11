@@ -153,7 +153,7 @@ def test_connected_on_event_transitions(event_type, expected_next_state_type):
     (events.Disconnected, states.Disconnected),
     (events.Up, states.Disconnecting),  # Reconnection.
     (events.Down, states.Disconnecting),
-    (events.UnexpectedError, states.Disconnecting),  # Invalid event.
+    (events.UnexpectedError, states.Disconnected),  # Errors events also signal VPN disconnection
     (events.Connected, states.Disconnecting)  # Invalid event.
 ])
 def test_disconnecting_on_event_transitions(event_type, expected_next_state_type):

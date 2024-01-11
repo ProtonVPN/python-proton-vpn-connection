@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-connection
-%define version 0.11.2
+%define version 0.11.3
 %define release 1
 
 Prefix: %{_prefix}
@@ -29,7 +29,7 @@ Requires: python3-proton-vpn-logger
 Requires: python3-proton-vpn-killswitch
 
 Conflicts: python3-proton-vpn-api-core < 0.19.0
-Conflicts: python3-proton-vpn-network-manager < 0.3.0
+Conflicts: python3-proton-vpn-network-manager < 0.3.3
 
 %{?python_disable_dependency_generator}
 
@@ -53,6 +53,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Thu Jan 11 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.11.3
+- Fix deadlock when notifying connection subscribers [VPNLINUX-705]
+
 * Tue Jan 09 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.11.2
 - Fix connection cancellation
 

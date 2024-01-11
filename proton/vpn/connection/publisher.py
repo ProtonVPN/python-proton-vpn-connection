@@ -20,6 +20,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
+import asyncio
 import inspect
 from typing import Callable, List, Optional
 
@@ -33,6 +34,7 @@ class Publisher:
 
     def __init__(self, subscribers: Optional[List[Callable]] = None):
         self._subscribers = subscribers or []
+        self._pending_tasks = set()
 
     def register(self, subscriber: Callable):
         """
@@ -61,7 +63,7 @@ class Publisher:
         if subscriber in self._subscribers:
             self._subscribers.remove(subscriber)
 
-    async def notify(self, *args, **kwargs):
+    def notify(self, *args, **kwargs):
         """
         Notifies the subscribers about a new update.
 
@@ -77,7 +79,9 @@ class Publisher:
         for subscriber in self._subscribers:
             try:
                 if inspect.iscoroutinefunction(subscriber):
-                    await subscriber(*args, **kwargs)
+                    notification_task = asyncio.create_task(subscriber(*args, **kwargs))
+                    self._pending_tasks.add(notification_task)
+                    notification_task.add_done_callback(self._pending_tasks.discard)
                 else:
                     subscriber(*args, **kwargs)
             except Exception:  # pylint: disable=broad-except

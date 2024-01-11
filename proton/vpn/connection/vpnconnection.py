@@ -129,7 +129,7 @@ class VPNConnection(ABC):
         """Unregister a previously registered connection events subscriber."""
         self._publisher.unregister(subscriber)
 
-    async def _notify_subscribers(self, event: Event):
+    def _notify_subscribers(self, event: Event):
         """Notifies all subscribers of a connection event.
 
         Subscribers are called passing the connection event as argument.
@@ -139,7 +139,7 @@ class VPNConnection(ABC):
 
         :param event: the event to be notified to subscribers.
         """
-        await self._publisher.notify(event=event)
+        self._publisher.notify(event=event)
 
     @staticmethod
     def create(server: VPNServer, credentials: VPNCredentials, settings: Settings = None,

@@ -19,7 +19,7 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from enum import IntEnum
+from enum import auto, Enum, IntEnum
 
 
 class ConnectionStateEnum(IntEnum):
@@ -31,15 +31,16 @@ class ConnectionStateEnum(IntEnum):
     ERROR = 4
 
 
-class StateMachineEventEnum(IntEnum):
+class StateMachineEventEnum(Enum):
     """VPN connection events."""
-    UP = 0
-    DOWN = 1
-    CONNECTED = 2
-    DISCONNECTED = 3
-    TIMEOUT = 4
-    AUTH_DENIED = 5
-    TUNNEL_SETUP_FAILED = 6
-    RETRY = 7
-    UNEXPECTED_ERROR = 8
-    DEVICE_DISCONNECTED = 9
+    INITIALIZED = auto()
+    UP = auto()
+    DOWN = auto()
+    CONNECTED = auto()
+    DISCONNECTED = auto()
+    TIMEOUT = auto()
+    AUTH_DENIED = auto()
+    TUNNEL_SETUP_FAILED = auto()
+    RETRY = auto()
+    UNEXPECTED_ERROR = auto()
+    DEVICE_DISCONNECTED = auto()

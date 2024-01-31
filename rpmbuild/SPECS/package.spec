@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-connection
-%define version 0.11.3
+%define version 0.11.4
 %define release 1
 
 Prefix: %{_prefix}
@@ -53,6 +53,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Wed Jan 31 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.11.4
+- Add initial event used for state machine initialization
+
 * Thu Jan 11 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.11.3
 - Fix deadlock when notifying connection subscribers [VPNLINUX-705]
 

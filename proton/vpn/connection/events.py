@@ -48,11 +48,16 @@ class Event:
     """Base event that all the other events should inherit from."""
     type = None
 
-    def __init__(self, context: EventContext):
+    def __init__(self, context: EventContext = None):
         if self.type is None:
             raise AttributeError("event attribute not defined")
 
-        self.context = context
+        self.context = context or EventContext(connection=None)
+
+
+class Initialized(Event):
+    """Event that leads to the initial state."""
+    type = StateMachineEventEnum.INITIALIZED
 
 
 class Up(Event):

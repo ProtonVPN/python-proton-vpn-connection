@@ -30,11 +30,11 @@ from typing import Optional, Callable, List
 
 from proton.loader import Loader
 
-from proton.vpn.connection.events import Event
+from proton.vpn.connection.events import Event, EventContext
 from proton.vpn.connection.interfaces import VPNServer, Settings, VPNCredentials
 from proton.vpn.connection.persistence import ConnectionPersistence, ConnectionParameters
 from proton.vpn.connection.publisher import Publisher
-from proton.vpn.connection import states
+from proton.vpn.connection import states, events
 from proton.vpn.killswitch.interface import KillSwitch
 
 
@@ -92,7 +92,12 @@ class VPNConnection(ABC):
             )
         else:
             self._unique_id = None
-            self.initial_state = states.Disconnected(states.StateContext(connection=self))
+            self.initial_state = states.Disconnected(
+                states.StateContext(
+                    event=events.Initialized(EventContext(connection=self)),
+                    connection=self
+                )
+            )
 
     @abstractmethod
     def _initialize_persisted_connection(

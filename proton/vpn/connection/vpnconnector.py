@@ -71,7 +71,9 @@ class VPNConnector:
         if current_connection:
             return current_connection.initial_state
 
-        return states.Disconnected(StateContext())
+        return states.Disconnected(
+            StateContext(event=events.Initialized(events.EventContext(connection=None)))
+        )
 
     def __init__(self, state: states.State = None):
         self._current_state = state

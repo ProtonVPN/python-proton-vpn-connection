@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import asyncio
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Optional
 
 from proton.vpn import logging
@@ -47,13 +47,12 @@ class StateContext:
     Relevant state context data.
 
     Attributes:
-        event: Event that led to the current state. It could be `None` on the
-            context for the initial state, after initializing the state machine.
+        event: Event that led to the current state.
         connection: current VPN connection. They only case where this
             attribute could be None is on the initial state, if there is not
             already an existing VPN connection.
     """
-    event: Optional[events.Event] = None
+    event: events.Event = field(default_factory=events.Initialized)
     connection: Optional["VPNConnection"] = None
     reconnection: Optional["VPNConnection"] = None
 

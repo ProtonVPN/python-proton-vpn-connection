@@ -339,9 +339,7 @@ class VPNConnection(ABC):
         so that no traffic leaks through the IPv6 interface while connected
         to the VPN.
         """
-        future = self._killswitch.enable(vpn_server)
-        loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, future.result)
+        await self._killswitch.enable(vpn_server)
 
     async def disable_killswitch(self):
         """
@@ -349,9 +347,7 @@ class VPNConnection(ABC):
 
         This method should be called after the user willingly ends a VPN connection.
         """
-        future = self._killswitch.disable()
-        loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, future.result)
+        await self._killswitch.disable()
 
     async def enable_ipv6_leak_protection(self):
         """
@@ -361,9 +357,7 @@ class VPNConnection(ABC):
         so that no traffic leaks through the IPv6 interface while connected
         to the VPN.
         """
-        future = self._killswitch.enable_ipv6_leak_protection()
-        loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, future.result)
+        await self._killswitch.enable_ipv6_leak_protection()
 
     async def disable_ipv6_leak_protection(self):
         """
@@ -371,9 +365,7 @@ class VPNConnection(ABC):
 
         This method should be called after the user willingly ends a VPN connection.
         """
-        future = self._killswitch.disable_ipv6_leak_protection()
-        loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, future.result)
+        await self._killswitch.disable_ipv6_leak_protection()
 
     def _get_user_pass(self, apply_feature_flags=False):
         """*For developers*

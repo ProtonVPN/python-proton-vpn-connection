@@ -21,7 +21,6 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import annotations
 
-import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Optional
@@ -165,11 +164,10 @@ class Disconnected(State):
             # IMPORTANT: in this case, the kill switch is **not** disabled.
             return events.Up(EventContext(connection=self.context.reconnection))
 
-        await asyncio.gather(
-            self.context.connection.disable_ipv6_leak_protection(),
-            self.context.connection.disable_killswitch(),
-            self.context.connection.remove_persistence()
-        )
+        # It's important the KS is removed before IPv6 LP.
+        await self.context.connection.disable_killswitch()
+        await self.context.connection.disable_ipv6_leak_protection()
+        await self.context.connection.remove_persistence()
 
         return None
 

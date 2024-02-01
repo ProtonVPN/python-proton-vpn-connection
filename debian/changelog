@@ -1,3 +1,9 @@
+protonvpn-connection (0.12.0) unstable; urgency=medium
+
+  * Switch to async kill switch interface
+
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Wed, 07 Feb 2024 11:00:34 +0100
+
 protonvpn-connection (0.11.4) unstable; urgency=medium
 
   * Add initial event used for state machine initialization

@@ -44,3 +44,10 @@ class StateMachineEventEnum(Enum):
     RETRY = auto()
     UNEXPECTED_ERROR = auto()
     DEVICE_DISCONNECTED = auto()
+
+
+class KillSwitchSetting(IntEnum):
+    """Kill switch setting values."""
+    OFF = 0
+    ON = 1
+    PERMANENT = 2

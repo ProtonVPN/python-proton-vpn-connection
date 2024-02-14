@@ -23,8 +23,7 @@ from proton.vpn.connection.vpnconfiguration import (OpenVPNTCPConfig,
                                                     OpenVPNUDPConfig,
                                                     OVPNConfig,
                                                     VPNConfiguration,
-                                                    WireguardConfig,
-                                                    DefaultSettings)
+                                                    WireguardConfig)
 
 from .common import (CWD, MalformedVPNCredentials, MalformedVPNServer,
                      MockSettings, MockVpnCredentials, MockVpnServer)
@@ -59,23 +58,14 @@ class MockVpnConfiguration(VPNConfiguration):
         return "test-content"
 
 
-def test_init_with_expected_args():
-    VPNConfiguration(MockVpnServer(), MockVpnCredentials())
-
-
-def test_init_with_unexpected_args():
-    with pytest.raises(TypeError):
-        VPNConfiguration(None, None, None)
-
-
 def test_not_implemented_generate():
-    cfg = VPNConfiguration(MockVpnServer(), MockVpnCredentials())
+    cfg = VPNConfiguration(MockVpnServer(), MockVpnCredentials(), MockSettings())
     with pytest.raises(NotImplementedError):
         cfg.generate()
 
 
 def test_change_certificate():
-    cfg = VPNConfiguration(MockVpnServer(), MockVpnCredentials())
+    cfg = VPNConfiguration(MockVpnServer(), MockVpnCredentials(), MockSettings())
     assert cfg.use_certificate is False
     cfg.use_certificate = True
     assert cfg.use_certificate is True
@@ -87,26 +77,20 @@ def test_custom_settings():
         def dns_custom_ips(self):
             return ["99.99.99.99"]
 
-
     cfg = VPNConfiguration(MockVpnServer(), MockVpnCredentials(), settings=NewSettings())
 
     assert isinstance(cfg.settings, NewSettings)
     assert cfg.settings.dns_custom_ips == ["99.99.99.99"]
 
 
-def test_default_settings():
-    cfg = VPNConfiguration(MockVpnServer(), MockVpnCredentials(), settings=None)
-    assert isinstance(cfg.settings, DefaultSettings)
-
-
 def test_ensure_configuration_file_is_created(modified_exec_env):
-    cfg = MockVpnConfiguration(MockVpnServer(), MockVpnCredentials())
+    cfg = MockVpnConfiguration(MockVpnServer(), MockVpnCredentials(), MockSettings())
     with cfg as f:
         assert os.path.isfile(f)
 
 
 def test_ensure_configuration_file_is_deleted():
-    cfg = MockVpnConfiguration(MockVpnServer(), MockVpnCredentials())
+    cfg = MockVpnConfiguration(MockVpnServer(), MockVpnCredentials(), MockSettings())
     fp = None
     with cfg as f:
         fp = f
@@ -116,16 +100,16 @@ def test_ensure_configuration_file_is_deleted():
 
 
 def test_ensure_generate_is_returning_expected_content():
-    cfg = MockVpnConfiguration(MockVpnServer(), MockVpnCredentials())
+    cfg = MockVpnConfiguration(MockVpnServer(), MockVpnCredentials(), MockSettings())
     with cfg as f:
         with open(f) as _f:
             line = _f.readline()
-            _cfg = MockVpnConfiguration(MockVpnServer(), MockVpnCredentials())
+            _cfg = MockVpnConfiguration(MockVpnServer(), MockVpnCredentials(), MockSettings())
             assert line == _cfg.generate()
 
 
 def test_ensure_same_configuration_file_in_case_of_duplicate():
-    cfg = MockVpnConfiguration(MockVpnServer(), MockVpnCredentials())
+    cfg = MockVpnConfiguration(MockVpnServer(), MockVpnCredentials(), MockSettings())
     with cfg as f:
         with cfg as _f:
             assert os.path.isfile(f) and os.path.isfile(_f) and f == _f
@@ -141,19 +125,19 @@ def test_ensure_same_configuration_file_in_case_of_duplicate():
     ]
 )
 def test_cidr_to_netmask(cidr, expected_mask):
-    cfg = MockVpnConfiguration(MockVpnServer(), MockVpnCredentials())
+    cfg = MockVpnConfiguration(MockVpnServer(), MockVpnCredentials(), MockSettings())
     assert cfg.cidr_to_netmask(cidr) == expected_mask
 
 
 @pytest.mark.parametrize("ipv4", ["192.168.1.1", "109.162.10.9", "1.1.1.1", "10.10.10.10"])
 def test_valid_ips(ipv4):
-    cfg = MockVpnConfiguration(MockVpnServer(), MockVpnCredentials())
+    cfg = MockVpnConfiguration(MockVpnServer(), MockVpnCredentials(), MockSettings())
     cfg.is_valid_ipv4(ipv4)
 
 
 @pytest.mark.parametrize("ipv4", ["192.168.1.90451", "109.", "1.-.1.1", "1111.10.10.10"])
 def test_not_valid_ips(ipv4):
-    cfg = MockVpnConfiguration(MockVpnServer(), MockVpnCredentials())
+    cfg = MockVpnConfiguration(MockVpnServer(), MockVpnCredentials(), MockSettings())
     cfg.is_valid_ipv4(ipv4)
 
 
@@ -163,44 +147,6 @@ def test_ovpnconfig_with_settings(protocol, modified_exec_env):
     ovpn_cfg._protocol = protocol
     output = ovpn_cfg.generate()
     assert ovpn_cfg._vpnserver.server_ip in output
-
-
-@pytest.mark.parametrize("protocol", ["udp", "tcp"])
-def test_ovpnconfig_with_missing_settings_applies_expected_defaults(protocol, modified_exec_env):
-    ovpn_cfg = OVPNConfig(MockVpnServer(), MockVpnCredentials())
-    ovpn_cfg._protocol = protocol
-    generated_cfg = ovpn_cfg.generate()
-
-
-@pytest.mark.parametrize("protocol", ["udp", "tcp"])
-def test_ovpnconfig_with_malformed_params(protocol, modified_exec_env):
-    with pytest.raises(TypeError):
-        OVPNConfig(None, None, None)
-
-
-@pytest.mark.parametrize("protocol", ["udp", "tcp"])
-def test_ovpnconfig_with_certificate_and_malformed_credentials(protocol, modified_exec_env):
-    ovpn_cfg = OVPNConfig(MockVpnServer(), MalformedVPNCredentials())
-    ovpn_cfg._protocol = protocol
-    ovpn_cfg.use_certificate = True
-    with pytest.raises(AttributeError):
-        ovpn_cfg.generate()
-
-
-@pytest.mark.parametrize("protocol", ["udp", "tcp"])
-def test_ovpnconfig_with_malformed_server(protocol, modified_exec_env):
-    ovpn_cfg = OVPNConfig(MalformedVPNServer(), MockVpnCredentials())
-    ovpn_cfg._protocol = protocol
-    with pytest.raises(AttributeError):
-        ovpn_cfg.generate()
-
-
-@pytest.mark.parametrize("protocol", ["udp", "tcp"])
-def test_ovpnconfig_with_malformed_server_and_credentials(protocol, modified_exec_env):
-    ovpn_cfg = OVPNConfig(MalformedVPNServer(), MalformedVPNCredentials())
-    ovpn_cfg._protocol = protocol
-    with pytest.raises(AttributeError):
-        ovpn_cfg.generate()
 
 
 def test_wireguard_config_content_generation(modified_exec_env):
@@ -215,27 +161,10 @@ def test_wireguard_config_content_generation(modified_exec_env):
     assert server.server_ip in generated_cfg
 
 
-def test_wireguard_with_malformed_credentials(modified_exec_env):
-    wg_cfg = WireguardConfig(MockVpnServer(), MalformedVPNCredentials())
-    wg_cfg.use_certificate = True
-    with pytest.raises(AttributeError):
-        wg_cfg.generate()
-
-
 def test_wireguard_with_non_certificate(modified_exec_env):
-    wg_cfg = WireguardConfig(MockVpnServer(), MockVpnCredentials())
+    wg_cfg = WireguardConfig(MockVpnServer(), MockVpnCredentials(), MockSettings())
     with pytest.raises(RuntimeError):
         wg_cfg.generate()
-
-
-def test_wireguard_without_settings(modified_exec_env):
-    server = MockVpnServer()
-    credentials = MockVpnCredentials()
-    wg_cfg = WireguardConfig(server, credentials, settings=None)
-    wg_cfg.use_certificate = True
-    generated_cfg = wg_cfg.generate()
-    generated_cfg_lines = generated_cfg.splitlines()
-    assert "AllowedIPs = 0.0.0.0/0" in generated_cfg_lines
 
 
 @pytest.mark.parametrize(
@@ -247,4 +176,7 @@ def test_wireguard_without_settings(modified_exec_env):
 )
 def test_get_expected_config_from_factory(protocol, expected_class):
     config = VPNConfiguration.from_factory(protocol)
-    assert isinstance(config(MockVpnServer(), MockVpnCredentials()), expected_class)
+    assert isinstance(
+        config(MockVpnServer(), MockVpnCredentials(), MockSettings()),
+        expected_class
+    )

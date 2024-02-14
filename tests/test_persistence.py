@@ -37,7 +37,7 @@ def test_load(temp_dir: str):
         f.write(
             '{"connection_id": "connection_id", "backend": "backend", '
             '"protocol": "protocol", "server_id": "server_id", '
-            '"server_name": "server_name", "killswitch": "1"}'
+            '"server_name": "server_name", "?": "1"}'
         )
 
     connection_persistence = ConnectionPersistence(persistence_directory=temp_dir)
@@ -48,7 +48,6 @@ def test_load(temp_dir: str):
     assert persisted_parameters.protocol == "protocol"
     assert persisted_parameters.server_id == "server_id"
     assert persisted_parameters.server_name == "server_name"
-    assert persisted_parameters.killswitch == 1
 
 
 def test_load_returns_none_and_logs_error_when_persistence_file_contains_invalid_json(temp_dir, caplog):
@@ -78,8 +77,7 @@ def test_save_(temp_dir: str):
         backend="backend",
         protocol="protocol",
         server_id="server_id",
-        server_name="server_name",
-        killswitch=0,
+        server_name="server_name"
     )
 
     connection_persistence = ConnectionPersistence(persistence_directory=temp_dir)
@@ -93,7 +91,6 @@ def test_save_(temp_dir: str):
         assert connection_parameters.protocol == persistence_file_content["protocol"]
         assert connection_parameters.server_id == persistence_file_content["server_id"]
         assert connection_parameters.server_name == persistence_file_content["server_name"]
-        assert connection_parameters.killswitch == persistence_file_content["killswitch"]
 
 
 def test_remove(temp_dir: str):

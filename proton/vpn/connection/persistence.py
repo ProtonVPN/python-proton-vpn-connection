@@ -21,7 +21,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
-
+from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
@@ -42,7 +42,18 @@ class ConnectionParameters:
     protocol: str
     server_id: str
     server_name: str
-    killswitch: int
+
+    def to_vpn_server(self) -> PersistedVPNServer:
+        """Returns the server parameters."""
+        return PersistedVPNServer(self)
+
+    def to_settings(self) -> PersistedSettings:
+        """Returns the settings parameters."""
+        return PersistedSettings()
+
+    def to_credentials(self) -> PersistedCredentials:
+        """Returns the credential parameters."""
+        return PersistedCredentials()
 
 
 class ConnectionPersistence:
@@ -76,8 +87,7 @@ class ConnectionPersistence:
                     backend=file_content["backend"],
                     protocol=file_content["protocol"],
                     server_id=file_content["server_id"],
-                    server_name=file_content["server_name"],
-                    killswitch=int(file_content.get("killswitch", 0))
+                    server_name=file_content["server_name"]
                 )
             except (JSONDecodeError, KeyError):
                 logger.exception(
@@ -102,3 +112,60 @@ class ConnectionPersistence:
                 f"to remove it: {self._connection_file_path}",
                 category="CONN", subcategory="PERSISTENCE", event="REMOVE"
             )
+
+
+class PersistedVPNServer:
+    """Holds the server parameters persisted to disk."""
+    # pylint: disable=missing-function-docstring
+
+    def __init__(self, persisted_connection: ConnectionParameters):
+        self.server_id = persisted_connection.server_id
+        self.server_name = persisted_connection.server_name
+
+    @property
+    def domain(self):
+        raise RuntimeError("Domain not available: connection loaded from disk.")
+
+    @property
+    def wg_public_key_x25519(self):
+        raise RuntimeError("WG public key not available: connection loaded from disk.")
+
+    @property
+    def tcp_ports(self):
+        raise RuntimeError("TCP ports not available: connection loaded from disk.")
+
+    @property
+    def udp_ports(self):
+        raise RuntimeError("UDP ports not available: connection loaded from disk.")
+
+    @property
+    def label(self):
+        raise RuntimeError("Label not available: connection loaded from disk.")
+
+
+class PersistedSettings:
+    """Holds the settings parameters persisted to disk."""
+    # pylint: disable=missing-function-docstring
+
+    @property
+    def dns_custom_ips(self):
+        raise RuntimeError("DNS custom IPs not available: connection loaded from disk.")
+
+    @property
+    def features(self):
+        raise RuntimeError("Features not available: connection loaded from disk.")
+
+
+class PersistedCredentials:
+    """Holds the credentials parameters persisted to disk."""
+    # pylint: disable=missing-function-docstring
+
+    @property
+    def pubkey_credentials(self):
+        raise RuntimeError("Public key credentials not available: connection loaded from disk.")
+
+    @property
+    def userpass_credentials(self):
+        raise RuntimeError(
+            "User/password credentials not available: connection loaded from disk."
+        )

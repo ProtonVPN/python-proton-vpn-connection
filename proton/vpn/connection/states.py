@@ -23,14 +23,14 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, ClassVar
 
 from proton.vpn import logging
 from proton.vpn.connection import events
-from proton.vpn.connection.enum import ConnectionStateEnum
+from proton.vpn.connection.enum import ConnectionStateEnum, KillSwitchSetting
 from proton.vpn.connection.events import EventContext
 from proton.vpn.connection.exceptions import ConcurrentConnectionsError
-from proton.vpn.killswitch.interface import KillSwitchState
+from proton.vpn.killswitch.interface import KillSwitch
 
 
 if TYPE_CHECKING:
@@ -50,10 +50,15 @@ class StateContext:
         connection: current VPN connection. They only case where this
             attribute could be None is on the initial state, if there is not
             already an existing VPN connection.
+        reconnection: optional VPN connection to connect to as soon as stopping the current one.
+        kill_switch: kill switch implementation.
+        kill_switch_setting: on, off, permanent.
     """
     event: events.Event = field(default_factory=events.Initialized)
     connection: Optional["VPNConnection"] = None
     reconnection: Optional["VPNConnection"] = None
+    kill_switch: ClassVar[KillSwitch] = None
+    kill_switch_setting: ClassVar[KillSwitchSetting] = None
 
 
 class State(ABC):
@@ -132,12 +137,6 @@ class State(ABC):
     async def run_tasks(self) -> Optional[events.Event]:
         """Tasks to be run when this state instance becomes the current VPN state."""
 
-    @property
-    def is_killswitch_enabled(self) -> bool:
-        """Returns if kill switch is enabled or not."""
-        return self.context.connection.killswitch is not None \
-            and self.context.connection.killswitch == KillSwitchState.ON.value
-
 
 class Disconnected(State):
     """
@@ -155,19 +154,22 @@ class Disconnected(State):
     async def run_tasks(self):
         # When the state machine is in disconnected state, a VPN connection
         # may have not been created yet.
-        if not self.context.connection:
-            return None
+        if self.context.connection:
+            await self.context.connection.remove_persistence()
 
         if self.context.reconnection:
+            # The Kill switch is enabled to avoid leaks when switching servers, even when
+            # the kill switch setting is off.
+            await self.context.kill_switch.enable()
+
             # When a reconnection is expected, an Up event is returned to start a new connection.
             # straight away.
-            # IMPORTANT: in this case, the kill switch is **not** disabled.
             return events.Up(EventContext(connection=self.context.reconnection))
 
-        # It's important the KS is removed before IPv6 LP.
-        await self.context.connection.disable_killswitch()
-        await self.context.connection.disable_ipv6_leak_protection()
-        await self.context.connection.remove_persistence()
+        if not self.context.kill_switch_setting == KillSwitchSetting.PERMANENT:
+            await self.context.kill_switch.disable()
+            await self.context.kill_switch.disable_ipv6_leak_protection()
+            logger.info("Kill switch disabled.")
 
         return None
 
@@ -209,12 +211,20 @@ class Connecting(State):
         return self
 
     async def run_tasks(self):
-        await self.context.connection.enable_ipv6_leak_protection()
-        if self.is_killswitch_enabled:
-            await self.context.connection.enable_killswitch(
-                # FIXME: this should be a vpn server  # pylint: disable=fixme
-                self.context.connection
-            )
+        permanent_ks = self.context.kill_switch_setting == KillSwitchSetting.PERMANENT
+        await self.context.kill_switch.enable_ipv6_leak_protection(permanent=permanent_ks)
+
+        # The reason for always enabling the kill switch independently of the kill switch setting
+        # is to avoid leaks when switching servers, even with the kill switch turned off.
+        # However, when the kill switch setting is off, the kill switch has to be removed when
+        # reaching the connected state.
+        await self.context.kill_switch.enable(
+            self.context.connection.server,
+            permanent=permanent_ks
+        )
+        logger.info(
+            f"{'Permanent' if permanent_ks else 'Standard'} kill switch enabled."
+        )
 
         await self.context.connection.start()
 
@@ -253,10 +263,15 @@ class Connected(State):
         return self
 
     async def run_tasks(self):
-        if self.is_killswitch_enabled:
+        if self.context.kill_switch_setting == KillSwitchSetting.OFF:
+            await self.context.kill_switch.disable()
+            logger.info("Kill switch disabled.")
+        else:
             # This is specific to the routing table KS implementation and should be removed.
             # At this point we switch from the routed KS to the full-on KS.
-            await self.context.connection.enable_killswitch()
+            await self.context.kill_switch.enable(
+                permanent=(self.context.kill_switch_setting == KillSwitchSetting.PERMANENT)
+            )
 
         await self.context.connection.add_persistence()
 

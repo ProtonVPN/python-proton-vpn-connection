@@ -29,26 +29,19 @@ from proton.utils.environment import ExecutionEnvironment
 
 from proton.vpn.connection.constants import \
     CA_CERT, OPENVPN_V2_TEMPLATE, WIREGUARD_TEMPLATE
-from proton.vpn.connection.interfaces import Settings
-
-
-class DefaultSettings(Settings):
-    """Default Proton VPN settings."""
 
 
 class VPNConfiguration:
     """Base VPN configuration."""
     EXTENSION = None
 
-    def __init__(self, vpnserver, vpncredentials, settings=None):
+    def __init__(self, vpnserver, vpncredentials, settings):
         self._configfile = None
         self._configfile_enter_level = None
         self._vpnserver = vpnserver
         self._vpncredentials = vpncredentials
-        self.settings = settings or DefaultSettings()
+        self.settings = settings
         self.use_certificate = False
-        if vpnserver is None or vpncredentials is None:
-            raise TypeError("Unexpected type `None`")
 
     @classmethod
     def from_factory(cls, protocol):

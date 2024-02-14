@@ -50,13 +50,25 @@ class VPNConnection(ABC):
     backend = None
     protocol = None
 
+    @classmethod
+    def from_persistence(cls, persisted_connection: ConnectionParameters):
+        """
+        Builds a connection object from the connection parameters previously persisted to disk.
+        """
+        return cls(
+            server=persisted_connection.to_vpn_server(),
+            credentials=persisted_connection.to_credentials(),
+            settings=persisted_connection.to_settings(),
+            connection_id=persisted_connection.connection_id
+        )
+
     # pylint: disable=too-many-arguments
     def __init__(
         self,
         server: VPNServer,
         credentials: VPNCredentials,
-        settings: Settings = None,
-        persisted_parameters: ConnectionParameters = None,
+        settings: Settings,
+        connection_id: str = None,
         connection_persistence: ConnectionPersistence = None,
         publisher: Publisher = None,
         killswitch: KillSwitch = None
@@ -69,6 +81,9 @@ class VPNConnection(ABC):
         :param settings: Settings to be used when establishing the VPN connection.
             This parameter is optional. When it's not specified the default settings
             will be used instead.
+        :param connection_id: unique ID of the existing connection.
+            This parameter is optional. It should be specified only if this instance
+            maps to an already existing network connection.
         :param connection_persistence: Connection persistence implementation.
             This parameter is optional. When not specified, the default connection
             persistence implementation will be used instead.
@@ -78,17 +93,16 @@ class VPNConnection(ABC):
         self._vpnserver = server
         self._vpncredentials = credentials
         self._settings = settings
-        self._persisted_parameters = persisted_parameters
 
         self._killswitch = killswitch or KillSwitch.get()()
 
         self._connection_persistence = connection_persistence or ConnectionPersistence()
         self._publisher = publisher or Publisher()
 
-        if self._persisted_parameters:
-            self._unique_id = self._persisted_parameters.connection_id
+        if connection_id:
+            self._unique_id = connection_id
             self.initial_state = self._initialize_persisted_connection(
-                self._persisted_parameters
+                connection_id
             )
         else:
             self._unique_id = None
@@ -100,9 +114,7 @@ class VPNConnection(ABC):
             )
 
     @abstractmethod
-    def _initialize_persisted_connection(
-            self, persisted_parameters: ConnectionParameters
-    ) -> states.State:
+    def _initialize_persisted_connection(self, connection_id: str) -> states.State:
         """
         Initializes the state of this instance of VPN connection according
         to previously persisted connection parameters and returns its current state.
@@ -184,58 +196,24 @@ class VPNConnection(ABC):
         return current_connection
 
     @property
+    def server(self) -> VPNServer:
+        """Returns the VPN server of this VPN connection."""
+        return self._vpnserver
+
+    @property
     def server_id(self) -> str:
         """Returns the VPN server ID of this VPN connection."""
-        # VPNConnection is only partially restored when deserialized from disk:
-        # it's constructed without neither VPNServer, VPNCredentials
-        # nor Settings objects. It only loads the parameters that were
-        # persisted to disk.
-        if self._vpnserver:
-            server_id = self._vpnserver.server_id
-        elif self._persisted_parameters:
-            server_id = self._persisted_parameters.server_id
-        else:
-            server_id = None
-
-        return server_id
+        return self._vpnserver.server_id
 
     @property
     def server_name(self) -> str:
         """Returns the VPN server name of this VPN connection."""
-        # VPNConnection is only partially restored when deserialized from disk:
-        # it's constructed without neither VPNServer, VPNCredentials
-        # nor Settings objects. It only loads the parameters that were
-        # persisted to disk.
-        if self._vpnserver:
-            server_name = self._vpnserver.server_name
-        elif self._persisted_parameters:
-            server_name = self._persisted_parameters.server_name
-        else:
-            server_name = None
-
-        return server_name
+        return self._vpnserver.server_name
 
     @property
     def server_ip(self) -> str:
         """Returns the VPN server IP of this VPN connection."""
-        server_ip = None
-        if self._vpnserver:
-            server_ip = self._vpnserver.server_ip
-
-        return server_ip
-
-    @property
-    def killswitch(self) -> int:
-        """Returns stored kill switch setting.
-
-        If internal settings object is not set, then we try to fetch it from
-        persisted parameters. If there they're not found then we default to
-        disabled.
-        """
-        if self._settings:
-            return self._settings.killswitch
-
-        return self._persisted_parameters.killswitch
+        return self._vpnserver.server_ip
 
     @property
     def settings(self) -> Settings:
@@ -315,12 +293,10 @@ class VPNConnection(ABC):
             backend=type(self).backend,
             protocol=type(self).protocol,
             server_id=self.server_id,
-            server_name=self.server_name,
-            killswitch=self.killswitch
+            server_name=self.server_name
         )
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, self._connection_persistence.save, params)
-        self._persisted_parameters = params
 
     async def remove_persistence(self):
         """
@@ -330,42 +306,6 @@ class VPNConnection(ABC):
         """
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, self._connection_persistence.remove)
-
-    async def enable_killswitch(self, vpn_server: VPNServer = None):
-        """
-        Prevents accidental leaks.
-
-        This method should be called before establishing IPv4 VPN connections,
-        so that no traffic leaks through the IPv6 interface while connected
-        to the VPN.
-        """
-        await self._killswitch.enable(vpn_server)
-
-    async def disable_killswitch(self):
-        """
-        Stops kill switch.
-
-        This method should be called after the user willingly ends a VPN connection.
-        """
-        await self._killswitch.disable()
-
-    async def enable_ipv6_leak_protection(self):
-        """
-        Prevents IPv6 leaks.
-
-        This method should be called before establishing IPv4 VPN connections,
-        so that no traffic leaks through the IPv6 interface while connected
-        to the VPN.
-        """
-        await self._killswitch.enable_ipv6_leak_protection()
-
-    async def disable_ipv6_leak_protection(self):
-        """
-        Stops preventing IPv6 leaks.
-
-        This method should be called after the user willingly ends a VPN connection.
-        """
-        await self._killswitch.disable_ipv6_leak_protection()
 
     def _get_user_pass(self, apply_feature_flags=False):
         """*For developers*

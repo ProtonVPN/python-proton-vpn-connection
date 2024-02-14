@@ -24,8 +24,11 @@ from __future__ import annotations
 import asyncio
 from typing import Optional, Callable
 
+from proton.vpn.killswitch.interface import KillSwitch
+
 from proton.vpn import logging
 from proton.vpn.connection import events, states, VPNConnection, VPNServer, VPNCredentials, Settings
+from proton.vpn.connection.enum import KillSwitchSetting
 from proton.vpn.connection.publisher import Publisher
 from proton.vpn.connection.states import StateContext
 
@@ -47,7 +50,7 @@ class VPNConnector:
     _instance: VPNConnector = None
 
     @classmethod
-    async def get_instance(cls):
+    async def get_instance(cls, settings: Settings, kill_switch: KillSwitch = None):
         """
         Gets a singleton instance.
 
@@ -58,7 +61,7 @@ class VPNConnector:
         if cls._instance:
             return cls._instance
 
-        cls._instance = VPNConnector()
+        cls._instance = VPNConnector(settings, kill_switch=kill_switch)
         initial_state = await cls._determine_initial_state()
         await cls._instance.initialize_state(initial_state)
         return cls._instance
@@ -75,10 +78,29 @@ class VPNConnector:
             StateContext(event=events.Initialized(events.EventContext(connection=None)))
         )
 
-    def __init__(self, state: states.State = None):
+    def __init__(
+            self, settings: Settings, state: states.State = None, kill_switch: KillSwitch = None
+    ):
+        self._settings = settings
         self._current_state = state
         self._publisher = Publisher()
         self._lock = asyncio.Lock()
+
+        self._update_kill_switch_setting(self._settings)
+        StateContext.kill_switch = kill_switch or KillSwitch.get()()
+
+    @property
+    def settings(self):
+        """Returns the settings specified for this connection."""
+        return self._settings
+
+    @settings.setter
+    def settings(self, settings: Settings):
+        self._settings = settings
+        self._update_kill_switch_setting(settings)
+
+    def _update_kill_switch_setting(self, settings: Settings):
+        StateContext.kill_switch_setting = KillSwitchSetting(settings.killswitch)
 
     async def initialize_state(self, state: states.State):
         """Initializes the state machine with the specified state."""
@@ -117,12 +139,15 @@ class VPNConnector:
 
     # pylint: disable=too-many-arguments
     async def connect(
-            self, server: VPNServer, credentials: VPNCredentials, settings: Settings,
+            self, server: VPNServer, credentials: VPNCredentials, settings: Settings = None,
             protocol: str = None, backend: str = None
     ):
         """Connects to a VPN server."""
+        if settings:
+            self.settings = settings
+
         connection = VPNConnection.create(
-            server, credentials, settings, protocol, backend
+            server, credentials, self._settings, protocol, backend
         )
 
         connection.register(self._on_connection_event)

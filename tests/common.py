@@ -16,6 +16,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
+from unittest.mock import Mock
+
 from proton.vpn.connection.interfaces import (Settings, VPNCredentials,
                                               VPNPubkeyCredentials, VPNServer,
                                               VPNUserPassCredentials, Features)
@@ -105,3 +107,7 @@ class MockSettings(Settings):
     @property
     def dns_custom_ips(self):
         return ["1.1.1.1", "10.10.10.10"]
+
+    @property
+    def features(self):
+        return Mock()

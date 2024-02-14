@@ -19,35 +19,53 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 from unittest.mock import Mock, patch, AsyncMock
 
 import pytest
+from proton.vpn.killswitch.interface import KillSwitch
 
-from proton.vpn.connection import events, states
+from proton.vpn.connection import events, states, Settings
+from proton.vpn.connection.enum import KillSwitchSetting
 from proton.vpn.connection.states import StateContext
 from proton.vpn.connection.vpnconnector import VPNConnector
 
 
+@pytest.fixture
+def settings():
+    settings = Mock(Settings)
+    settings.killswitch = 0
+    return settings
+
+
+@pytest.fixture
+def kill_switch():
+    return Mock(KillSwitch)
+
+
 @pytest.mark.asyncio
-async def test_initialize_state_runs_tasks_for_initial_state():
+async def test_initialize_state_runs_tasks_for_initial_state(settings, kill_switch):
     initial_state = Mock()
     initial_state.run_tasks = AsyncMock(return_value=None)
 
-    await VPNConnector().initialize_state(initial_state)
+    await VPNConnector(settings, kill_switch=kill_switch).initialize_state(initial_state)
 
     initial_state.run_tasks.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_initialize_state_subscribes_to_connection_if_exists():
+async def test_initialize_state_subscribes_to_connection_if_exists(settings, kill_switch):
     initial_state = Mock()
     initial_state.run_tasks = AsyncMock(return_value=None)
 
-    await VPNConnector().initialize_state(initial_state)
+    await VPNConnector(
+        settings, kill_switch=kill_switch
+    ).initialize_state(initial_state)
 
     initial_state.context.connection.register.assert_called_once()
 
 
 @pytest.mark.asyncio
 @patch("proton.vpn.connection.vpnconnector.VPNConnection")
-async def test_connect_creates_connection_and_sends_up_event_to_current_state(vpn_connection_mock):
+async def test_connect_creates_connection_and_sends_up_event_to_current_state(
+        vpn_connection_mock, settings, kill_switch
+):
     initial_state = Mock()
     next_state = Mock()
     initial_state.run_tasks = AsyncMock(return_value=None)
@@ -55,11 +73,11 @@ async def test_connect_creates_connection_and_sends_up_event_to_current_state(vp
     # Mock that next_state does not auto generate new events
     next_state.run_tasks = AsyncMock(return_value=None)
 
-    connector = VPNConnector(initial_state)
+    connector = VPNConnector(settings, state=initial_state, kill_switch=kill_switch)
 
     server = Mock()
     credentials = Mock()
-    settings = Mock()
+    settings.kill_switch = KillSwitchSetting.OFF
     await connector.connect(server, credentials, settings, "protocol", "backend")
 
     vpn_connection_mock.create.assert_called_once_with(server, credentials, settings, "protocol", "backend")
@@ -74,7 +92,7 @@ async def test_connect_creates_connection_and_sends_up_event_to_current_state(vp
 
 
 @pytest.mark.asyncio
-async def test_disconnect_sends_down_event_to_current_state():
+async def test_disconnect_sends_down_event_to_current_state(settings, kill_switch):
     initial_state = Mock()
     next_state = Mock()
     initial_state.run_tasks = AsyncMock(return_value=None)
@@ -82,7 +100,7 @@ async def test_disconnect_sends_down_event_to_current_state():
     # Mock that next_state does not auto generate new events
     next_state.run_tasks = AsyncMock(return_value=None)
 
-    connector = VPNConnector(initial_state)
+    connector = VPNConnector(settings, state=initial_state, kill_switch=kill_switch)
 
     await connector.disconnect()
 
@@ -92,14 +110,16 @@ async def test_disconnect_sends_down_event_to_current_state():
 
 
 @pytest.mark.asyncio
-async def test_connector_unsubscribes_from_current_connection_when_connection_ends():
+async def test_connector_unsubscribes_from_current_connection_when_connection_ends(
+        settings, kill_switch
+):
     initial_state = Mock()
     initial_state.run_tasks = AsyncMock(return_value=None)
     next_state = states.Disconnected(StateContext(connection=AsyncMock()))
     next_state.context.connection.unregister = Mock(return_value=None)
     initial_state.on_event = Mock(return_value=next_state)
 
-    connector = VPNConnector()
+    connector = VPNConnector(settings, kill_switch=kill_switch)
     await connector.initialize_state(initial_state)
 
     # Simulate connection event.
@@ -112,13 +132,15 @@ async def test_connector_unsubscribes_from_current_connection_when_connection_en
 
 
 @pytest.mark.asyncio
-async def test_connector_does_not_run_state_tasks_when_event_did_not_lead_to_a_state_transition():
+async def test_connector_does_not_run_state_tasks_when_event_did_not_lead_to_a_state_transition(
+        settings, kill_switch
+):
     current_state = Mock()
     # Mock that events received by the current state do not lead to a state transition.
     current_state.on_event.return_value = current_state
     current_state.run_tasks = AsyncMock(return_value=None)
 
-    connector = VPNConnector()
+    connector = VPNConnector(settings, kill_switch=kill_switch)
     await connector.initialize_state(current_state)
     current_state.run_tasks.reset_mock()
 
@@ -133,7 +155,9 @@ async def test_connector_does_not_run_state_tasks_when_event_did_not_lead_to_a_s
 
 
 @pytest.mark.asyncio
-async def test_connector_sends_events_generated_when_running_state_tasks():
+async def test_connector_sends_events_generated_when_running_state_tasks(
+        settings, kill_switch
+):
     initial_state = Mock()
     initial_state.run_tasks = AsyncMock(return_value=None)
     next_state = Mock()
@@ -148,7 +172,9 @@ async def test_connector_sends_events_generated_when_running_state_tasks():
     next_state.on_event.return_value = next_next_state
     next_next_state.run_tasks = AsyncMock(return_value=None)
 
-    await VPNConnector().initialize_state(initial_state)
+    await VPNConnector(
+        settings, kill_switch=kill_switch
+    ).initialize_state(initial_state)
 
     on_event_callback = initial_state.context.connection.register.call_args.args[0]
 
@@ -162,34 +188,39 @@ async def test_connector_sends_events_generated_when_running_state_tasks():
 
 @pytest.mark.asyncio
 @patch("proton.vpn.connection.vpnconnector.VPNConnection")
-async def test_get_instance_returns_a_singleton_instance(VPNConnection):
+async def test_get_instance_returns_a_singleton_instance(VPNConnection, settings):
     VPNConnection.get_current_connection = AsyncMock(return_value=None)
 
-    connector1 = await VPNConnector.get_instance()
-    connector2 = await VPNConnector.get_instance()
+    VPNConnector._instance = None  # Reset singleton instance.
+    connector1 = await VPNConnector.get_instance(settings, kill_switch=AsyncMock())
+    connector2 = await VPNConnector.get_instance(settings)
     assert connector1 is connector2
 
 
 @pytest.mark.asyncio
 @patch("proton.vpn.connection.vpnconnector.VPNConnection")
-async def test_get_instance_initializes_state_to_initial_connection_state_if_a_connection_exists(VPNConnection):
+async def test_get_instance_initializes_state_to_initial_connection_state_if_a_connection_exists(
+        VPNConnection, settings
+):
     current_connection = Mock()
     current_connection.initial_state = states.Connected(states.StateContext(connection=current_connection))
     current_connection.add_persistence = AsyncMock(return_value=None)
     VPNConnection.get_current_connection = AsyncMock(return_value=current_connection)
 
     VPNConnector._instance = None  # Reset singleton instance.
-    connector = await VPNConnector.get_instance()
+    connector = await VPNConnector.get_instance(settings, kill_switch=AsyncMock())
 
     assert connector.current_state is current_connection.initial_state
 
 
 @pytest.mark.asyncio
 @patch("proton.vpn.connection.vpnconnector.VPNConnection")
-async def test_get_instance_initializes_state_to_disconnected_if_a_connection_does_not_exist(VPNConnection):
+async def test_get_instance_initializes_state_to_disconnected_if_a_connection_does_not_exist(
+        VPNConnection, settings
+):
     VPNConnection.get_current_connection = AsyncMock(return_value=None)
 
     VPNConnector._instance = None  # Reset singleton instance.
-    connector = await VPNConnector.get_instance()
+    connector = await VPNConnector.get_instance(settings, kill_switch=AsyncMock())
 
     assert isinstance(connector.current_state, states.Disconnected)

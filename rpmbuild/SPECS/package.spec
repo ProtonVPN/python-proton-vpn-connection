@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-connection
-%define version 0.12.0
+%define version 0.13.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -28,8 +28,8 @@ Requires: python3-proton-core
 Requires: python3-proton-vpn-logger
 Requires: python3-proton-vpn-killswitch
 
-Conflicts: python3-proton-vpn-api-core < 0.19.0
-Conflicts: python3-proton-vpn-network-manager < 0.3.3
+Conflicts: python3-proton-vpn-api-core < 0.20.4
+Conflicts: python3-proton-vpn-network-manager < 0.4.0
 
 %{?python_disable_dependency_generator}
 
@@ -53,6 +53,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Wed Feb 14 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.13.0
+- Add permanent kill switch
+
 * Wed Feb 07 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.12.0
 - Switch to async kill switch interface
 

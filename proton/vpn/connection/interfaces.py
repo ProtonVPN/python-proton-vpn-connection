@@ -92,45 +92,18 @@ class VPNCredentials(Protocol):  # pylint: disable=too-few-public-methods
     userpass_credentials: Optional[VPNUserPassCredentials]
 
 
-class Features:
+class Features(Protocol):
     """
     This class is used to define which features are supported.
     """
-
-    @property
-    def netshield(self) -> int:
-        """
-        :return: netshield state value
-        :rtype: int
-        """
-        return None
-
-    @property
-    def vpn_accelerator(self) -> bool:
-        """
-        :return: vpn accelerator state value
-        :rtype: bool
-        """
-        return None
-
-    @property
-    def port_forwarding(self) -> bool:
-        """
-        :return: port forwarding state value
-        :rtype: bool
-        """
-        return None
-
-    @property
-    def moderate_nat(self) -> bool:
-        """
-        :return: moderate nat state value
-        :rtype: bool
-        """
-        return None
+    # pylint: disable=too-few-public-methods
+    netshield: int
+    vpn_accelerator: bool
+    port_forwarding: bool
+    moderate_nat: bool
 
 
-class Settings:
+class Settings(Protocol):
     """Optional.
 
     If you would like to pass some specific settings for VPN
@@ -164,30 +137,7 @@ class Settings:
 
     Passing only this is perfectly fine.
     """
-
-    @property
-    def killswitch(self) -> int:
-        """Required.
-
-        :return: state of the kill switch configuration.
-        :rtype: int
-        """
-        return 0
-
-    @property
-    def dns_custom_ips(self) -> List[str]:
-        """Optional.
-
-        :return: a list with alternative IPs for DNS queries
-        :rtype: List[str]
-        """
-        return []
-
-    @property
-    def features(self) -> Features:
-        """Optional.
-
-        :return: object with features
-        :rtype: Features
-        """
-        return Features()
+    # pylint: disable=too-few-public-methods
+    killswitch: int
+    dns_custom_ips: List[str]
+    features: Features

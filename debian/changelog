@@ -1,3 +1,9 @@
+protonvpn-connection (0.14.0) unstable; urgency=medium
+
+  * Apply kill switch setting immediately
+
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Fri, 16 Feb 2024 14:33:38 +0100
+
 protonvpn-connection (0.13.0) unstable; urgency=medium
 
   * Add permanent kill switch

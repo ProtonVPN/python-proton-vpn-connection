@@ -169,7 +169,6 @@ class Disconnected(State):
         if not self.context.kill_switch_setting == KillSwitchSetting.PERMANENT:
             await self.context.kill_switch.disable()
             await self.context.kill_switch.disable_ipv6_leak_protection()
-            logger.info("Kill switch disabled.")
 
         return None
 
@@ -222,9 +221,6 @@ class Connecting(State):
             self.context.connection.server,
             permanent=permanent_ks
         )
-        logger.info(
-            f"{'Permanent' if permanent_ks else 'Standard'} kill switch enabled."
-        )
 
         await self.context.connection.start()
 
@@ -265,7 +261,6 @@ class Connected(State):
     async def run_tasks(self):
         if self.context.kill_switch_setting == KillSwitchSetting.OFF:
             await self.context.kill_switch.disable()
-            logger.info("Kill switch disabled.")
         else:
             # This is specific to the routing table KS implementation and should be removed.
             # At this point we switch from the routed KS to the full-on KS.

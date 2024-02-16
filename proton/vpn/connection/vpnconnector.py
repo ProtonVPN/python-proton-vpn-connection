@@ -83,11 +83,9 @@ class VPNConnector:
     ):
         self._settings = settings
         self._current_state = state
+        self._kill_switch = kill_switch or KillSwitch.get()()
         self._publisher = Publisher()
         self._lock = asyncio.Lock()
-
-        self._update_kill_switch_setting(self._settings)
-        StateContext.kill_switch = kill_switch or KillSwitch.get()()
 
     @property
     def settings(self):
@@ -96,19 +94,47 @@ class VPNConnector:
 
     @settings.setter
     def settings(self, settings: Settings):
+        """Sets the settings to be applied when establishing the next connection."""
         self._settings = settings
-        self._update_kill_switch_setting(settings)
-
-    def _update_kill_switch_setting(self, settings: Settings):
         StateContext.kill_switch_setting = KillSwitchSetting(settings.killswitch)
+
+    async def apply_settings(self, settings: Settings):
+        """
+        Sets the settings to be applied when establishing the next connection and
+        applies them to the current connection whenever that's possible.
+        """
+        self.settings = settings
+        await self._apply_kill_switch_setting(KillSwitchSetting(settings.killswitch))
+
+    async def _apply_kill_switch_setting(self, kill_switch_setting: KillSwitchSetting):
+        """Enables/disables the kill switch depending on the setting value."""
+        if kill_switch_setting == KillSwitchSetting.PERMANENT:
+            await self._current_state.context.kill_switch.enable(permanent=True)
+        elif (
+                kill_switch_setting == KillSwitchSetting.ON
+                and not isinstance(self._current_state, states.Disconnected)
+        ):
+            await self._current_state.context.kill_switch.enable(permanent=False)
+        else:  # kill_switch_setting == KillSwitchSetting.OFF
+            await self._current_state.context.kill_switch.disable()
 
     async def initialize_state(self, state: states.State):
         """Initializes the state machine with the specified state."""
+        StateContext.kill_switch = self._kill_switch
+        StateContext.kill_switch_setting = KillSwitchSetting(self._settings.killswitch)
+
         connection = state.context.connection
         if connection:
             connection.register(self._on_connection_event)
 
+        # Sets the initial state of the connector and triggers the tasks associated
+        # to the state.
         await self._update_state(state)
+
+        # Makes sure that the kill switch state is inline with the current
+        # kill switch setting (e.g. if the KS setting is set to "permanent" then
+        # the permanent KS should be enabled, if it was not the case yet).
+        await self.apply_settings(self._settings)
 
     @property
     def current_state(self) -> states.State:

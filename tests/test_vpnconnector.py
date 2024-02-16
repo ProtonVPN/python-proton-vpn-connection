@@ -23,6 +23,7 @@ from proton.vpn.killswitch.interface import KillSwitch
 
 from proton.vpn.connection import events, states, Settings
 from proton.vpn.connection.enum import KillSwitchSetting
+from proton.vpn.connection.events import EventContext
 from proton.vpn.connection.states import StateContext
 from proton.vpn.connection.vpnconnector import VPNConnector
 
@@ -36,23 +37,23 @@ def settings():
 
 @pytest.fixture
 def kill_switch():
-    return Mock(KillSwitch)
+    return AsyncMock(KillSwitch)
 
 
 @pytest.mark.asyncio
 async def test_initialize_state_runs_tasks_for_initial_state(settings, kill_switch):
-    initial_state = Mock()
-    initial_state.run_tasks = AsyncMock(return_value=None)
+    initial_state = states.Disconnected(StateContext(connection=None))
+    with patch.object(initial_state, "run_tasks") as run_tasks:
+        await VPNConnector(settings, kill_switch=kill_switch).initialize_state(initial_state)
 
-    await VPNConnector(settings, kill_switch=kill_switch).initialize_state(initial_state)
-
-    initial_state.run_tasks.assert_called_once()
+        run_tasks.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_initialize_state_subscribes_to_connection_if_exists(settings, kill_switch):
-    initial_state = Mock()
-    initial_state.run_tasks = AsyncMock(return_value=None)
+    connection = AsyncMock()
+    connection.register = Mock()
+    initial_state = states.Connected(StateContext(connection=connection))
 
     await VPNConnector(
         settings, kill_switch=kill_switch
@@ -113,11 +114,12 @@ async def test_disconnect_sends_down_event_to_current_state(settings, kill_switc
 async def test_connector_unsubscribes_from_current_connection_when_connection_ends(
         settings, kill_switch
 ):
-    initial_state = Mock()
-    initial_state.run_tasks = AsyncMock(return_value=None)
-    next_state = states.Disconnected(StateContext(connection=AsyncMock()))
-    next_state.context.connection.unregister = Mock(return_value=None)
-    initial_state.on_event = Mock(return_value=next_state)
+    connection = AsyncMock()
+    connection.register = Mock()
+    connection.unregister = Mock()
+
+    initial_state = states.Connected(StateContext(connection=connection))
+    next_state = states.Disconnected(StateContext(connection=connection))
 
     connector = VPNConnector(settings, kill_switch=kill_switch)
     await connector.initialize_state(initial_state)
@@ -125,8 +127,7 @@ async def test_connector_unsubscribes_from_current_connection_when_connection_en
     # Simulate connection event.
     initial_state.context.connection.register.assert_called_once()
     on_event_callback = initial_state.context.connection.register.call_args.args[0]
-    print(on_event_callback)
-    await on_event_callback(event=Mock())
+    await on_event_callback(event=events.Disconnected(EventContext(connection=connection)))
 
     next_state.context.connection.unregister.assert_called_once_with(on_event_callback)
 
@@ -135,55 +136,57 @@ async def test_connector_unsubscribes_from_current_connection_when_connection_en
 async def test_connector_does_not_run_state_tasks_when_event_did_not_lead_to_a_state_transition(
         settings, kill_switch
 ):
-    current_state = Mock()
-    # Mock that events received by the current state do not lead to a state transition.
-    current_state.on_event.return_value = current_state
-    current_state.run_tasks = AsyncMock(return_value=None)
+    connection = AsyncMock()
+    connection.register = Mock()
+    current_state = states.Connected(StateContext(connection=connection))
 
     connector = VPNConnector(settings, kill_switch=kill_switch)
     await connector.initialize_state(current_state)
-    current_state.run_tasks.reset_mock()
 
-    # Simulate connection event.
     current_state.context.connection.register.assert_called_once()
     on_event_callback = current_state.context.connection.register.call_args.args[0]
-    await on_event_callback(Mock())
 
-    # Assert that after the new event, since there was no state transition, the current
-    # state tasks were not run again.
-    current_state.run_tasks.assert_not_called()
+    with patch.object(current_state, "run_tasks") as run_tasks:
+        # Simulate Connected connection event, which should not lead to a state transition
+        # since we already are in Connected state.
+        await on_event_callback(events.Connected(EventContext(connection=connection)))
+
+        # Assert that after the new event, since there was no state transition, the current
+        # state tasks were not run again.
+        run_tasks.assert_not_called()
 
 
 @pytest.mark.asyncio
 async def test_connector_sends_events_generated_when_running_state_tasks(
         settings, kill_switch
 ):
-    initial_state = Mock()
-    initial_state.run_tasks = AsyncMock(return_value=None)
-    next_state = Mock()
-    initial_state.on_event.return_value = next_state
-
-    # Mock that next_state generates a new event when its tasks are run.
-    generated_event = Mock()
-    next_state.run_tasks = AsyncMock(return_value=generated_event)
-
-    # Stop cascading events.
-    next_next_state = Mock()
-    next_state.on_event.return_value = next_next_state
-    next_next_state.run_tasks = AsyncMock(return_value=None)
+    connection = AsyncMock()
+    connection.register = Mock()
+    connection.unregister = Mock()
+    initial_state = states.Disconnecting(StateContext(connection=connection))
 
     await VPNConnector(
         settings, kill_switch=kill_switch
     ).initialize_state(initial_state)
 
-    on_event_callback = initial_state.context.connection.register.call_args.args[0]
+    initial_event = events.Disconnected(EventContext(connection=connection))
+    next_state = states.Disconnected(StateContext(connection=connection))
+    next_event = events.Up(EventContext(connection=connection))
+    with (
+        patch.object(initial_state, "on_event", return_value=next_state),
+        patch.object(next_state, "run_tasks", return_value=next_event),
+        patch.object(next_state, "on_event", return_value=next_state)
+    ):
+        # Simulate connection event.
+        on_event_callback = initial_state.context.connection.register.call_args.args[0]
+        await on_event_callback(initial_event)
 
-    # Simulate connection event.
-    initial_event = Mock()
-    await on_event_callback(initial_event)
-
-    initial_state.on_event.assert_called_with(initial_event)
-    next_state.on_event.assert_called_with(generated_event)
+        # The initial state will receive the simulated event above.
+        initial_state.on_event.assert_called_once()
+        # The connection event will lead to the next state, which will return a new event when running run_tasks()
+        next_state.run_tasks.assert_called_once()
+        # And the returned event will be processed.
+        next_state.on_event.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -224,3 +227,36 @@ async def test_get_instance_initializes_state_to_disconnected_if_a_connection_do
     connector = await VPNConnector.get_instance(settings, kill_switch=AsyncMock())
 
     assert isinstance(connector.current_state, states.Disconnected)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "kill_switch_setting,current_state,kill_switch_enabled_called,permanent_kill_switch_used,kill_switch_disabled_called",
+    [
+        (KillSwitchSetting.PERMANENT, states.Disconnected, True, True, False),  # The state does not matter.
+        (KillSwitchSetting.ON, states.Connected, True, False, False),
+        (KillSwitchSetting.ON, states.Connecting, True, False, False),
+        (KillSwitchSetting.ON, states.Disconnecting, True, False, False),
+        (KillSwitchSetting.ON, states.Disconnected, False, False, False),
+        (KillSwitchSetting.ON, states.Error, True, False, False),
+        (KillSwitchSetting.OFF, states.Connected, False, False, True)  # The state does not matter.
+    ]
+)
+async def test_apply_settings(kill_switch_setting, current_state, kill_switch_enabled_called, permanent_kill_switch_used, kill_switch_disabled_called):
+    settings = Mock()
+    settings.killswitch = kill_switch_setting
+    kill_switch = AsyncMock()
+    connection = AsyncMock()
+    connection.register = Mock()
+    connection.unregister = Mock()
+
+    connector = VPNConnector(settings, kill_switch=kill_switch)
+    current_state = current_state(StateContext(connection=connection))
+    await connector.initialize_state(current_state)
+
+    await connector.apply_settings(settings)
+
+    assert kill_switch.enable.called == kill_switch_enabled_called
+    if kill_switch_enabled_called:
+        kill_switch.enable.assert_called_with(permanent=permanent_kill_switch_used)
+    assert kill_switch_disabled_called == kill_switch_disabled_called

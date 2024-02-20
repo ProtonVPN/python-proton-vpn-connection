@@ -211,7 +211,6 @@ class Connecting(State):
 
     async def run_tasks(self):
         permanent_ks = self.context.kill_switch_setting == KillSwitchSetting.PERMANENT
-        await self.context.kill_switch.enable_ipv6_leak_protection(permanent=permanent_ks)
 
         # The reason for always enabling the kill switch independently of the kill switch setting
         # is to avoid leaks when switching servers, even with the kill switch turned off.
@@ -260,6 +259,7 @@ class Connected(State):
 
     async def run_tasks(self):
         if self.context.kill_switch_setting == KillSwitchSetting.OFF:
+            await self.context.kill_switch.enable_ipv6_leak_protection()
             await self.context.kill_switch.disable()
         else:
             # This is specific to the routing table KS implementation and should be removed.

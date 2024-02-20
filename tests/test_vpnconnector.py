@@ -16,7 +16,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock, patch, AsyncMock, call
 
 import pytest
 from proton.vpn.killswitch.interface import KillSwitch
@@ -231,18 +231,67 @@ async def test_get_instance_initializes_state_to_disconnected_if_a_connection_do
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "kill_switch_setting,current_state,kill_switch_enabled_called,permanent_kill_switch_used,kill_switch_disabled_called",
+    "kill_switch_setting,current_state,kill_switch_method_calls",
     [
-        (KillSwitchSetting.PERMANENT, states.Disconnected, True, True, False),  # The state does not matter.
-        (KillSwitchSetting.ON, states.Connected, True, False, False),
-        (KillSwitchSetting.ON, states.Connecting, True, False, False),
-        (KillSwitchSetting.ON, states.Disconnecting, True, False, False),
-        (KillSwitchSetting.ON, states.Disconnected, False, False, False),
-        (KillSwitchSetting.ON, states.Error, True, False, False),
-        (KillSwitchSetting.OFF, states.Connected, False, False, True)  # The state does not matter.
+        # The state does not matter for the permanent KS setting,
+        # the permanent KS should always be enabled immediately.
+        # The IPv6 leak protection should always be removed since
+        # the permanent KS already prevents IPv6 leaks.
+        (KillSwitchSetting.PERMANENT, states.Disconnected, [
+            call.enable(permanent=True), call.disable_ipv6_leak_protection()
+        ]),
+        (KillSwitchSetting.PERMANENT, states.Connecting, [
+            call.enable(permanent=True), call.disable_ipv6_leak_protection()
+        ]),
+        (KillSwitchSetting.PERMANENT, states.Connected, [
+            call.enable(permanent=True), call.disable_ipv6_leak_protection()
+        ]),
+        (KillSwitchSetting.PERMANENT, states.Disconnecting, [
+            call.enable(permanent=True), call.disable_ipv6_leak_protection()
+        ]),
+
+        # For the ON setting, the non-permanent KS should only be enabled
+        # if **not** in Disconnected state. The IPv6 leak protection should
+        # always be removed since the non-permanent KS already prevents IPv6 leaks.
+        (KillSwitchSetting.ON, states.Disconnected, [
+            call.disable(), call.disable_ipv6_leak_protection()
+        ]),
+        (KillSwitchSetting.ON, states.Connected, [
+            call.enable(permanent=False), call.disable_ipv6_leak_protection()
+        ]),
+        (KillSwitchSetting.ON, states.Disconnecting, [
+            call.enable(permanent=False), call.disable_ipv6_leak_protection()
+        ]),
+        (KillSwitchSetting.ON, states.Error, [
+            call.enable(permanent=False), call.disable_ipv6_leak_protection()
+        ]),
+
+        # For the OFF setting, the kill switch should always be removed but
+        # the leak protection should only be removed in Disconnected state,
+        # otherwise it should be added.
+        (KillSwitchSetting.OFF, states.Disconnected, [
+            call.disable(),
+            call.disable_ipv6_leak_protection()
+        ]),
+        (KillSwitchSetting.OFF, states.Connecting, [
+            call.enable_ipv6_leak_protection(),
+            call.disable()
+        ]),
+        (KillSwitchSetting.OFF, states.Connected, [
+            call.enable_ipv6_leak_protection(),
+            call.disable()
+        ]),
+        (KillSwitchSetting.OFF, states.Disconnecting, [
+            call.enable_ipv6_leak_protection(),
+            call.disable()
+        ]),
+        (KillSwitchSetting.OFF, states.Error, [
+            call.enable_ipv6_leak_protection(),
+            call.disable()
+        ]),
     ]
 )
-async def test_apply_settings(kill_switch_setting, current_state, kill_switch_enabled_called, permanent_kill_switch_used, kill_switch_disabled_called):
+async def test_apply_settings(kill_switch_setting, current_state, kill_switch_method_calls):
     settings = Mock()
     settings.killswitch = kill_switch_setting
     kill_switch = AsyncMock()
@@ -253,10 +302,8 @@ async def test_apply_settings(kill_switch_setting, current_state, kill_switch_en
     connector = VPNConnector(settings, kill_switch=kill_switch)
     current_state = current_state(StateContext(connection=connection))
     await connector.initialize_state(current_state)
+    kill_switch.reset_mock()
 
     await connector.apply_settings(settings)
 
-    assert kill_switch.enable.called == kill_switch_enabled_called
-    if kill_switch_enabled_called:
-        kill_switch.enable.assert_called_with(permanent=permanent_kill_switch_used)
-    assert kill_switch_disabled_called == kill_switch_disabled_called
+    assert kill_switch.method_calls == kill_switch_method_calls

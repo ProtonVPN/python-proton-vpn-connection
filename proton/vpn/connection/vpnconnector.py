@@ -108,15 +108,32 @@ class VPNConnector:
 
     async def _apply_kill_switch_setting(self, kill_switch_setting: KillSwitchSetting):
         """Enables/disables the kill switch depending on the setting value."""
+        kill_switch = self._current_state.context.kill_switch
+
         if kill_switch_setting == KillSwitchSetting.PERMANENT:
-            await self._current_state.context.kill_switch.enable(permanent=True)
-        elif (
-                kill_switch_setting == KillSwitchSetting.ON
-                and not isinstance(self._current_state, states.Disconnected)
-        ):
-            await self._current_state.context.kill_switch.enable(permanent=False)
-        else:  # kill_switch_setting == KillSwitchSetting.OFF
-            await self._current_state.context.kill_switch.disable()
+            await kill_switch.enable(permanent=True)
+            # Since full KS already prevents IPv6 leaks:
+            await kill_switch.disable_ipv6_leak_protection()
+
+        elif kill_switch_setting == KillSwitchSetting.ON:
+            if isinstance(self._current_state, states.Disconnected):
+                await kill_switch.disable()
+                await kill_switch.disable_ipv6_leak_protection()
+            else:
+                await kill_switch.enable(permanent=False)
+                # Since full KS already prevents IPv6 leaks:
+                await kill_switch.disable_ipv6_leak_protection()
+
+        elif kill_switch_setting == KillSwitchSetting.OFF:
+            if isinstance(self._current_state, states.Disconnected):
+                await kill_switch.disable()
+                await kill_switch.disable_ipv6_leak_protection()
+            else:
+                await kill_switch.enable_ipv6_leak_protection()
+                await kill_switch.disable()
+
+        else:
+            raise RuntimeError(f"Unexpected kill switch setting: {kill_switch_setting}")
 
     async def initialize_state(self, state: states.State):
         """Initializes the state machine with the specified state."""

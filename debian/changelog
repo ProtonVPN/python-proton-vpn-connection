@@ -1,3 +1,9 @@
+protonvpn-connection (0.14.1) unstable; urgency=medium
+
+  * Fix issue when switching from standard to advanced kill switch
+
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Tue, 20 Feb 2024 17:34:03 +0100
+
 protonvpn-connection (0.14.0) unstable; urgency=medium
 
   * Apply kill switch setting immediately

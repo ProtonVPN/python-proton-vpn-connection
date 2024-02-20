@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-connection
-%define version 0.14.0
+%define version 0.14.1
 %define release 1
 
 Prefix: %{_prefix}
@@ -53,6 +53,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Tue Feb 20 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.14.1
+- Fix issue when switching from standard to advanced kill switch
+
 * Fri Feb 16 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.14.0
 - Apply kill switch setting immediately
 

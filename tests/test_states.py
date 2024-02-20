@@ -313,7 +313,6 @@ async def test_connecting_run_tasks(kill_switch_setting):
 
     permanent_ks = kill_switch_setting == KillSwitchSetting.PERMANENT
     assert context.method_calls == [
-        call.kill_switch.enable_ipv6_leak_protection(permanent=permanent_ks),
         call.kill_switch.enable(context.connection.server, permanent=permanent_ks),
         call.connection.start()
     ]
@@ -346,6 +345,7 @@ async def test_connected_run_tasks(kill_switch_setting):
         ]
     else:  # Kill switch OFF.
         assert context.method_calls == [
+            call.kill_switch.enable_ipv6_leak_protection(),
             call.kill_switch.disable(),
             call.connection.add_persistence()
         ]

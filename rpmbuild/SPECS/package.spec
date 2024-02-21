@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-connection
-%define version 0.14.1
+%define version 0.14.2
 %define release 1
 
 Prefix: %{_prefix}
@@ -53,6 +53,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Wed Feb 21 2024 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.14.2
+- Add permanent connection if user cancels connection and ends up in disconnected state
+
 * Tue Feb 20 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.14.1
 - Fix issue when switching from standard to advanced kill switch
 

@@ -166,7 +166,13 @@ class Disconnected(State):
             # straight away.
             return events.Up(EventContext(connection=self.context.reconnection))
 
-        if not self.context.kill_switch_setting == KillSwitchSetting.PERMANENT:
+        if self.context.kill_switch_setting == KillSwitchSetting.PERMANENT:
+            # This is an abstraction leak of the network manager KS.
+            # The only reason for enabling permanent KS here is to switch from the
+            # routed KS to the full KS if the user cancels the connection while in
+            # Connecting state. Otherwise, the full KS should already be there.
+            await self.context.kill_switch.enable(permanent=True)
+        else:
             await self.context.kill_switch.disable()
             await self.context.kill_switch.disable_ipv6_leak_protection()
 

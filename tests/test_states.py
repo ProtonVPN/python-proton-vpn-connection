@@ -230,7 +230,7 @@ async def test_disconnected_run_tasks_does_not_disable_the_kill_switch_when_set_
     When the kill switch is not set to permanent, the disconnected state should
     **not** disable the kill switch.
     """
-    context = Mock()
+    context = AsyncMock()
     context.reconnection = None  # Reconnection not requested
     context.kill_switch_setting = KillSwitchSetting.PERMANENT
     context.connection.remove_persistence = AsyncMock(return_value=None)
@@ -239,7 +239,8 @@ async def test_disconnected_run_tasks_does_not_disable_the_kill_switch_when_set_
     generated_event = await disconnected.run_tasks()
 
     assert context.method_calls == [
-        call.connection.remove_persistence()
+        call.connection.remove_persistence(),
+        call.kill_switch.enable(permanent=True)
     ]
 
     assert generated_event is None
@@ -316,7 +317,6 @@ async def test_connecting_run_tasks(kill_switch_setting):
         call.kill_switch.enable(context.connection.server, permanent=permanent_ks),
         call.connection.start()
     ]
-
 
 
 @pytest.mark.asyncio

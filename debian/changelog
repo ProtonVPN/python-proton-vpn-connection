@@ -1,3 +1,9 @@
+protonvpn-connection (0.14.2) unstable; urgency=medium
+
+  * Add permanent connection if user cancels connection and ends up in disconnected state
+
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Wed, 21 Feb 2024 10:00:00 +0100
+
 protonvpn-connection (0.14.1) unstable; urgency=medium
 
   * Fix issue when switching from standard to advanced kill switch

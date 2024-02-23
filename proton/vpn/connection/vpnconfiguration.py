@@ -33,15 +33,16 @@ from proton.vpn.connection.constants import \
 
 class VPNConfiguration:
     """Base VPN configuration."""
+    PROTOCOL = None
     EXTENSION = None
 
-    def __init__(self, vpnserver, vpncredentials, settings):
+    def __init__(self, vpnserver, vpncredentials, settings, use_certificate=False):
         self._configfile = None
         self._configfile_enter_level = None
         self._vpnserver = vpnserver
         self._vpncredentials = vpncredentials
-        self.settings = settings
-        self.use_certificate = False
+        self._settings = settings
+        self.use_certificate = use_certificate
 
     @classmethod
     def from_factory(cls, protocol):
@@ -60,10 +61,12 @@ class VPNConfiguration:
         # This is a race free way of having temporary files.
 
         if self._configfile is None:
-            self.__delete_existing_configuration()
+            self._delete_existing_configuration()
+            # NOTE: we should try to keep filename length
+            # below 15 characters, including the prefix.
             self._configfile = tempfile.NamedTemporaryFile(
                 dir=self.__base_path, delete=False,
-                prefix='ProtonVPN-', suffix=self.EXTENSION, mode='w'
+                prefix='pvpn', suffix=self.EXTENSION, mode='w'
             )
             self._configfile.write(self.generate())
             self._configfile.close()
@@ -82,7 +85,7 @@ class VPNConfiguration:
             os.unlink(self._configfile.name)
             self._configfile = None
 
-    def __delete_existing_configuration(self):
+    def _delete_existing_configuration(self):
         for file in self.__base_path:
             if file.endswith(f".{self.EXTENSION}"):
                 os.remove(os.path.join(self.__base_path, file))
@@ -115,7 +118,7 @@ class VPNConfiguration:
 
 class OVPNConfig(VPNConfiguration):
     """OpenVPN-specific configuration."""
-    _protocol = None
+    PROTOCOL = None
     EXTENSION = ".ovpn"
 
     def generate(self) -> str:
@@ -124,24 +127,24 @@ class OVPNConfig(VPNConfiguration):
         Returns:
             string: configuration file
         """
-        ports = self._vpnserver.tcp_ports if "tcp" == self._protocol else self._vpnserver.udp_ports
+        ports = self._vpnserver.tcp_ports if "tcp" == self.PROTOCOL else self._vpnserver.udp_ports
 
         j2_values = {
-            "openvpn_protocol": self._protocol,
+            "openvpn_protocol": self.PROTOCOL,
             "serverlist": [self._vpnserver.server_ip],
             "openvpn_ports": ports,
             "ca_certificate": CA_CERT,
             "certificate_based": self.use_certificate,
-            "custom_dns": len(self.settings.dns_custom_ips) > 0,
+            "custom_dns": len(self._settings.dns_custom_ips) > 0,
         }
 
         if self.use_certificate:
             j2_values["cert"] = self._vpncredentials.pubkey_credentials.certificate_pem
             j2_values["priv_key"] = self._vpncredentials.pubkey_credentials.openvpn_private_key
 
-        if len(self.settings.dns_custom_ips) > 0:
+        if len(self._settings.dns_custom_ips) > 0:
             dns_ips = []
-            for ip_address in self.settings.dns_custom_ips:
+            for ip_address in self._settings.dns_custom_ips:
 
                 # FIX-ME: Should custom DNS IPs be tested
                 # if they are in a valid form ?
@@ -159,17 +162,17 @@ class OVPNConfig(VPNConfiguration):
 
 class OpenVPNTCPConfig(OVPNConfig):
     """Configuration for OpenVPN using TCP."""
-    _protocol = "tcp"
+    PROTOCOL = "tcp"
 
 
 class OpenVPNUDPConfig(OVPNConfig):
     """Configuration for OpenVPN using UDP."""
-    _protocol = "udp"
+    PROTOCOL = "udp"
 
 
 class WireguardConfig(VPNConfiguration):
     """Wireguard-specific configuration."""
-    _protocol = "wireguard"
+    PROTOCOL = "wireguard"
     EXTENSION = ".conf"
 
     def generate(self) -> str:
@@ -183,7 +186,7 @@ class WireguardConfig(VPNConfiguration):
             "wg_client_secret_key": self._vpncredentials.pubkey_credentials.wg_private_key,
             "wg_ip": self._vpnserver.server_ip,
             "wg_port": self._vpnserver.udp_ports[0],
-            "wg_server_pk": self._vpnserver.wg_public_key_x25519,
+            "wg_server_pk": self._vpnserver.x25519pk,
         }
 
         template = Environment(loader=BaseLoader).from_string(WIREGUARD_TEMPLATE)

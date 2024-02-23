@@ -64,25 +64,6 @@ def test_not_implemented_generate():
         cfg.generate()
 
 
-def test_change_certificate():
-    cfg = VPNConfiguration(MockVpnServer(), MockVpnCredentials(), MockSettings())
-    assert cfg.use_certificate is False
-    cfg.use_certificate = True
-    assert cfg.use_certificate is True
-
-
-def test_custom_settings():
-    class NewSettings:
-        @property
-        def dns_custom_ips(self):
-            return ["99.99.99.99"]
-
-    cfg = VPNConfiguration(MockVpnServer(), MockVpnCredentials(), settings=NewSettings())
-
-    assert isinstance(cfg.settings, NewSettings)
-    assert cfg.settings.dns_custom_ips == ["99.99.99.99"]
-
-
 def test_ensure_configuration_file_is_created(modified_exec_env):
     cfg = MockVpnConfiguration(MockVpnServer(), MockVpnCredentials(), MockSettings())
     with cfg as f:
@@ -153,11 +134,10 @@ def test_wireguard_config_content_generation(modified_exec_env):
     server = MockVpnServer()
     credentials = MockVpnCredentials()
     settings = MockSettings()
-    wg_cfg = WireguardConfig(server, credentials, settings)
-    wg_cfg.use_certificate = True
+    wg_cfg = WireguardConfig(server, credentials, settings, True)
     generated_cfg = wg_cfg.generate()
     assert credentials.pubkey_credentials.wg_private_key in generated_cfg
-    assert server.wg_public_key_x25519 in generated_cfg
+    assert server.x25519pk in generated_cfg
     assert server.server_ip in generated_cfg
 
 

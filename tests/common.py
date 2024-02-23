@@ -49,7 +49,7 @@ class MockVpnServer(VPNServer):
         return "com.test-domain.www"
 
     @property
-    def wg_public_key_x25519(self):
+    def x25519pk(self):
         return "wg_public_key"
 
     @property

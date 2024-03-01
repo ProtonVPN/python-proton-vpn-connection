@@ -23,12 +23,15 @@ from proton.vpn.connection.interfaces import (Settings, VPNCredentials,
                                               VPNUserPassCredentials, Features)
 import pathlib
 import os
+from collections import namedtuple
 
 CWD = str(pathlib.Path(__file__).parent.absolute())
 PERSISTANCE_CWD = os.path.join(
     CWD,
     "connection_persistence"
 )
+OpenVPNPorts = namedtuple("OpenVPNPorts", "udp tcp")
+WireGuardPorts = namedtuple("WireGuardPorts", "udp tcp")
 
 
 class MalformedVPNCredentials:
@@ -53,12 +56,12 @@ class MockVpnServer(VPNServer):
         return "wg_public_key"
 
     @property
-    def tcp_ports(self):
-        return [445, 5995]
+    def openvpn_ports(self):
+        return OpenVPNPorts([80, 1194], [445, 5995])
 
     @property
-    def udp_ports(self):
-        return [80, 1194]
+    def wireguard_ports(self):
+        return WireGuardPorts([443, 88], [443])
 
     @property
     def server_name(self):

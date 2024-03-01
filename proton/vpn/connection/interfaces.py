@@ -20,6 +20,16 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from typing import List, Optional, Protocol
+from dataclasses import dataclass
+
+
+@dataclass
+class ProtocolPorts(Protocol):
+    """Dataclass for ports.
+    These ports are mainly used for establishing VPN connections.
+    """
+    udp: List
+    tcp: List
 
 
 class VPNServer(Protocol):  # pylint: disable=too-few-public-methods
@@ -36,17 +46,17 @@ class VPNServer(Protocol):  # pylint: disable=too-few-public-methods
     Attributes:
         server_ip: server ip to connect to.
         domain: domain to be used for x509 verification.
-        wg_public_key_x25519: x25519 public key for wireguard peer verification.
-        tcp_ports: List of TCP ports, if the protocol requires them.
-        udp_ports: List of UDP ports, if the protocol requires them.
+        x25519pk: x25519 public key for wireguard peer verification.
+        wireguard_ports: Dict of WireGuard ports, if the protocol requires them.
+        openvpn_ports: Dict of OpenVPN ports, if the protocol requires them.
         server_id: ID of the server to connect to.
         server_name: Name of the server to connect to.
     """
     server_ip: str
+    openvpn_ports: ProtocolPorts
+    wireguard_ports: ProtocolPorts
     domain: str
-    wg_public_key_x25519: str
-    tcp_ports: List[int]
-    udp_ports: List[int]
+    x25519pk: str
     server_id: str
     server_name: str
     label: str = None

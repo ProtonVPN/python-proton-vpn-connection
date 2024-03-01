@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-connection
-%define version 0.14.3
+%define version 0.14.4
 %define release 1
 
 Prefix: %{_prefix}
@@ -53,6 +53,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Fri Mar 1 2024 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.14.4
+- Add WireGuard ports
+
 * Mon Feb 26 2024 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.14.3
 - Update Wireguard configuration
 

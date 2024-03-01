@@ -127,7 +127,8 @@ class OVPNConfig(VPNConfiguration):
         Returns:
             string: configuration file
         """
-        ports = self._vpnserver.tcp_ports if "tcp" == self.PROTOCOL else self._vpnserver.udp_ports
+        openvpn_ports = self._vpnserver.openvpn_ports
+        ports = openvpn_ports.tcp if "tcp" == self.PROTOCOL else openvpn_ports.udp
 
         j2_values = {
             "openvpn_protocol": self.PROTOCOL,
@@ -185,7 +186,7 @@ class WireguardConfig(VPNConfiguration):
         j2_values = {
             "wg_client_secret_key": self._vpncredentials.pubkey_credentials.wg_private_key,
             "wg_ip": self._vpnserver.server_ip,
-            "wg_port": self._vpnserver.udp_ports[0],
+            "wg_port": self._vpnserver.wireguard_ports[0],
             "wg_server_pk": self._vpnserver.x25519pk,
         }
 

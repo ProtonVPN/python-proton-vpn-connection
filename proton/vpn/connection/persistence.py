@@ -127,16 +127,16 @@ class PersistedVPNServer:
         raise RuntimeError("Domain not available: connection loaded from disk.")
 
     @property
-    def wg_public_key_x25519(self):
+    def x25519pk(self):
         raise RuntimeError("WG public key not available: connection loaded from disk.")
 
     @property
-    def tcp_ports(self):
-        raise RuntimeError("TCP ports not available: connection loaded from disk.")
+    def openvpn_ports(self):
+        raise RuntimeError("OpenVPN ports not available: connection loaded from disk.")
 
     @property
-    def udp_ports(self):
-        raise RuntimeError("UDP ports not available: connection loaded from disk.")
+    def wireguard_ports(self):
+        raise RuntimeError("WireGuard ports not available: connection loaded from disk.")
 
     @property
     def label(self):

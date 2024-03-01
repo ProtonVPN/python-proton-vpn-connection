@@ -172,11 +172,7 @@ async def test_connector_sends_events_generated_when_running_state_tasks(
     initial_event = events.Disconnected(EventContext(connection=connection))
     next_state = states.Disconnected(StateContext(connection=connection))
     next_event = events.Up(EventContext(connection=connection))
-    with (
-        patch.object(initial_state, "on_event", return_value=next_state),
-        patch.object(next_state, "run_tasks", return_value=next_event),
-        patch.object(next_state, "on_event", return_value=next_state)
-    ):
+    with patch.object(initial_state, "on_event", return_value=next_state), patch.object(next_state, "run_tasks", return_value=next_event), patch.object(next_state, "on_event", return_value=next_state):
         # Simulate connection event.
         on_event_callback = initial_state.context.connection.register.call_args.args[0]
         await on_event_callback(initial_event)

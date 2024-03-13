@@ -10,5 +10,5 @@ Package: python3-proton-vpn-connection
 Architecture: all
 Depends: ${python3:Depends}, ${misc:Depends}, python3-jinja2, python3-proton-core, python3-proton-vpn-logger, python3-proton-vpn-killswitch
 Recommends: python3-tabulate
-Breaks: python3-proton-vpn-api-core (<< 0.20.2), python3-proton-vpn-network-manager (<< 0.4.2)
+Breaks: python3-proton-vpn-api-core (<< 0.21.1), python3-proton-vpn-network-manager (<< 0.4.2)
 Description: Python3 ProtonVPN Connection

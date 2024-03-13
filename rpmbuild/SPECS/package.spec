@@ -28,7 +28,7 @@ Requires: python3-proton-core
 Requires: python3-proton-vpn-logger
 Requires: python3-proton-vpn-killswitch
 
-Conflicts: python3-proton-vpn-api-core < 0.21.2
+Conflicts: python3-proton-vpn-api-core < 0.21.1
 Conflicts: python3-proton-vpn-network-manager < 0.4.2
 
 %{?python_disable_dependency_generator}
